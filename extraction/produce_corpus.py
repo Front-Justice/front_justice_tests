@@ -1,7 +1,6 @@
 import json
 import random
 import re
-import utils
 from multiprocessing import Pool
 import glob
 import PIL.Image as Image
@@ -22,6 +21,7 @@ def convert_from_ls(annotation):
 
 def treat_annotation(cell):
 	annotation, idx, images_dir, sliding_value_x, sliding_value_y, mean_width, mean_height = cell
+	print(idx)
 	image_name = annotation["image"].split("/")[-1]
 	corresponding_image = glob.glob(f"{images_dir}/{image_name}")
 	if corresponding_image == []:
@@ -69,7 +69,6 @@ def treat_annotation(cell):
 						cropped = utils.crop_image(loaded, good_coordinates, show_image=False)
 						if not os.path.isfile(f"../data/name_extraction/corpus/false/{idx}_{index}_{idx_x}_{idx_y}.png"):
 							cropped.save(f"../data/name_extraction/corpus/false/{idx}_{index}_{idx_x}_{idx_y}.png")
-	exit(0)
 
 
 def produce_corpus(json_file):
