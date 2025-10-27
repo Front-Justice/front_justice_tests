@@ -1,5 +1,8 @@
 import glob
 import shutil
+
+import numpy as np
+
 import utils.utils as utils
 import tqdm
 import PIL.Image as Image
@@ -27,7 +30,8 @@ Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
 class RandomForestImageClassifier():
 	def __init__(self,
 				 build_vocab=True,
-				 corpus_path=None):
+				 corpus_path=None,
+				 params_file=None):
 		if build_vocab:
 			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="../data/name_extraction/corpus/*")
 		else:
@@ -36,19 +40,12 @@ class RandomForestImageClassifier():
 		self.model = None
 		self.corpus_path = corpus_path
 		assert self.vocab is not None, "Vocab is None, check path."
+		self.params_file = utils.load_json_to_dict(params_file)
 
-	def crop_and_resize(self, image, vertical_crop_factor):
-		height_resized = image.height // vertical_crop_factor
-		image = image.crop((0, 0, image.width, height_resized))
-		# dims = (image.width // resize_factor, image.height // resize_factor)
-		image = image.resize((1062, 391))
-		# image = image.resize(dims)
-		#print(image.size)
-		#Image.Image.show(image)
-		return image
 
 
 	def extract_features(self, image, show_features=False):
+		image = image.resize((200, 200))
 		if show_features:
 			fd, hog_image = skimage.feature.hog(
 				image,
@@ -71,6 +68,7 @@ class RandomForestImageClassifier():
 				return None
 		if show_features:
 			self.reveal_hog_features(image=image, hog_image=hog_image)
+			exit(0)
 		return hog_features
 
 	def reveal_hog_features(self, image, hog_image):
@@ -103,9 +101,8 @@ class RandomForestImageClassifier():
 		if show_image:
 			Image.Image.show(image)
 		if resize:
-			x, y = 1062, 391
 			try:
-				image = utils.resize(image, x, y)
+				image = utils.resize(image, self.params_file['dims'][0], self.params_file['dims'][1])
 			except OSError:
 				return None
 		features = self.extract_features(image)
@@ -121,9 +118,9 @@ class RandomForestImageClassifier():
 		print("Treating images.")
 		images = glob.glob('../data/name_extraction/corpus/*/*.png')
 		random.shuffle(images)
-		coefficient = 4
+		coefficient = 3
 		for index, image in enumerate(tqdm.tqdm(images)):
-			result = self.process_image(image, produce_labels=True, resize=False)
+			result = self.process_image(image, produce_labels=True, resize=True)
 			count_false = y.count(1)
 			count_true = y.count(0)
 			if result is not None and index > 0:
@@ -135,6 +132,8 @@ class RandomForestImageClassifier():
 				X.append(features)
 				y.append(label)
 		print(f"Corpus size: {len(X)}")
+		print(f"True labels: {count_true}.\n"
+			  f"False labels: {count_false}.")
 		return X, y
 
 
@@ -160,6 +159,9 @@ class RandomForestImageClassifier():
 
 	def slide_over_image(self, image_name):
 		# Pour les rectangles
+
+		params = utils.load_json_to_dict("../data/name_extraction/params.json")
+		mean_width,  mean_height = params["dims"][0], params["dims"][1]
 		if isinstance(image_name, str):
 			loaded = utils.load_image(image_name, greyscale=True)
 		else:
@@ -169,10 +171,8 @@ class RandomForestImageClassifier():
 		OPACITY = int(255 * TRANSPARENCY)
 
 
-		mean_width = 1062
-		mean_height = 391
-		sliding_value_x = 0.05
-		sliding_value_y = 0.04
+		sliding_value_x = 0.02
+		sliding_value_y = 0.02
 
 		loaded_as_rgb = Image.merge("RGB", (loaded, loaded, loaded))
 		draw = ImageDraw.Draw(loaded_as_rgb, "RGBA")
@@ -191,24 +191,29 @@ class RandomForestImageClassifier():
 		all_y = [n * sliding_value_y * original_height
 				 for n in range(0, int(1 / sliding_value_y))]
 
+		mask = np.zeros(loaded.size)
 		for idx_x, x in enumerate(all_x):
 			for idx_y, y in enumerate(all_y):
-				print("---")
-				good_coordinates = (x, y, x + mean_width, y + mean_height)
+				print(f"Coords: {x}, {y}")
+				good_coordinates = (round(x), round(y), round(x + mean_width), round(y + mean_height))
 				current_rectangle = Rectangle(good_coordinates[0],
 											  good_coordinates[1],
 											  good_coordinates[2],
 											  good_coordinates[3])
-				cropped = utils.crop_image(loaded, good_coordinates, show_image=False)
+				cropped = utils.crop_image(loaded, good_coordinates, show_image=False, resize=True, dimensions=(mean_width, mean_height))
 				hog = self.process_image(cropped, produce_labels=False, load_image=False)
-				print(hog.shape)
-				print(current_rectangle)
 				prediction = self.model.predict([hog])[0]
 				if prediction == 0:
 					draw.rectangle(((good_coordinates[0], good_coordinates[1]), (good_coordinates[2], good_coordinates[3])),
-								   fill=(255, 52, 0, 20))
-
+								   fill=(255, 52, 0, 5))
+					mask[good_coordinates[1]:good_coordinates[3],
+						good_coordinates[0]:good_coordinates[2]] = mask[good_coordinates[1]:good_coordinates[3],
+																		good_coordinates[0]:good_coordinates[2]] + 30
 		utils.show_image(loaded_as_rgb)
+		max_value = np.max(mask)
+		normalized_mask = np.divide(mask, max_value) * 255
+		image = Image.fromarray(normalized_mask)
+		image.show()
 		exit(0)
 
 
@@ -220,6 +225,7 @@ class RandomForestImageClassifier():
 		self.vocab = joblib.load(vocab_path)
 		images = glob.glob('/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/page_classification/data'
 						   '/page_classification/predictions/page_1/11_J_76_0009.jpg')
+
 		image = utils.load_image(images[0], greyscale=True)
 		x, y = image.size
 		image = utils.crop_image(image, coordinates=(0, y/2, x, y), resize=False)
@@ -240,7 +246,8 @@ class RandomForestImageClassifier():
 if __name__ == '__main__':
 	random.seed(1234)
 	classifier = RandomForestImageClassifier(build_vocab=True,
-											 corpus_path="../data/name_extraction/corpus/corpus.data")
-	classifier.process_corpus()
-	classifier.train(model_path="../models/name/NameClassifier.joblib", vocab_path="../models/name/vocab.joblib")
+											 corpus_path="../data/name_extraction/corpus/corpus.data",
+											 params_file="../data/name_extraction/params.json",)
+	# classifier.process_corpus()
+	# classifier.train(model_path="../models/name/NameClassifier.joblib", vocab_path="../models/name/vocab.joblib")
 	classifier.predict(model_path="../models/name/NameClassifier.joblib", vocab_path="../models/name/vocab.joblib")

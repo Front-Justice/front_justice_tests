@@ -58,20 +58,19 @@ def treat_annotation(cell):
 											  good_coordinates[3])
 				overlap = check_if_overlap(GT_rectangle, current_rectangle)
 
-				loaded = utils.load_image(corresponding_image)
 				if overlap != None and overlap > 0.4:
 					cropped = utils.crop_image(loaded, good_coordinates, show_image=False)
 					if not os.path.isfile(f"../data/name_extraction/corpus/true/{idx}_{index}_{idx_x}_{idx_y}.png"):
 						cropped.save(f"../data/name_extraction/corpus/true/{idx}_{index}_{idx_x}_{idx_y}.png")
 				else:
 					random_float = random.random()
-					if random_float < 0.08:
-						cropped = utils.crop_image(loaded, good_coordinates, show_image=False)
+					if random_float < 0.03:
+						cropped = utils.crop_image(loaded, good_coordinates, show_image=False, dimensions=(mean_width, mean_height))
 						if not os.path.isfile(f"../data/name_extraction/corpus/false/{idx}_{index}_{idx_x}_{idx_y}.png"):
 							cropped.save(f"../data/name_extraction/corpus/false/{idx}_{index}_{idx_x}_{idx_y}.png")
 
 
-def produce_corpus(json_file):
+def produce_corpus(json_file, produce_square=False, x_factor=None, y_factor=None):
 	images_dir = "/home/mgl/Téléchargements/export_images_front_justice/images"
 	with open(json_file) as js_file:
 		annotations = json.load(js_file)
@@ -81,14 +80,27 @@ def produce_corpus(json_file):
 
 	for annotation in annotations:
 		for label in annotation["label"]:
+			# Retrieves the mean dimensions of the target box
 			x, y, width, height = convert_from_ls(label)
 			all_heights.append(height)
 			all_widths.append(width)
 
-	mean_height = round(np.mean(all_heights)/2)
-	mean_width = round(np.mean(all_widths)/2)
-	sliding_value_x = 0.08
+	if produce_square:
+		mean_width = round(np.mean(all_widths))
+		mean_width = 1.5 * mean_width
+		mean_height = mean_width
+	else:
+		mean_width = round(np.mean(all_widths) * x_factor)
+		mean_height = round(np.mean(all_heights) * y_factor)
+	print(f"Size of out boxes: {mean_width}x{mean_height}")
+	sliding_value_x = 0.04
 	sliding_value_y = 0.02
+	with open("../data/name_extraction/params.json", "w") as json_file:
+		json.dump({"dims": (mean_width, mean_height),
+				   "sliding_value_x": sliding_value_x,
+				  "sliding_value_y":sliding_value_y
+				   },
+				  json_file)
 
 
 	data = [(annotation,
@@ -132,7 +144,10 @@ def crop_image(image, coordinates, show_image=False):
 
 
 def main(annotations):
-	boxes_heights, boxes_width = produce_corpus(annotations)
+	boxes_heights, boxes_width = produce_corpus(annotations,
+												produce_square=False,
+												x_factor=0.5,
+												y_factor=0.5)
 
 if __name__ == '__main__':
 	main("../data/name_extraction/gold.json")

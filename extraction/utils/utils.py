@@ -1,3 +1,5 @@
+import json
+
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 
@@ -13,21 +15,14 @@ def resize(image, x, y):
 	return image
 
 
-def crop_and_resize(image, vertical_crop_factor):
-		height_resized = image.height // vertical_crop_factor
-		image = image.crop((0, 0,  image.width, height_resized))
-		# dims = (image.width // resize_factor, image.height // resize_factor)
-		image = image.resize((1062, 391))
-		# image = image.resize(dims)
-		#print(image.size)
-		#Image.Image.show(image)
-		return image
+def load_json_to_dict(path):
+	with open(path, "r") as input_json:
+		return json.load(input_json)
 
-
-def crop_image(image, coordinates, show_image=False, resize=False):
+def crop_image(image, coordinates, show_image=False, resize=False, dimensions=None):
 		image = image.crop(coordinates)
 		if resize:
-			image = image.resize((1062, 391))
+			image = image.resize(dimensions)
 		if show_image:
 			Image.Image.show(image)
 		return image
