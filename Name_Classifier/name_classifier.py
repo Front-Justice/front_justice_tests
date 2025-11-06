@@ -2,7 +2,7 @@ import glob
 import shutil
 
 import numpy as np
-
+import pylab
 import utils.utils as utils
 import tqdm
 import PIL.Image as Image
@@ -10,10 +10,10 @@ import PIL.ImageDraw as ImageDraw
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import accuracy_score
 import skimage
-from skimage import color, data, exposure
+from skimage import color, data, exposure, measure
 from skimage import io
 import random
 import cv2
@@ -45,7 +45,7 @@ class RandomForestImageClassifier():
 
 
 	def extract_features(self, image, show_features=False):
-		image = image.resize((200, 200))
+		# image = image.resize((200, 200))
 		if show_features:
 			fd, hog_image = skimage.feature.hog(
 				image,
@@ -144,39 +144,53 @@ class RandomForestImageClassifier():
 		inputs, labels = self.load_corpus()
 		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
 		print("Training...")
-		my_model = svm.SVC()
-		my_model = RandomForestClassifier(n_estimators=200,
-										 random_state=0)
+		param_dist = {
+			'n_estimators': range(50, 300, 40),
+			'max_depth': [None, 10, 20, 30],
+			'min_samples_split': range(2, 11),
+			'min_samples_leaf': range(1, 5),
+			'max_features': ['sqrt', 'log2']
+		}
+		my_model = RandomForestClassifier(random_state=42)
+		random_search = RandomizedSearchCV(my_model,
+										   param_distributions=param_dist,
+										   n_iter=10,
+										   cv=5,
+										   n_jobs=11,
+										   verbose=2)
+		# my_model = svm.SVC()
 		# fit the model to the training set
-		my_model.fit(X_train, y_train)
-		accuracy = my_model.score(X_test, y_test)
-		y_pred = my_model.predict(X_test)
+		random_search.fit(X_train, y_train)
+		best_rf = random_search.best_estimator_
+		y_pred = best_rf.predict(X_test)
 		print(classification_report(y_pred, y_test))
 		# https://stackoverflow.com/a/20662980
-		joblib.dump(my_model, model_path)
+		joblib.dump(best_rf, model_path)
 		joblib.dump(self.vocab, vocab_path)
 
 
-	def slide_over_image(self, image_name):
+	def slide_over_image(self, image):
 		# Pour les rectangles
+		image_name = image.split("/")[-1]
+		image = utils.load_image(image, greyscale=True)
+		print(image_name)
 
 		params = utils.load_json_to_dict("../data/name_extraction/params.json")
 		mean_width,  mean_height = params["dims"][0], params["dims"][1]
-		if isinstance(image_name, str):
-			loaded = utils.load_image(image_name, greyscale=True)
-		else:
-			loaded = image_name
 		TINT_COLOR = (0, 0, 0)  # Black
 		TRANSPARENCY = .25  # Degree of transparency, 0-100%
 		OPACITY = int(255 * TRANSPARENCY)
 
 
-		sliding_value_x = 0.02
-		sliding_value_y = 0.02
+		sliding_value_x = 0.03
+		sliding_value_y = 0.05
 
-		loaded_as_rgb = Image.merge("RGB", (loaded, loaded, loaded))
+		# sliding_value_x = 0.07
+		# sliding_value_y = 0.07
+
+		loaded_as_rgb = Image.merge("RGB", (image, image, image))
 		draw = ImageDraw.Draw(loaded_as_rgb, "RGBA")
-		original_width, original_height = loaded.size
+		original_width, original_height = image.size
 
 		# overlay = Image.new('RGBA', loaded.size, TINT_COLOR + (0,))
 		# draw = ImageDraw.Draw(overlay)  # Create a context for drawing things on it.
@@ -188,34 +202,89 @@ class RandomForestImageClassifier():
 		# Extract True value
 		all_x = [n * sliding_value_x * original_width
 				 for n in range(0, int(1 / sliding_value_x))]
-		all_y = [n * sliding_value_y * original_height
+		# all_x = [item for item in all_x if item < original_width]
+		all_y = [original_height*.5 + (n * sliding_value_y * original_height)
 				 for n in range(0, int(1 / sliding_value_y))]
-
-		mask = np.zeros(loaded.size)
-		for idx_x, x in enumerate(all_x):
+		all_y = [item for item in all_y if item < original_height]
+		contrast = 10
+		mask = np.zeros(image.size).transpose()
+		for idx_x, x in enumerate(tqdm.tqdm(all_x)):
 			for idx_y, y in enumerate(all_y):
-				print(f"Coords: {x}, {y}")
+				# print(f"Coords: {x}, {y}")
 				good_coordinates = (round(x), round(y), round(x + mean_width), round(y + mean_height))
 				current_rectangle = Rectangle(good_coordinates[0],
 											  good_coordinates[1],
 											  good_coordinates[2],
 											  good_coordinates[3])
-				cropped = utils.crop_image(loaded, good_coordinates, show_image=False, resize=True, dimensions=(mean_width, mean_height))
+				cropped = utils.crop_image(image, good_coordinates, show_image=False, resize=True, dimensions=(mean_width, mean_height))
 				hog = self.process_image(cropped, produce_labels=False, load_image=False)
 				prediction = self.model.predict([hog])[0]
 				if prediction == 0:
 					draw.rectangle(((good_coordinates[0], good_coordinates[1]), (good_coordinates[2], good_coordinates[3])),
-								   fill=(255, 52, 0, 5))
+								   fill=(255, 52, 0, 30))
 					mask[good_coordinates[1]:good_coordinates[3],
 						good_coordinates[0]:good_coordinates[2]] = mask[good_coordinates[1]:good_coordinates[3],
-																		good_coordinates[0]:good_coordinates[2]] + 30
-		utils.show_image(loaded_as_rgb)
-		max_value = np.max(mask)
-		normalized_mask = np.divide(mask, max_value) * 255
-		image = Image.fromarray(normalized_mask)
-		image.show()
-		exit(0)
+																		good_coordinates[0]:good_coordinates[2]] + contrast
+					draw.rectangle(((good_coordinates[0], good_coordinates[1]), (good_coordinates[2], good_coordinates[3])),
+							   fill=(0, 0, 0, 0), width=2, outline="red")
+		# max_value = np.max(mask)
+		# normalized_mask = np.divide(mask, max_value) * 255
+		normalized_mask = mask < (contrast*2) - 1
+		contours = measure.find_contours(normalized_mask, 0.8)
 
+		for contour in contours:
+			print("New contour")
+			y_bottom = np.max(contour[:, 0])
+			y_top = np.min(contour[:, 0])
+			x_right = np.max(contour[:, 1])
+			x_left = np.min(contour[:, 1])
+			print(x_left, y_top, x_right, y_bottom)
+			draw.rectangle(((x_left, y_top), (x_right, y_bottom)),
+						   fill=(0, 0, 0, 0), width=5, outline="blue")
+			padding = 200
+			draw.rectangle(((x_left - padding, y_top - padding), (x_right + padding, y_bottom + padding)),
+						   fill=(0, 0, 0, 0), width=5, outline="black")
+
+			# On recommence sur le contour
+			sliding_value_x = 0.1
+			sliding_value_y = 0.1
+			rectangle_width = (x_right + padding) - (x_left - padding)
+			rectangle_height = (y_bottom + padding) - (y_top - padding)
+			all_y = [(y_top - padding) + (n * sliding_value_y * rectangle_height)
+					 for n in range(0, int(1 / sliding_value_y))]
+			all_y = [int(item) for item in all_y if item < (y_bottom + padding - mean_height)]
+			all_x = [(x_left - padding) + n * sliding_value_x * rectangle_width
+					 for n in range(0, int(1 / sliding_value_x))]
+			all_x = [int(item) for item in all_x if item < (x_right + padding - mean_width)]
+
+			contrast = 10
+			# mask = np.zeros(image.size).transpose()
+			for idx_x, x in enumerate(tqdm.tqdm(all_x)):
+				for idx_y, y in enumerate(all_y):
+					print(f"Coords: {x}, {y}")
+					good_coordinates = (round(x), round(y), round(x + mean_width), round(y + mean_height))
+					current_rectangle = Rectangle(good_coordinates[0],
+												  good_coordinates[1],
+												  good_coordinates[2],
+												  good_coordinates[3])
+					cropped = utils.crop_image(image, good_coordinates, show_image=False, resize=True,
+											   dimensions=(mean_width, mean_height))
+					hog = self.process_image(cropped, produce_labels=False, load_image=False)
+					prediction = self.model.predict([hog])[0]
+					if prediction == 0:
+						print("Positive result")
+						draw.rectangle(
+							((good_coordinates[0], good_coordinates[1]), (good_coordinates[2], good_coordinates[3])),
+							fill=(220, 52, 0, 30))
+						mask[good_coordinates[1]:good_coordinates[3],
+						good_coordinates[0]:good_coordinates[2]] = mask[good_coordinates[1]:good_coordinates[3],
+																   good_coordinates[0]:good_coordinates[2]] + contrast
+						draw.rectangle(
+							((good_coordinates[0], good_coordinates[1]), (good_coordinates[2], good_coordinates[3])),
+							fill=(0, 0, 0, 0), width=2, outline="yellow")
+
+		# utils.show_image(loaded_as_rgb)
+		loaded_as_rgb.save(f"../data/name_extraction/corpus/predicted/{image_name.replace('.jpg', '.png')}")
 
 	def predict(self,
 				model_path=None,
@@ -223,13 +292,10 @@ class RandomForestImageClassifier():
 				debug_model=False):
 		self.model = joblib.load(model_path)
 		self.vocab = joblib.load(vocab_path)
-		images = glob.glob('/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/page_classification/data'
-						   '/page_classification/predictions/page_1/11_J_76_0009.jpg')
-
-		image = utils.load_image(images[0], greyscale=True)
-		x, y = image.size
-		image = utils.crop_image(image, coordinates=(0, y/2, x, y), resize=False)
-		self.slide_over_image(image)
+		images = glob.glob('/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/page_classification/data/page_classification/predictions/page_1/*.jpg')
+		for image in images:
+			# image = utils.crop_image(image, coordinates=(0, y/2, x*(2/3), y*(5/6)), resize=False)
+			self.slide_over_image(image)
 
 	def process_corpus(self):
 		inputs, labels = self.build_dataset()

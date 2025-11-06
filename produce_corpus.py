@@ -48,6 +48,7 @@ def treat_annotation(cell):
 								 good_coordinates[2],
 								 good_coordinates[3])
 		cropped = crop_image(loaded, good_coordinates)
+		cropped = utils.resize(cropped, x=mean_width, y=mean_height)
 		cropped.save(f"../data/name_extraction/corpus/true/label_{idx}_{index}.png")
 		for idx_x, x in enumerate(all_x):
 			for idx_y, y in enumerate(all_y):
@@ -58,8 +59,8 @@ def treat_annotation(cell):
 											  good_coordinates[3])
 				overlap = check_if_overlap(GT_rectangle, current_rectangle)
 
-				if overlap != None and overlap > 0.4:
-					cropped = utils.crop_image(loaded, good_coordinates, show_image=False)
+				if overlap != None and overlap > 0.5:
+					cropped = utils.crop_image(loaded, good_coordinates, show_image=False, dimensions=(mean_width, mean_height))
 					if not os.path.isfile(f"../data/name_extraction/corpus/true/{idx}_{index}_{idx_x}_{idx_y}.png"):
 						cropped.save(f"../data/name_extraction/corpus/true/{idx}_{index}_{idx_x}_{idx_y}.png")
 				else:
@@ -144,10 +145,10 @@ def crop_image(image, coordinates, show_image=False):
 
 
 def main(annotations):
-	boxes_heights, boxes_width = produce_corpus(annotations,
+	produce_corpus(annotations,
 												produce_square=False,
-												x_factor=0.5,
-												y_factor=0.5)
+												x_factor=1,
+												y_factor=1)
 
 if __name__ == '__main__':
 	main("../data/name_extraction/gold.json")

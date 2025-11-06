@@ -1,11 +1,15 @@
 import glob
+import pickle
 import shutil
+import sys
+from multiprocessing import Pool
 
 import tqdm
 import PIL.Image as Image
 from sklearn.ensemble import RandomForestClassifier
+from sklearn import svm
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 import skimage
 from skimage import color, data, exposure
 from skimage import io
@@ -17,10 +21,13 @@ import matplotlib.pyplot as plt
 
 
 class RandomForestImageClassifier():
-	def __init__(self, build_vocab=True):
+	def __init__(self,
+				 build_vocab=True,
+				 corpus_path=None):
 		if build_vocab:
-			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="data/page_*")
+			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="data/page_classification/corpus/page_*")
 		self.model_path = None
+		self.corpus_path = corpus_path
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
@@ -90,40 +97,54 @@ class RandomForestImageClassifier():
 		else:
 			return features
 
+	def retrieve_hog_and_label(self, image):
+		return self.load_image(image, produce_labels=True)
+
 	def build_dataset(self):
-		X, y = [], []
 		print("Treating images.")
-		images = glob.glob('data/page_*/*.jpg')
+		images = glob.glob('data/page_classification/corpus/page_*/*.jpg')
 		random.shuffle(images)
-		images = images
-		for image in tqdm.tqdm(images):
-			features, label = self.load_image(image, produce_labels=True)
-			X.append(features)
-			y.append(label)
+		with Pool(12) as p:
+			corpus = p.map(self.retrieve_hog_and_label, images)
+		X = [array for array, _ in corpus]
+		y = [label for _, label in corpus]
+		with open(self.corpus_path, "wb") as corpus_file:
+			pickle.dump((X, y), corpus_file)
 		return X, y
+
+	def load_corpus(self):
+		with open(self.corpus_path, "rb") as corpus_file:
+			inputs, labels = pickle.load(corpus_file)
+		return inputs, labels
 
 	def train(self,
 			  model_path=None,
 			  vocab_path=None,
 			  show_features=False):
-		inputs, labels = self.build_dataset()
-		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.1, random_state=42)
-		rfc_100 = RandomForestClassifier(n_estimators=100, random_state=0)
+		if not os.path.isfile(self.corpus_path):
+			inputs, labels = self.build_dataset()
+		else:
+			inputs, labels = self.load_corpus()
+		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
+		model = RandomForestClassifier(n_estimators=100, random_state=0)
+		model = svm.SVC()
 		# fit the model to the training set
-		rfc_100.fit(X_train, y_train)
-		accuracy = rfc_100.score(X_test, y_test)
+		model.fit(X_train, y_train)
+		accuracy = model.score(X_test, y_test)
 		print(accuracy)
+		y_pred = model.predict(X_test)
+		print(classification_report(y_pred, y_test))
 		# https://stackoverflow.com/a/20662980
-		joblib.dump(rfc_100, model_path)
+		joblib.dump(model, model_path)
 		joblib.dump(self.vocab, vocab_path)
 
 	def predict(self,
 				model_path=None,
 				vocab_path=None,
-				debug_model=False):
+				debug_model=False,
+				images=False):
 		model = joblib.load(model_path)
 		vocab = joblib.load(vocab_path)
-		images = glob.glob('/home/mgl/Bureau/Travail/projets/Front_Justice/htr-front-justice/data/all_images/*.jpg')
 		random.shuffle(images)
 		if debug_model:
 			importances = model.feature_importances_
@@ -146,15 +167,24 @@ class RandomForestImageClassifier():
 			prediction = model.predict([test_image])
 			out_dir = vocab[prediction[0]]
 			try:
-				os.mkdir(f"data/predictions/{out_dir}")
+				os.mkdir(f"data/page_classification/predictions/")
 			except FileExistsError:
 				pass
-			shutil.copyfile(image, f"data/predictions/{out_dir}/{image.split('/')[-1]}")
+			try:
+				os.mkdir(f"data/page_classification/predictions/{out_dir}")
+			except FileExistsError:
+				pass
+			shutil.copyfile(image, f"data/page_classification/predictions/{out_dir}/{image.split('/')[-1]}")
 
 	# Predict on the test set results
 
 
 if __name__ == '__main__':
-	classifier = RandomForestImageClassifier(build_vocab=False)
+	classifier = RandomForestImageClassifier(build_vocab=True,
+											 corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/"
+														 "alternative_pipeline/page_classification/data/page_classification/corpus.data")
+	if len(sys.argv) > 1:
+		images = glob.glob(f"{sys.argv[1]}*.jpg")
+		assert images != [], "No images found."
 	# classifier.train(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib")
-	classifier.predict(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib")
+	classifier.predict(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib", images=images)

@@ -19,6 +19,9 @@ def load_json_to_dict(path):
 	with open(path, "r") as input_json:
 		return json.load(input_json)
 
+def save_image(image, path):
+	image.save(path)
+
 def crop_image(image, coordinates, show_image=False, resize=False, dimensions=None):
 		image = image.crop(coordinates)
 		if resize:
