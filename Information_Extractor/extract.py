@@ -79,6 +79,7 @@ class Extractor:
 			corresponding_tree = self.xml_dict[image_id]
 
 			loaded_image = utils.load(corresp)
+			test = "test"
 			corresponding_category = self.categories_dict[annotation["category_id"]]
 			print(f"Corresponding image: {corresp}")
 			print(f"Corresponding category: {corresponding_category}")
