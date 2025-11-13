@@ -1,0 +1,118 @@
+{
+    "11_J_3(2)-0011": {
+        "Pr\u00e9sident": {
+            "persName": "Quelle",
+            "role": ", lieutenant Colonel Commandant l'Artillere a\u0300 Pied de l'ar me\u0301e Pre\u0301sident; Pre\u0301sident, Quelle, lieutenant Colonel, Commandant l'Artilleire a\u0300 Pied de l'ar me\u0301e",
+            "certainty": 0.3
+        },
+        "Jur\u00e9s": [
+            {
+                "persName": "Barbancey",
+                "role": ", Chef du Bataillon, de l'Etat Major de l Arme\u0301e Barbancey, Chef de Bataillon, de l'Etat Major de l'Arme\u0301e",
+                "certainty": 1
+            },
+            {
+                "persName": "Humbert",
+                "role": ", capitaine, du 5^e Re\u0301giment d'Artittene\u0301 a\u0300 piad Humbert, capitaine, du 3^e Re\u0301ginient d'Artitterre\u0301 a\u0300 pied",
+                "certainty": 1
+            },
+            {
+                "persName": "Argers",
+                "role": ", Lieutenant du Serpinet Aitioenoile du Q.C Argers, Lieutenant du Serpice Automiile du Q.C",
+                "certainty": 1
+            },
+            {
+                "persName": "Pinon",
+                "role": " (Mare\u0301chal des logis. du6^ Escetron du Train Pinon (Mare\u0301chal des logis. du D Escedrion du Train",
+                "certainty": 1
+            }
+        ]
+    },
+    "11_J_3(2)-0151": {
+        "Pr\u00e9sident": {
+            "persName": "Delin",
+            "role": ", Lieut^t- colonel de gendamerie, pre\u0301vo\u0302t de l'arme\u0301e Pre\u0301sident,",
+            "certainty": 1
+        },
+        "Jur\u00e9s": [
+            {
+                "persName": "Barbancey",
+                "role": ", Chef de Bataillon a\u0300 l'Etat major de l'arme\u0301e",
+                "certainty": 1
+            },
+            {
+                "persName": "Humbert",
+                "role": ", Capitaine au 5^e Re\u0301giment d'artillerie a\u0300 pied",
+                "certainty": 1
+            },
+            {
+                "persName": "Umilta",
+                "role": ", sous- lieutenant au 17 R.T.T. Compagnie de Garde du 99",
+                "certainty": 1
+            },
+            {
+                "persName": " I^al des logis",
+                "role": " au 6' escadron du train ses Equipages M^ce",
+                "certainty": 0.5
+            }
+        ]
+    },
+    "11_J_2(2)-0412": {
+        "Pr\u00e9sident": {
+            "persName": "Seta",
+            "role": ", Lieutenant colonel, Directeur du ge\u0301nie des Etapes Pre\u0301sident;",
+            "certainty": 1
+        },
+        "Jur\u00e9s": [
+            {
+                "persName": "De\u0301cot",
+                "role": ", Chef Fesc^nn de gendarmerie - pre\u0301voti d'Etapee",
+                "certainty": 1
+            },
+            {
+                "persName": "sousise",
+                "role": ". cpmme au 130 Re\u0301g^t Territorial d'Inf^ne",
+                "certainty": 0.3
+            },
+            {
+                "persName": "Gourgues",
+                "role": ", lieutenant. du service des Etapes",
+                "certainty": 1
+            },
+            {
+                "persName": "Cournadre",
+                "role": ", adjudant au 138^e Re\u0301g^t Territorial d'Inf^ne",
+                "certainty": 1
+            }
+        ]
+    },
+    "11_J_2(1)-0499": {
+        "Pr\u00e9sident": {
+            "persName": "du Teil de Havelt",
+            "role": ", Lieutenant colonel, commandant d'Etapes de l'Armee Pre\u0301sidents",
+            "certainty": 0.5
+        },
+        "Jur\u00e9s": [
+            {
+                "persName": "Bourlot",
+                "role": ",  chef d'esc^n au 1^e Re\u0301giment de Hunards - Re\u0301serve du peronel SEtap",
+                "certainty": 1
+            },
+            {
+                "persName": "Saurie",
+                "role": ",  Capitaine de gendarmerie- adjoint au Pre\u0301vit de l'arme\u0301e",
+                "certainty": 1
+            },
+            {
+                "persName": "Bouley",
+                "role": ",  3/lieut^t com^er la 9^e Compaprie du d'escadron de brain",
+                "certainty": 1
+            },
+            {
+                "persName": "Quernel",
+                "role": ",  M^al de lopis au 26e Re\u0301giment de dragons",
+                "certainty": 1
+            }
+        ]
+    }
+}

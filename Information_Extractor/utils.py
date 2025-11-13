@@ -1,5 +1,3 @@
-import copy
-
 import PIL.Image as Image
 import re
 
@@ -79,6 +77,38 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 		return ratio
 	else:
 		return None
+
+def process_name(example, pipeline):
+	if isinstance(example, list):
+		example = " ".join(example)
+	print("---")
+	print(example)
+	result = pipeline(example.lower())
+	print(result)
+	persName_NER = example[result[0]['start']: result[0]['end']] if result[0]["entity_group"] == "PER" else None
+	role_NER = example[result[0]['end']:] if result[0]["entity_group"] == "PER" else None
+
+	# Extraction simple: le premier mot. Pour les noms à particule c'est plus compliqué: aller chercher la virgule?
+	match_first_word = re.search(re.compile(r"[^\s,.]+"), example)
+	spans = match_first_word.span()
+	homemade_NER = example[spans[0]: spans[1]]
+	homemade_role = example[spans[1]:]
+	if persName_NER == homemade_NER:
+		certainty = 1
+		persName = persName_NER
+		role = role_NER
+	elif persName_NER is not None:
+		certainty = 0.5
+		persName = persName_NER
+		role = role_NER
+	else:
+		certainty = 0.3
+		persName = homemade_NER
+		role = homemade_role
+	return {"persName": persName,
+			"role": role,
+			"certainty": certainty}
+
 
 def check_if_line_in_box(box_coord, baseline):
 	"""

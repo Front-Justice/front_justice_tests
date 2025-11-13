@@ -1,9 +1,8 @@
 import unicodedata
 
-import kraken
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import json
 import glob
-import PIL.Image as Image
 import lxml.etree as ET
 import re
 import utils as utils
@@ -21,6 +20,11 @@ class Extractor:
 	
 	def __init__(self,
 				 path_to_annotations: str, ):
+
+		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
+		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
+
+		self.nlp = pipeline('ner', model=self.ner_model, tokenizer=self.tokenizer, aggregation_strategy="simple")
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
 		self.conversion_dict = {item.replace("(", "-").replace(")", "").split("/")[-1].replace(".jpg", ""): item for item in
@@ -100,7 +104,7 @@ class Extractor:
 
 
 
-	def reconstruct_magistrates_table(self):
+	def extract_magistrates_table(self):
 		"""
 		Cette fonction reconstruit les tables contenant le nom des magistrats
 		:return:
@@ -146,7 +150,7 @@ class Extractor:
 
 					# On vérifie que la ligne est bien dans la colonne 1
 					is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column, baseline=converted_baseline)
-					if is_in_box is True and is_in_correct_column is True:
+					if is_in_box is True:
 						try:
 							table_dict[document]
 						except KeyError:
@@ -155,10 +159,20 @@ class Extractor:
 							table_dict[document][idx].append(line["string"])
 						except KeyError:
 							table_dict[document][idx] = [line["string"]]
-		print(table_dict)
-		exit(0)
+		print(len(table_dict))
+		for document, annotations in table_dict.items():
+			president = annotations[0]
+			jures = [annotation for key, annotation in annotations.items() if key != 0]
+			processed_jures = []
+			for jure in jures:
+				jure = utils.process_name(jure, self.nlp)
+				processed_jures.append(jure)
+			processed_president = utils.process_name(president, self.nlp)
+			table_dict[document] = {"Président": processed_president,
+									"Jurés": processed_jures}
+		return table_dict
 
-	def clean_annotations(self):
+	def finetune_categories(self):
 		clean_annotations = copy.deepcopy(self.extracted_annotations)
 		# On nettoie ensuite
 		soldat_description_split_regexp = re.compile("([AÀ] l'effet)")
@@ -171,7 +185,6 @@ class Extractor:
 			del clean_annotations[document]["Magistrats"]
 			del clean_annotations[document]["Colonne"]
 			del clean_annotations[document]["Table"]
-			self.reconstruct_magistrates_table(document, annotations)
 			for category, annotation in annotations.items():
 				if category in self.excluded_classes:
 					del clean_annotations[document][category]
@@ -217,8 +230,6 @@ class Extractor:
 					if inculpation and condamnations:
 						del clean_annotations[document][category]
 
-		with open("result/annotations.json", "w") as input_Json:
-			json.dump(clean_annotations, input_Json, indent=4)
 
 	def extract(self):
 		for annotation in self.annotations:
@@ -265,6 +276,24 @@ if __name__ == '__main__':
 	annotations_first_page = "data/first_page/annotations.json"
 	annotations_table = "data/table_management/annotations.json"
 	extractor = Extractor(path_to_annotations=annotations_table)
-	table_magistrats = extractor.reconstruct_magistrates_table()
 	extractor.extract()
-	extractor.clean_annotations()
+	extractor.finetune_categories()
+	final_dict = {}
+	table_magistrats = extractor.extract_magistrates_table()
+	print(table_magistrats)
+	for document, annotations in extractor.extracted_annotations.items():
+		print(document)
+		for document_magistrat, magistrats in table_magistrats.items():
+			print(document_magistrat)
+			if document_magistrat == document:
+				print("Merging.")
+				final_dict[document] = {**magistrats, **annotations}
+				print(final_dict[document])
+
+		del final_dict[document]["Magistrats"]
+		del final_dict[document]["Colonne"]
+		del final_dict[document]["Table"]
+		del final_dict[document]["ligne"]
+
+	with open("result/annotations.json", "w") as input_Json:
+		json.dump(final_dict, input_Json, indent=4)
