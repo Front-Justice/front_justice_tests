@@ -20,14 +20,18 @@ import os
 import matplotlib.pyplot as plt
 
 
-class RandomForestImageClassifier():
+class PageClassifier():
 	def __init__(self,
 				 build_vocab=True,
-				 corpus_path=None):
+				 corpus_path=None,
+				 model=None,
+				 vocab=None):
 		if build_vocab:
 			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="data/page_classification/corpus/page_*")
 		self.model_path = None
 		self.corpus_path = corpus_path
+		self.model = joblib.load(model)
+		self.vocab = joblib.load(vocab)
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
@@ -135,23 +139,16 @@ class RandomForestImageClassifier():
 		y_pred = model.predict(X_test)
 		print(classification_report(y_pred, y_test))
 		# https://stackoverflow.com/a/20662980
-		joblib.dump(model, model_path)
+		joblib.dump(self.model, model_path)
 		joblib.dump(self.vocab, vocab_path)
 
 	def predict(self,
-				model_path=None,
-				vocab_path=None,
 				debug_model=False,
-				images=False):
-		model = joblib.load(model_path)
-		vocab = joblib.load(vocab_path)
-		random.shuffle(images)
+				image=False):
 		if debug_model:
-			importances = model.feature_importances_
-
+			importances = self.model.feature_importances_
 			# Trier les caractéristiques par importance
 			indices = importances.argsort()[::-1]
-
 			# Afficher les 20 caractéristiques les plus importantes
 			plt.figure(figsize=(12, 6))
 			plt.title("Top 20 caractéristiques les plus importantes")
@@ -162,29 +159,33 @@ class RandomForestImageClassifier():
 			plt.show()
 			exit(0)
 
-		for image in images:
-			test_image = self.load_image(image_path=image, show_image=False)
-			prediction = model.predict([test_image])
-			out_dir = vocab[prediction[0]]
-			try:
-				os.mkdir(f"data/page_classification/predictions/")
-			except FileExistsError:
-				pass
-			try:
-				os.mkdir(f"data/page_classification/predictions/{out_dir}")
-			except FileExistsError:
-				pass
-			shutil.copyfile(image, f"data/page_classification/predictions/{out_dir}/{image.split('/')[-1]}")
+		test_image = self.load_image(image_path=image, show_image=False)
+		prediction = self.model.predict([test_image])
+		return self.vocab[prediction[0]]
+
 
 	# Predict on the test set results
 
 
 if __name__ == '__main__':
-	classifier = RandomForestImageClassifier(build_vocab=True,
-											 corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/"
-														 "alternative_pipeline/page_classification/data/page_classification/corpus.data")
+	classifier = PageClassifier(build_vocab=True,
+								corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/"
+								"alternative_pipeline/page_classification/data/page_classification/corpus.data",
+								model="models/PageClassifier.joblib",
+								vocab="models/vocab.joblib")
 	if len(sys.argv) > 1:
 		images = glob.glob(f"{sys.argv[1]}*.jpg")
 		assert images != [], "No images found."
 	# classifier.train(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib")
-	classifier.predict(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib", images=images)
+	for image in images:
+		prediction = classifier.predict(images=images)
+		out_dir = classifier.vocab[prediction[0]]
+		try:
+			os.mkdir(f"data/page_classification/predictions/")
+		except FileExistsError:
+			pass
+		try:
+			os.mkdir(f"data/page_classification/predictions/{out_dir}")
+		except FileExistsError:
+			pass
+		shutil.copyfile(image, f"data/page_classification/predictions/{out_dir}/{image.split('/')[-1]}")

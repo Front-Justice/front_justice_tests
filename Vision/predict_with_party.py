@@ -1,0 +1,41 @@
+import PIL
+import party.pred
+import PIL.Image as Image
+import lightning.fabric as Fabric
+import kraken.containers as Containers
+from party.fusion import PartyModel
+
+class PartyPredict:
+	def __init__(self):
+		self.fabric = Fabric.Fabric(accelerator="auto",
+							   devices=16,
+							   precision="bf16-mixed")
+		self.model = PartyModel.from_safetensors(
+			"/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
+		)
+
+	def create_baseline(self, coords, corresponding_image):
+		baseline = Containers.BaselineLine(id='test', baseline=coords, boundary=None)
+		segmentation = Containers.Segmentation(type="baselines",
+											   imagename=corresponding_image,
+											   text_direction="horizontal-lr",
+											   lines=[baseline],
+											   script_detection=False)
+		return segmentation
+
+	def inference(self, segmentation, image):
+		prediction = party.pred.batched_pred(model=self.model, im=image, bounds=segmentation, fabric=self.fabric)
+		line = next(prediction)
+		return line
+
+if __name__ == '__main__':
+	corresponding_image = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/11_J_77-0355.jpg"
+	as_image = PIL.Image.open(corresponding_image)
+	processed_baseline = [[1464, 3386],
+						  [2517, 3396]]
+	predictor = PartyPredict()
+	segmentation = predictor.create_baseline(processed_baseline, corresponding_image)
+	prediction = predictor.inference(segmentation=segmentation, image=as_image)
+	print(prediction)
+
+

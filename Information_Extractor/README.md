@@ -18,6 +18,11 @@ Script qui met en place l'OCR via Party.
 
 ## Améliorations
 
+### Identification des lignes importantes
+
+à l'aide de classification par random forest à nouveau ? Pour éviter d'avoir 
+à toucher le modèle de segmentation.
+
 ### Multiples passages d'OCR
 
 Pour les lignes importantes:
@@ -29,4 +34,6 @@ Pour les lignes importantes:
 
 On peut essayer de comparer les résultats de l'OCR par kraken et par Party. 
 Party est particulièrement lourd et on ne peut pas l'utiliser pour tout traiter, 
-mais on peut comparer les résultats et s'en servir pour faciliter la correction
+mais on peut comparer les résultats et s'en servir pour faciliter la correction.
+
+

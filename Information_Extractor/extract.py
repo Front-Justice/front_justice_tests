@@ -1,3 +1,10 @@
+###############
+
+## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
+
+###############
+
+
 import unicodedata
 
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
@@ -173,6 +180,10 @@ class Extractor:
 		return table_dict
 
 	def finetune_categories(self):
+		"""
+		Cette fonction permet de produire l'extraction de l'information.
+		:return:
+		"""
 		clean_annotations = copy.deepcopy(self.extracted_annotations)
 		# On nettoie ensuite
 		soldat_description_split_regexp = re.compile("([AÀ] l'effet)")
