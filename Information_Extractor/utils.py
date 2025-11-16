@@ -4,9 +4,6 @@ import re
 def load(path):
 	return Image.open(path)
 
-def simplify_coordinate(coords):
-	return [round(item) for item in coords]
-
 def split_after_keep_delimiter(string, delimiter):
 	print("---")
 	print(string)

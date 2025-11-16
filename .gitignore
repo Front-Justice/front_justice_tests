@@ -4,3 +4,4 @@ data/
 *.jpg
 *.joblib
 __pycache__/
+__init__.py
