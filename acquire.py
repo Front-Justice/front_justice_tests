@@ -123,9 +123,9 @@ class Pipeline():
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
 								   ocr_model=self.kraken_ocr_model)
-		# baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
+		baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
 		# utils.pickle_object(baseline, "results/baseline.pickle")
-		baseline = utils.unpickle_object("results/baseline.pickle")
+		# baseline = utils.unpickle_object("results/baseline.pickle")
 		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
 
 
@@ -164,22 +164,21 @@ class Pipeline():
 																			confidence=0.2,
 																			model=self.yolo_models["magistrats"],
 																			show_image=False)
-		current_dict["magistrats"] = magistrats
 
 		# On s'occupe ensuite de la transcription
-		# ocr_prediction = self.transcribe(image=page["image_path"])
+		ocr_prediction = self.transcribe(image=page["image_path"])
 
 		# utils.save_as_dict(ocr_prediction, "results/ocr_prediction.json")
 
-		ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
+		# ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
 
 		# On extrait les noms de magistrats
-		self.extractor.extract_magistrates_table(ocr_prediction,
+		magistrats_extraits = self.extractor.extract_magistrates_table(ocr_prediction,
 												 magistrats,
 												 image=page["image_path"],
 												 show_images=False)
 
-
+		current_dict["magistrats"] = magistrats_extraits
 		return current_dict
 
 	def traitement_p2(self):

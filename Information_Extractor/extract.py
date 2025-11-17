@@ -74,6 +74,7 @@ class Extractor:
 		"""
 		Cette fonction extrait les noms des magistrats et leur statut à parti
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
 		[
 			{
 				'baseline': [[231, 5467], [2329, 5450]],
@@ -85,6 +86,7 @@ class Extractor:
 				'prediction': 'FORMULE N^o 16.'
 			}
 		]
+		'''
 		:param zones_magistrats: une liste de dictionnaires de la forme:
 		[
 			{
@@ -97,18 +99,67 @@ class Extractor:
 				'coordinates': [[209, 2537], [2744, 2682]]
 			}
 		]
-		:param image: 
-		:param show_images: 
-		:return: 
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param show_images: [Debug] afficher l'image
+		:return: Un dictionnaire de la forme:
+			{
+			  "Président": {
+				"extracted": {
+				  "persName": "Delin Lieut^t Cotonel",
+				  "role": " de Gendarmerie Prevot de l'armée Président,",
+				  "certainty": 0.5
+				},
+				"baseline": [
+				[[225, 2137 ], [2631, 2194]],
+				[[2723,2114], [3005, 2114]]
+				],
+				"predictions": [
+				  "Delin Lieut^t Cotonel de Gendarmerie Prevot de l'armée",
+				  "Président,"
+				]
+			  },
+			  "Jurés": [
+				{
+				  "extracted": {
+					"persName": "Barbancey",
+					"role": ", chefde bataillon de l'Etat Hajor de l'armée",
+					"certainty": 1
+				  },
+				  "baseline": [
+					...
+				  ],
+				  "predictions": [
+					"Barbancey, chefde bataillon de l'Etat Hajor de l'armée"
+				  ]
+				},
+				...,
+				{
+				  "extracted": {
+					"persName": "Remy",
+					"role": ", Maréchal des logis, du 6^e Escedron du Train",
+					"certainty": 1
+				  },
+				  "baseline": [
+					...
+				  ],
+				  "predictions": [
+					"Remy, Maréchal des logis, du 6^e Escedron du Train"
+				  ]
+				}
+			  ]
+			}
 		"""
 
 		table_dict = {}
 		column_annotation = self.filter_zones(zones_magistrats, "Colonne")
 		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
 		sorted_lines = utils.vertical_order_zones(lines_annotation)
-		first_column, second_column = utils.horizontal_order_zones(column_annotation)
-		first_column, second_column = first_column["coordinates"], second_column["coordinates"]
-		print(sorted_lines)
+		first_column, _ = utils.horizontal_order_zones(column_annotation)
+		first_column = first_column["coordinates"]
+		first_column_as_rectangle = self.rectangle(first_column[0][0],
+												   first_column[0][1],
+												   first_column[1][0],
+												   first_column[1][1])
 		if show_images:
 			for line in sorted_lines:
 				loaded_image = Image.open(image)
@@ -117,26 +168,16 @@ class Extractor:
 
 
 		# On itère sur les zones identifiées par YOLO
-		for line in sorted_lines:
+		for idx, line in enumerate(sorted_lines):
 			corresponding_box = line["coordinates"]
-			print(corresponding_box)
 			box_as_rectangle = self.rectangle(corresponding_box[0][0],
 											  corresponding_box[0][1],
 											  corresponding_box[1][0],
 											  corresponding_box[1][1])
-			print(first_column)
-			first_column = self.rectangle(first_column[0][0],
-										 first_column[0][1],
-										 first_column[1][0],
-										 first_column[1][1])
-			second_column = self.rectangle(second_column[0][0],
-										 second_column[0][1],
-										 second_column[1][0],
-										 second_column[1][1])
 
 			# On vérifie que la ligne nous intéresse, qu'elle se trouve sur la première colonne
-			overlap_ratio_first_column = utils.check_if_overlap(first_column, box_as_rectangle)
-			if overlap_ratio_first_column < 0.5:
+			overlap_ratio_first_column = utils.check_if_overlap(first_column_as_rectangle, box_as_rectangle)
+			if overlap_ratio_first_column is not None and overlap_ratio_first_column < 0.5:
 				continue
 
 			# On itère sur les lignes identifiées par Kraken
@@ -148,28 +189,43 @@ class Extractor:
 				is_in_box = utils.check_if_line_in_box(box_coord=box_as_rectangle, baseline=converted_baseline)
 
 				# On vérifie que la ligne est bien dans la colonne 1
-				is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column, baseline=converted_baseline)
+				is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column_as_rectangle, baseline=converted_baseline)
 				if is_in_box is True:
 					try:
-						table_dict[document]
+						table_dict[idx].append(
+							{
+								"prediction": prediction,
+								"baseline": baseline
+							 }
+						)
+
 					except KeyError:
-						table_dict[document] = {}
-					try:
-						table_dict[document][idx].append(line["string"])
-					except KeyError:
-						table_dict[document][idx] = [line["string"]]
-		print(len(table_dict))
-		for document, annotations in table_dict.items():
-			president = annotations[0]
-			jures = [annotation for key, annotation in annotations.items() if key != 0]
-			processed_jures = []
-			for jure in jures:
-				jure = utils.process_name(jure, self.nlp)
-				processed_jures.append(jure)
-			processed_president = utils.process_name(president, self.nlp)
-			table_dict[document] = {"Président": processed_president,
-									"Jurés": processed_jures}
-		return table_dict
+						table_dict[idx] = [
+							{
+								"prediction": prediction,
+								"baseline": baseline
+							 }
+						]
+		table_list = [item for item in table_dict.values()]
+
+		# On récupère les informations, en sachant que le premier est toujours le président
+		# TODO: on peut vérifier la présence du mot `président` dans la ligne transcrite
+		president = table_list[0]
+		jures = table_list[1:]
+		processed_jures = []
+
+		# On va itérer jury par jury
+		for jure in jures:
+			extracted_entities = utils.extract_magistrates_names(" ".join(line['prediction'] for line in jure), self.nlp)
+			jury_dict = {"extracted": extracted_entities,
+						 "baseline": [line['baseline'] for line in jure],
+						 "predictions": [line['prediction'] for line in jure]}
+			processed_jures.append(jury_dict)
+		processed_president = utils.extract_magistrates_names(" ".join(line['prediction'] for line in president), self.nlp)
+		return {"Président": {"extracted": processed_president,
+							  "baseline": [line['baseline'] for line in president],
+							  "predictions": [line['prediction'] for line in president]},
+								"Jurés": processed_jures}
 
 	def finetune_categories(self):
 		"""

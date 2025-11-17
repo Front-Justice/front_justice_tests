@@ -59,12 +59,18 @@ def vertical_order_zones(annotations:list[dict]) -> list[dict]:
 	On ordonne par la deuxième coordonnée de la boîte (y1)
 	:param annotations: Les annotations sous la forme d'une liste de dictionnaire:
 	[
-		{'label': 'ligne', 'coordinates': [2713, 2242, 3033, 2857]},
-		{'label': 'ligne', 'coordinates': [213, 2236, 2745, 2404]}
+		{
+			'label': 'ligne',
+			'coordinates': [[2713, 2242], [3033, 2857]]
+		},
+		{
+			'label': 'ligne',
+			'coordinates': [[213, 2236], [2745, 2404]]
+		}
 	]
 	:return: Les mêmes annotations ordonnées
 	"""
-	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][1])
+	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0][1])
 	return sorted_list
 
 def rectanglify(coords):
@@ -76,12 +82,18 @@ def horizontal_order_zones(annotations):
 	On ordonne par la première coordonnée de la boîte (x1)
 	:param annotations: Les annotations sous la forme d'une liste de dictionnaire:
 	[
-		{'label': 'ligne', 'coordinates': [2713, 2242, 3033, 2857]},
-		{'label': 'ligne', 'coordinates': [213, 2236, 2745, 2404]}
+		{
+			'label': 'ligne',
+			'coordinates': [[2713, 2242], [3033, 2857]]
+		},
+		{
+			'label': 'ligne',
+			'coordinates': [[213, 2236], [2745, 2404]]
+		}
 	]
 	:return: Les mêmes annotations ordonnées
 	"""
-	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0])
+	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0][0])
 	return sorted_list
 
 
@@ -96,13 +108,14 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 	else:
 		return None
 
-def process_name(example, pipeline):
+def extract_magistrates_names(example, pipeline, debug=False):
 	if isinstance(example, list):
 		example = " ".join(example)
-	print("---")
-	print(example)
 	result = pipeline(example.lower())
-	print(result)
+	if debug:
+		print("---")
+		print(example)
+		print(result)
 	persName_NER = example[result[0]['start']: result[0]['end']] if result[0]["entity_group"] == "PER" else None
 	role_NER = example[result[0]['end']:] if result[0]["entity_group"] == "PER" else None
 
@@ -127,6 +140,9 @@ def process_name(example, pipeline):
 			"role": role,
 			"certainty": certainty}
 
+
+def rectangle_to_baseline(rectangle):
+	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
 def check_if_line_in_box(box_coord, baseline):
 	"""
