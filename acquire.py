@@ -2,6 +2,8 @@ import os
 import sys
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
+import Vision.KRAKEN as KRAKEN
+import Information_Extractor.extract as extract
 import glob
 import PIL.Image as Image
 
@@ -22,15 +24,24 @@ class Pipeline():
 		self.current_image_idx = 0
 		self.pages_classees = []
 
-		# Modèles
+
+		# Les modèles de zones
 		self.yolo_models = {}
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
 			self.yolo_models[name] = yolo.load(path)
 
+		self.YOLO_Segmenter_P1 = yolo.YOLOSegmenter(models=self.yolo_models)
+
+		# Les modèles d'OCR
+		self.kraken_lines_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_updated.mlmodel"
+		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/ocr_updated_150p.mlmodel"
+		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
+
+		# L'outil d'extraction de l'information
+		self.extractor = extract.Extractor()
 
 	def load_image(self, image):
-		# self.current_image = Image.open(image)
 		self.current_image_path = image
 
 	def classify_image(self):
@@ -47,7 +58,7 @@ class Pipeline():
 		for image in images:
 			dossier, ident = utils.get_name_from_path(image)
 			# On vérifie s'il n'y a pas de problème de disparition d'image
-			result = self.check_image_consistency(ident)
+			self.check_image_consistency(ident)
 			self.images_name_list.append(ident)
 			self.load_image(image)
 			self.classify_image()
@@ -86,15 +97,13 @@ class Pipeline():
 				print("Dossier terminé")
 				self.minutes[current_minute_number] = current_minute
 				break
-			if classe == "page_4" and self.pages_classees[idx + 1][1] == "page_1":
+			if classe in ["page_4", "page_autre"] and self.pages_classees[idx + 1][1] == "page_1":
 				print("Minute terminée")
 				self.minutes[current_minute_number] = current_minute
 				current_minute = []
-			elif classe == "page_4" and self.pages_classees[idx + 1][1] == "page_autre":
-				print("Un document autre est adjoint. On vérifie s'il appartient à la minute en cours")
-			else:
-				print("On continue")
+				current_minute_number += 1
 		print(self.minutes)
+		utils.save_as_dict(self.minutes, "results/minutes.json")
 
 	def check_image_consistency(self, current_image):
 		"""
@@ -110,15 +119,68 @@ class Pipeline():
 				  f"On passe à la minute suivante.")
 			exit(0)
 
-	def traitement_p1(self, page):
+	def transcribe(self, image):
+		loaded_page = Image.open(image)
+		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
+								   ocr_model=self.kraken_ocr_model)
+		# baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
+		# utils.pickle_object(baseline, "results/baseline.pickle")
+		baseline = utils.unpickle_object("results/baseline.pickle")
+		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
+
+
+	def traitement_p_1(self, page):
 		"""
 		Extraction d'information de la première page du procès
-		:return:
+		On extrait d'abord toutes les informations à l'aide d'un modèle généraliste
+		Puis on extrait les magistrats
+		:return: On amende le fichier JSON général.
 		"""
-		print(page)
-		YOLO_Segmenter_P1 = yolo.YOLOSegmenter(model=self.yolo_models["page_1"])
-		YOLO_Segmenter_P1.segment(page["image_path"])
-		exit(0)
+
+		# On segmente la page 1: boxes générales
+		print("---")
+		print(f"Treating {page}")
+		classes_page_1 = ["Description du Soldat",
+						  "Inculpation_antecedents",
+						  "Magistrats",
+						  "MainZone-crimeDate",
+						  "MainZone-judgementNumber",
+						  "MainZone-judgementPlace",
+						  "MainZone-orderNumber",
+						  "Nom du soldat"]
+		current_dict = {}
+		zones_page_1, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
+																			  target_classes=classes_page_1,
+																			  confidence=0.5,
+																			  model=self.yolo_models["page_1"])
+		current_dict["general"] = zones_page_1
+		current_dict["manquantes"] = zones_manquantes
+
+		# On s'occupe de la table des magistrats
+		classes_magistrats = ["ligne",
+							  "Colonne"]
+		magistrats, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
+																			target_classes=classes_magistrats,
+																			confidence=0.2,
+																			model=self.yolo_models["magistrats"],
+																			show_image=False)
+		current_dict["magistrats"] = magistrats
+
+		# On s'occupe ensuite de la transcription
+		# ocr_prediction = self.transcribe(image=page["image_path"])
+
+		# utils.save_as_dict(ocr_prediction, "results/ocr_prediction.json")
+
+		ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
+
+		# On extrait les noms de magistrats
+		self.extractor.extract_magistrates_table(ocr_prediction,
+												 magistrats,
+												 image=page["image_path"],
+												 show_images=False)
+
+
+		return current_dict
 
 	def traitement_p2(self):
 		pass
@@ -140,18 +202,18 @@ class Pipeline():
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if page["classe"] == "page_1":
-					self.traitement_p1(page)
-				elif page["classe"] != "page_autre":
-					self.traitement_p_autre()
+					annotations = self.traitement_p_1(page)
+				page["annotations"] = annotations
 
+		utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
 
 
 def main(images_dir):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	images.sort(key=lambda x:int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	yolo_models = {
-		"page_1": "Vision/segmentation_models/yolov11_page1.pt",
-		"magistrats": "Vision/segmentation_models/yolov11_table_magistrats.pt",
+		"page_1": "Vision/models/yolov11_page_1.pt",
+		"magistrats": "Vision/models/yolov11_table_magistrats.pt",
 	}
 	pipeline = Pipeline(page_classifier_model="Page_Classifier/models/PageClassifier.joblib",
 						page_classifier_vocab="Page_Classifier/models/vocab.joblib",

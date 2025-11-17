@@ -43,27 +43,45 @@ def produce_line_function(baseline):
 	x_1, y_1, x_2, y_2 = baseline
 	a = (y_2 - y_1) / (x_2 - x_1)
 	b = y_1 - a * x_1
-	# print(f"Function: y = {round(a, 2)}*x + {b}")
 	return a, b
 
 def point_in_box(coord, box_coord):
 	x, y = coord
-	min_x, min_y, max_x, max_y = box_coord
-	if min_x <= x <= max_x and min_y <= y <= max_y:
+	if box_coord.xmin <= x <= box_coord.xmax and box_coord.ymin <= y <= box_coord.ymax:
 		return True
 	else:
 		return False
 
 
-def vertical_order_zones(annotations):
-	interm = [(item['bbox'][1], item) for item in annotations]
-	sorted_list = sorted(interm, key=lambda x: x[0])
+def vertical_order_zones(annotations:list[dict]) -> list[dict]:
+	"""
+	Fonction pour ordonner les zones verticalement (du plus haut au plus bas).
+	On ordonne par la deuxième coordonnée de la boîte (y1)
+	:param annotations: Les annotations sous la forme d'une liste de dictionnaire:
+	[
+		{'label': 'ligne', 'coordinates': [2713, 2242, 3033, 2857]},
+		{'label': 'ligne', 'coordinates': [213, 2236, 2745, 2404]}
+	]
+	:return: Les mêmes annotations ordonnées
+	"""
+	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][1])
 	return sorted_list
 
+def rectanglify(coords):
+	return
 
 def horizontal_order_zones(annotations):
-	interm = [(item['bbox'][0], item) for item in annotations]
-	sorted_list = sorted(interm, key=lambda x: x[0])
+	"""
+	Fonction pour ordonner les zones horizontalement (de gauche à droite).
+	On ordonne par la première coordonnée de la boîte (x1)
+	:param annotations: Les annotations sous la forme d'une liste de dictionnaire:
+	[
+		{'label': 'ligne', 'coordinates': [2713, 2242, 3033, 2857]},
+		{'label': 'ligne', 'coordinates': [213, 2236, 2745, 2404]}
+	]
+	:return: Les mêmes annotations ordonnées
+	"""
+	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0])
 	return sorted_list
 
 
@@ -112,14 +130,21 @@ def process_name(example, pipeline):
 
 def check_if_line_in_box(box_coord, baseline):
 	"""
-	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone
+	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone.
+	Présuppose des lignes globalement droites (= représentables par des fonctions affines)
 	:param box_coord: les coordonnées de la zone
 	:param baseline: les points de la ligne
 	:return:
 	"""
+
+	# On identifie la fonction qui représente la droite passant par les 2 points extrêmes de la ligne
 	a, b = produce_line_function(baseline)
+
+	# On regarde la distance horizontale entre ces deux points
 	x_distance = round(baseline[-2] - baseline[0])
 	steps = x_distance // 20
+
+	# On crée 20 points le long de la droite. Si la moitié sont dans la zone, on renvoie True
 	twenty_points = [(item , round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
 	number_in = 0
 	for point in twenty_points:
@@ -129,13 +154,3 @@ def check_if_line_in_box(box_coord, baseline):
 		return True
 	else:
 		return False
-
-def convert_coco_coordinates(coords):
-	"""
-	Cette fonction remplace le format coco (x, y, width, height) par le format
-	(droite, haut, gauche, bas)
-	:param coords: les coordonnées au format coco
-	:return:
-	"""
-	converted = [round(coords[0]), round(coords[1]), round(coords[0] + coords[2]), round(coords[1] + coords[3])]
-	return converted

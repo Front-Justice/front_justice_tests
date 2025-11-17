@@ -10,23 +10,22 @@ import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import json
 import glob
-import lxml.etree as ET
 import re
-import utils as utils
+import Information_Extractor.utils as utils
 import copy
+import PIL.Image as Image
 from collections import namedtuple
 
 
 class Extractor:
 	"""
-	Classe pour extraire les self.extracted_annotations à partir:
+	Classe pour extraire les informations à partir:
 	 	- d'un corpus d'annotations au format COCO
 	 	- d'un corpus de documents XML au format ALTO
 	 	- du même corpus d'images
 	"""
 	
-	def __init__(self,
-				 path_to_annotations: str, ):
+	def __init__(self):
 
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
@@ -39,133 +38,126 @@ class Extractor:
 		# Le format doit être COCO
 
 		self.rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
-		with open(path_to_annotations, "r") as input_Json:
-			self.json_data = json.load(input_Json)
 
-		# On construit le dictionnaire de catégories: {id:label}
-		self.categories = self.json_data["categories"]
-		self.categories_dict = {category['id']: category['name'] for category in self.categories}
-		self.reverse_categories_dict = {value:key for key, value in self.categories_dict.items()}
 
 		# On récupère les images en grande taille
-		self.images_dict = {item['id']: self.conversion_dict[item['file_name'].split("_jpg")[0]] for item in self.json_data["images"]}
-		self.annotations = self.json_data["annotations"]
-		self.xml_dict = {}
 		self.extracted_annotations = {}
 		self.excluded_classes = ["Titre"]
 
 
-		self.build_xml_dict()
-		self.filtered_by_document = {}
-		for annotation in self.annotations:
-			corresp = self.images_dict[annotation["image_id"]]
-			image_id = corresp.replace(".jpg", "").split("/")[-1]
-			corresponding_tree = self.xml_dict[image_id]
-			try:
-				self.filtered_by_document[image_id].append(annotation)
-			except KeyError:
-				self.filtered_by_document[image_id] = [annotation]
 
 
-	def build_xml_dict(self):
-		""" Construit un dictionnaire de la forme:
-			 Dict: {
-			 "basename":
-			 {"tree": lxml.Element,
-			 "lines":
-			 			[
-			 			{"element": lxml.Element,
-			 				"id": id
-			 				"baseline": baseline
-			 				"string": string			}
-			 			},
-			 				etc...		]
-			 }
-		:return:
+	def filter_zones(self, annotations:list[dict], category:str) -> list[dict]:
 		"""
-		for annotation in self.annotations:
-			corresp = self.images_dict[annotation["image_id"]]
-			corresp_xml = corresp.replace(".jpg", ".xml")
-			basename = corresp_xml.split("/")[-1]
-			correct_path = f"data/xml/{basename}"
-			print(correct_path)
-			as_tree = ET.parse(correct_path)
-			all_lines = as_tree.xpath("//alto:TextLine", namespaces=self.alto_namepaces)
-			all_lines_id = as_tree.xpath("//alto:TextLine/@ID", namespaces=self.alto_namepaces)
-			all_lines_baseline = as_tree.xpath("//alto:TextLine/@BASELINE", namespaces=self.alto_namepaces)
-			all_lines_string = as_tree.xpath("//alto:TextLine/alto:String/@CONTENT", namespaces=self.alto_namepaces)
-			assert len(all_lines) == len(all_lines_string) == len(all_lines_baseline) == len(all_lines_id)
-			zipped = list(zip(all_lines, all_lines_id, all_lines_baseline, all_lines_string))
-			lines = [{"element": element, "id": id, "baseline": baseline, "string": string} for
-					 element, id, baseline, string in zipped]
-
-
-			self.xml_dict[basename.replace(".xml", "")] = {"tree": as_tree, "lines": lines}
-
-	def filter_zones(self, annotations, category):
-		corresp_id = self.reverse_categories_dict[category]
-		return [annotation for annotation in annotations if annotation['category_id'] == corresp_id]
+		Fonction permettant de filtrer les zones par catégorie
+		:param annotations: Une liste de dictionnaires de la forme:
+		[
+			{'label': 'Magistrats', 'coordinates': [113, 1362, 3038, 3235]},
+			...,
+			{'label': 'Table', 'coordinates': [195, 2039, 3034, 2863]}
+		]
+		:param category: la catégorie à filtrer
+		:return: La même liste avec la zone ciblée
+		"""
+		return [annotation for annotation in annotations if annotation['label'] == category]
 
 	def horizontal_order_zones(self, annotations):
 		pass
 
 
 
-	def extract_magistrates_table(self):
+	def extract_magistrates_table(self,
+								  ocr_prediction,
+								  zones_magistrats,
+								  image:str=None,
+								  show_images:bool=True):
 		"""
-		Cette fonction reconstruit les tables contenant le nom des magistrats
-		:return:
+		Cette fonction extrait les noms des magistrats et leur statut à parti
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		:param zones_magistrats: une liste de dictionnaires de la forme:
+		[
+			{
+				'label': 'ligne',
+				'coordinates': [[212, 2400], [2735, 2551]]
+			},
+			...,
+			{
+				'label': 'ligne',
+				'coordinates': [[209, 2537], [2744, 2682]]
+			}
+		]
+		:param image: 
+		:param show_images: 
+		:return: 
 		"""
 
-		# Pour chaque document
 		table_dict = {}
-		for document, annotations in self.filtered_by_document.items():
-			print(document)
-			table_annotation = self.filter_zones(annotations, "Table")
-			column_annotation = self.filter_zones(annotations, "Colonne")
-			lines_annotation = self.filter_zones(annotations, "ligne")
-			sorted_lines = utils.vertical_order_zones(lines_annotation)
-			sorted_columns = utils.horizontal_order_zones(column_annotation)
-			first_column = utils.convert_coco_coordinates(sorted_columns[0][1]['bbox'])
-			second_column = utils.convert_coco_coordinates(sorted_columns[1][1]['bbox'])
-			corresponding_tree = self.xml_dict[document]
+		column_annotation = self.filter_zones(zones_magistrats, "Colonne")
+		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
+		sorted_lines = utils.vertical_order_zones(lines_annotation)
+		first_column, second_column = utils.horizontal_order_zones(column_annotation)
+		first_column, second_column = first_column["coordinates"], second_column["coordinates"]
+		print(sorted_lines)
+		if show_images:
+			for line in sorted_lines:
+				loaded_image = Image.open(image)
+				cropped = loaded_image.crop(line["coordinates"])
+				cropped.show()
 
-			# On itère sur les zones identifiées par YOLO
-			for idx, (_, line_zone) in enumerate(sorted_lines):
-				corresponding_box = line_zone["bbox"]
-				converted = utils.convert_coco_coordinates(corresponding_box)
-				box_as_rectangle = self.rectangle(converted[0], converted[1], converted[2], converted[3])
-				first_column = self.rectangle(first_column[0], 
-											 first_column[1], 
-											 first_column[2], 
-											 first_column[3])
-				second_column = self.rectangle(second_column[0], 
-											 second_column[1], 
-											 second_column[2], 
-											 second_column[3])
 
-				# On vérifie que la ligne nous intéresse, qu'elle se trouve sur la première colonne
-				overlap_ratio_first_column = utils.check_if_overlap(first_column, box_as_rectangle)
-				if overlap_ratio_first_column < 0.5:
-					continue
-				# On itère sur les lignes identifiées par Kraken
-				for line in corresponding_tree["lines"]:
-					baseline = [int(item) for item in line["baseline"].split(" ")]
-					# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
-					converted_baseline = [baseline[0], baseline[1], baseline[-2], baseline[-1]]
-					is_in_box = utils.check_if_line_in_box(box_coord=converted, baseline=converted_baseline)
+		# On itère sur les zones identifiées par YOLO
+		for line in sorted_lines:
+			corresponding_box = line["coordinates"]
+			print(corresponding_box)
+			box_as_rectangle = self.rectangle(corresponding_box[0][0],
+											  corresponding_box[0][1],
+											  corresponding_box[1][0],
+											  corresponding_box[1][1])
+			print(first_column)
+			first_column = self.rectangle(first_column[0][0],
+										 first_column[0][1],
+										 first_column[1][0],
+										 first_column[1][1])
+			second_column = self.rectangle(second_column[0][0],
+										 second_column[0][1],
+										 second_column[1][0],
+										 second_column[1][1])
 
-					# On vérifie que la ligne est bien dans la colonne 1
-					is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column, baseline=converted_baseline)
-					if is_in_box is True:
-						try:
-							table_dict[document]
-						except KeyError:
-							table_dict[document] = {}
-						try:
-							table_dict[document][idx].append(line["string"])
-						except KeyError:
-							table_dict[document][idx] = [line["string"]]
+			# On vérifie que la ligne nous intéresse, qu'elle se trouve sur la première colonne
+			overlap_ratio_first_column = utils.check_if_overlap(first_column, box_as_rectangle)
+			if overlap_ratio_first_column < 0.5:
+				continue
+
+			# On itère sur les lignes identifiées par Kraken
+			for predicted_line in ocr_prediction:
+				prediction = predicted_line["prediction"]
+				baseline = predicted_line["baseline"]
+				# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
+				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+				is_in_box = utils.check_if_line_in_box(box_coord=box_as_rectangle, baseline=converted_baseline)
+
+				# On vérifie que la ligne est bien dans la colonne 1
+				is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column, baseline=converted_baseline)
+				if is_in_box is True:
+					try:
+						table_dict[document]
+					except KeyError:
+						table_dict[document] = {}
+					try:
+						table_dict[document][idx].append(line["string"])
+					except KeyError:
+						table_dict[document][idx] = [line["string"]]
 		print(len(table_dict))
 		for document, annotations in table_dict.items():
 			president = annotations[0]

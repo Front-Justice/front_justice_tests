@@ -17,73 +17,68 @@ def load(model_path):
 
 
 class YOLOSegmenter():
-	def __init__(self, model):
-		self.model = model
+	def __init__(self, models):
+		self.model_page_1 = models["page_1"]
+		self.model_table_magistrats = models["magistrats"]
 
-	def segment(self, image:str) -> list[dict[str, list[int]]]:
+
+	def segment_zones(self,
+					  image:str,
+					  target_classes:list,
+					  confidence=0.5,
+					  model=None,
+					  show_image=False) -> tuple[list[dict], list[str]]:
 		"""
 		La segmentation d'une image à l'aide de plusieurs modèles YOLO, adaptés au type de page.
-		:param image: le chemin vers l'image
-		:return:
+		:param image: Le chemin vers l'image
+		:param target_classes: Les classes qu'il faut trouver dans l'image
+		:param confidence: Le seuil de confiance minimal
+		:param model: Le modèle de segmentation
+		:param show_image: Option pour faire apparaître l'image
+		:return: Un tuple (liste[dictionnaire], classes manquantes)
 		"""
 
+
 		# Run batched inference on a list of images
-		results = self.model([image])  # return a list of Results objects
-
+		results = model([image], conf=confidence, verbose=False)[0]  # return a list of Results objects
+		if show_image:
+			results.show()
+		check_list = []
 		# Les résultats de l'analyse sur la page 1
-		results_dict = []
-		for result in results:
-			print("---")
-			classes_dict = self.model.names
-			print(classes_dict)
-			boxes = result.boxes  # Boxes object for bounding box outputs
-			classes = [round(item) for item in boxes.cls.tolist()]
-			as_labels = [classes_dict[obj] for obj in classes]
-			coordinates = boxes.xyxy.tolist()
-			for label, coordinate in zip(as_labels, coordinates):
-				results_dict.append({"label": label,
-									 "coordinates": utils.simplify_coordinate(coordinate)})
-				if label == "Nom du soldat":
-					correct_coord = utils.simplify_coordinate(coordinate)
-					correct_coord = [[correct_coord[0], correct_coord[1]],
-									 [correct_coord[2], correct_coord[3]]]
-					as_image = Image.open(image)
-					as_image.show()
-					predictor = PARTY.PartyPredict()
-					print(correct_coord)
-					segmentation = predictor.create_baseline(correct_coord, corresponding_image=image)
-					prediction = predictor.inference(segmentation=segmentation, image=as_image)
-					print(prediction)
-					exit(0)
-			print(f"Classes: {classes}")
-			print(f"As labels: {as_labels}")
-			print(f"xyxy: {coordinates}")
+		results_list = []
+		classes_dict = model.names
+		boxes = results.boxes  # Boxes object for bounding box outputs
+		classes = [round(item) for item in boxes.cls.tolist()]
+		as_labels = [classes_dict[obj] for obj in classes]
+		coordinates = boxes.xyxy.tolist()
+		for label, coordinate in list(zip(as_labels, coordinates)):
+			results_list.append({"label": label,
+								 "coordinates": utils.format_coordinates(coordinate)})
+			check_list.append(label)
 
-		page_class = 1
-		# Si on est page 1, on applique le modèle sur les tables
-		if page_class == 1:
-			# On applique le deuxième modèle, d'identification des tables de magistrat
-			yolo_model_table = "../segmentation_models/yolov11_table_magistrats.pt"
-			# Load a model
-			model = YOLO(yolo_model_table)  # pretrained YOLO11n model
+		missing = utils.check_if_missing(target_classes, check_list)
+		if len(missing) > 0:
+			print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
+		else:
+			missing = None
+		return results_list, missing
 
-			results_magistrates = model([image])  # return a list of Results objects
-			for result in results_magistrates:
-				print("---")
-				classes_dict = model.names
-				print(classes_dict)
-				boxes = result.boxes  # Boxes object for bounding box outputs
-				classes = [round(item) for item in boxes.cls.tolist()]
-				as_labels = [classes_dict[obj] for obj in classes]
-				coordinates = boxes.xyxy.tolist()
-				print(f"Classes: {classes}")
-				print(f"As labels: {as_labels}")
-				print(f"xyxy: {coordinates}")
+	def process_nom_soldat(self, image, coordinate):
+		correct_coord = utils.format_coordinates(coordinate)
+		correct_coord = [[correct_coord[0], correct_coord[1]],
+						 [correct_coord[2], correct_coord[3]]]
+		as_image = Image.open(image)
+		print(correct_coord)
+		predictor = PARTY.PartyPredict()
+		segmentation = predictor.create_baseline(correct_coord, corresponding_image=image)
+		prediction = predictor.inference(segmentation=segmentation, image=as_image)
+		print(prediction)
+
 
 if __name__ == '__main__':
 	image = "data/test_data/11_J_31(1)-0011.jpg"
 	im = Image.open(image)
 	# segments = segment_lines_with_kraken(im)
 	segments = None
-	YOLO = YOLOSegmenter()
-	YOLO.segment(segments)
+	yol = YOLOSegmenter()
+	yol.segment(segments)
