@@ -3,6 +3,7 @@ import sys
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
+import Vision.PARTY as PARTY
 import Information_Extractor.extract as extract
 import glob
 import PIL.Image as Image
@@ -40,6 +41,8 @@ class Pipeline():
 
 		# L'outil d'extraction de l'information
 		self.extractor = extract.Extractor()
+
+		self.party = PARTY.PartyPredict()
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -124,8 +127,6 @@ class Pipeline():
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
 								   ocr_model=self.kraken_ocr_model)
 		baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
-		# utils.pickle_object(baseline, "results/baseline.pickle")
-		# baseline = utils.unpickle_object("results/baseline.pickle")
 		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
 
 
@@ -140,6 +141,12 @@ class Pipeline():
 		# On segmente la page 1: boxes générales
 		print("---")
 		print(f"Treating {page}")
+		# On s'occupe d'abord de la transcription des lignes
+		ocr_prediction = self.transcribe(image=page["image_path"])
+		# utils.save_as_dict(ocr_prediction, "results/ocr_prediction.json")
+		# ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
+
+		# Puis ont travaille sur les zones
 		classes_page_1 = ["Description du Soldat",
 						  "Inculpation_antecedents",
 						  "Magistrats",
@@ -165,12 +172,7 @@ class Pipeline():
 																			model=self.yolo_models["magistrats"],
 																			show_image=False)
 
-		# On s'occupe ensuite de la transcription
-		ocr_prediction = self.transcribe(image=page["image_path"])
 
-		# utils.save_as_dict(ocr_prediction, "results/ocr_prediction.json")
-
-		# ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
 
 		# On extrait les noms de magistrats
 		magistrats_extraits = self.extractor.extract_magistrates_table(ocr_prediction,
@@ -179,6 +181,14 @@ class Pipeline():
 												 show_images=False)
 
 		current_dict["magistrats"] = magistrats_extraits
+
+
+		nom_du_soldat = self.extractor.extract_nom_du_soldat(ocr_prediction=ocr_prediction,
+															 annotations=zones_page_1,
+															 image=page["image_path"],
+															 show_images=False,
+															 party_engine=self.party)
+		current_dict["Nom du soldat"] = nom_du_soldat
 		return current_dict
 
 	def traitement_p2(self):
@@ -202,9 +212,9 @@ class Pipeline():
 			for page in pages:
 				if page["classe"] == "page_1":
 					annotations = self.traitement_p_1(page)
-				page["annotations"] = annotations
-
-		utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
+					page["annotations"] = annotations
+				utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
+		exit(0)
 
 
 def main(images_dir):

@@ -30,10 +30,10 @@ class PartyPredict:
 
 if __name__ == '__main__':
 	corresponding_image = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/11_J_77-0355.jpg"
-	as_image = PIL.Image.open(corresponding_image)
 	processed_baseline = [[1464, 3386],
 						  [2517, 3396]]
 	predictor = PartyPredict()
+	as_image = PIL.Image.open(corresponding_image)
 	segmentation = predictor.create_baseline(processed_baseline, corresponding_image)
 	prediction = predictor.inference(segmentation=segmentation, image=as_image)
 	print(prediction)

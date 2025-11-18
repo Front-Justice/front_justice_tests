@@ -47,5 +47,6 @@ class KRAKEN():
 			interm_dict = {}
 			interm_dict['baseline'] = line.baseline
 			interm_dict['prediction'] = record.prediction
+			interm_dict['cuts'] = record.cuts
 			prediction.append(interm_dict)
 		return prediction

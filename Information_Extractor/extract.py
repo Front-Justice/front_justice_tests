@@ -6,7 +6,7 @@
 
 
 import unicodedata
-
+from shapely.geometry import Polygon
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import json
 import glob
@@ -63,6 +63,131 @@ class Extractor:
 
 	def horizontal_order_zones(self, annotations):
 		pass
+
+	def extract_nom_du_soldat(self,
+								  ocr_prediction:list[dict],
+								  annotations:list[dict],
+							  	  party_engine,
+								  image:str=None,
+								  show_images:bool=False):
+		"""
+		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param zones_nom: une liste de dictionnaires de la forme:
+		[
+			{
+				'label': 'Nom du soldat',
+				'coordinates': [[212, 2400], [2735, 2551]]
+			}
+		]
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param show_images: [Debug] afficher l'image
+		:return: Un dictionnaire de la forme:
+			{
+				"extracted": {
+				  "surname": "Delin",
+				  "forename": "",
+				  "certainty": 0.5
+				},
+				"baseline": [
+				[[225, 2137 ], [2631, 2194]],
+				[[2723,2114], [3005, 2114]]
+				],
+				"prediction": [
+				  "",
+				]
+			  }
+		"""
+
+		# On récupère la boîte correspondante
+		nom_du_soldat = self.filter_zones(annotations, "Nom du soldat")
+
+		# On teste s'il y a plusieurs soldats
+		assert len(nom_du_soldat) == 1, "Jugement de plusieurs soldats. À implémenter"
+
+
+		# On va commencer par identifier le nom prédit par kraken
+		soldat_zone = nom_du_soldat[0]['coordinates']
+		soldat_zone_as_rectangle = self.rectangle(soldat_zone[0][0],
+												  soldat_zone[0][1],
+												  soldat_zone[1][0],
+												  soldat_zone[1][1])
+
+		# On cherche la ligne qui entre dans la zone du nom du soldat
+		corresponding_lines = []
+		for idx, line in enumerate(ocr_prediction):
+			baseline = line['baseline']
+			converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+			is_in_box = utils.check_if_line_in_box(box_coord=soldat_zone_as_rectangle,
+												   baseline=converted_baseline,
+												   intersect_ratio=0.1)
+			if is_in_box is True:
+				corresponding_lines.append(line)
+
+		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
+		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
+		distances = []
+		if len(corresponding_lines) > 1:
+			for idx, ligne in enumerate(corresponding_lines):
+				prediction = ligne['prediction']
+				# On identifie la ligne pouvant contenir à l'effet de juger
+				dist = utils.similarite_ratcliff(prediction, "A l'effet de juger")
+				distances.append(dist)
+		correct_line_index = distances.index(max(distances))
+		name_line = corresponding_lines[correct_line_index]
+
+		# On a la ligne correspondante. Maintenant, on va identifier les caractères
+		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
+		# en polygones, pour ensuite vérifier les intersections entre la boîte et les intersections
+		nom_du_soldat_kraken = utils.extract_string_from_cuts(box=soldat_zone, line=name_line).strip()
+		print(name_line['prediction'])
+		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
+																	   nom_du_soldat_kraken,
+																	   pipeline=self.nlp)
+
+		if show_images:
+			as_image = Image.open(image)
+			cropped = as_image.crop((soldat_zone[0][0],
+									 soldat_zone[0][1],
+									 soldat_zone[1][0],
+									 soldat_zone[1][1]))
+			cropped.show()
+
+		# On prédit à l'aide de party la baseline qui se trouve à l'intérieur de la boite
+		party_segmentation = party_engine.create_baseline(soldat_zone, image)
+		party_prediction = party_engine.inference(segmentation=party_segmentation, image=as_image)
+		nom_soldat_party = party_prediction.prediction
+
+		# on produit le dictionnaire
+		extracted = {}
+		extracted["forename"] = {"value": prenoms,
+								 "certainty": certitude_prenoms}
+		if nom_du_soldat_kraken == nom_soldat_party:
+			extracted["surname"] = {"value": nom_soldat_party,
+									"certainty": 1}
+		else:
+			extracted["surname"] = {"value": nom_soldat_party if nom_soldat_party != "+" else nom_du_soldat_kraken,
+									"certainty": 0.5,
+									"predictions": {"kraken": nom_du_soldat_kraken,
+													"party": nom_soldat_party}
+									}
+
+		return {"baseline": soldat_zone,
+				"extracted": extracted}
 
 
 
