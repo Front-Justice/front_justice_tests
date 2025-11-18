@@ -33,7 +33,7 @@ def split_after_keep_delimiter(string, delimiter):
 	print(len(out_split))
 	return out_split
 
-def split_before_keep_delimiter(string, delimiter):
+def split_before_keep_delimiter(string:str, delimiter:re.Pattern):
 	out_split = []
 	results = re.finditer(delimiter, string)
 	delimiters = [0]

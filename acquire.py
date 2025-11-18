@@ -123,7 +123,7 @@ class Pipeline():
 				  f"On passe à la minute suivante.")
 			exit(0)
 
-	def transcribe(self, image):
+	def transcription_kraken(self, image):
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
 								   ocr_model=self.kraken_ocr_model)
@@ -149,7 +149,7 @@ class Pipeline():
 		target_transcription = f"results/ocr_prediction_{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription):
 			print("Segmentation/Transcription with kraken")
-			self.current_page_transcription = self.transcribe(image=page["image_path"])
+			self.current_page_transcription = self.transcription_kraken(image=page["image_path"])
 			utils.save_as_dict(self.current_page_transcription, target_transcription)
 		else:
 			print("Found existing kraken transcription")
@@ -175,12 +175,14 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
-		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(ocr_prediction=self.current_page_transcription,
+		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(ocr_prediction=self.current_page_transcription,
 																			  annotations=zones_page_1,
 																			  image=page["image_path"],
 																			  show_images=False,
 																			  loaded_image=loaded_image,
 																			  party_engine=self.party)
+
+
 
 
 		# On s'occupe de la table des magistrats
@@ -203,6 +205,14 @@ class Pipeline():
 
 		# On extrait le numéro d'ordre
 		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(ocr_prediction=self.current_page_transcription,
+																			  annotations=zones_page_1,
+																			  image=page["image_path"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  party_engine=self.party)
+
+		# On extrait le numéro de jugement
+		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(ocr_prediction=self.current_page_transcription,
 																			  annotations=zones_page_1,
 																			  image=page["image_path"],
 																			  show_images=False,

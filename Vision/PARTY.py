@@ -21,18 +21,25 @@ class PartyPredict:
 		:param corresponding_image: le nom de l'image
 		:return:
 		"""
-		baseline = Containers.BaselineLine(id='test', baseline=coords, boundary=None)
+		# En général, on ne transcrira qu'une ligne avec Party, mais dans certains cas on a besoin de plusieurs lignes
+		if len(coords) != 1:
+			baseline = [Containers.BaselineLine(id='test', baseline=coord, boundary=None) for coord in coords]
+		else:
+			baseline = [Containers.BaselineLine(id='test', baseline=coords, boundary=None)]
 		segmentation = Containers.Segmentation(type="baselines",
 											   imagename=corresponding_image,
 											   text_direction="horizontal-lr",
-											   lines=[baseline],
+											   lines=baseline,
 											   script_detection=False)
 		return segmentation
 
 	def inference(self, segmentation, image):
 		prediction = party.pred.batched_pred(model=self.model, im=image, bounds=segmentation, fabric=self.fabric)
-		line = next(prediction)
-		return line
+		lines = list(prediction)
+		if len(lines) != 1:
+			return lines
+		else:
+			return lines[0]
 
 if __name__ == '__main__':
 	corresponding_image = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/11_J_77-0355.jpg"
