@@ -20,6 +20,7 @@ class Pipeline():
 												 vocab=page_classifier_vocab)
 		self.current_image = None
 		self.current_image_path = None
+		self.current_page_transcription = None
 		self.minutes = {}
 		self.images_name_list = []
 		self.current_image_idx = 0
@@ -142,11 +143,20 @@ class Pipeline():
 		print("---")
 		print(f"Treating {page}")
 		# On s'occupe d'abord de la transcription des lignes
-		ocr_prediction = self.transcribe(image=page["image_path"])
-		# utils.save_as_dict(ocr_prediction, "results/ocr_prediction.json")
-		# ocr_prediction = utils.load_json_to_dict("results/ocr_prediction.json")
 
-		# Puis ont travaille sur les zones
+		# TODO: à supprimer, éventuellement, utile pour le debug. On vérifie si le fichier n'existe pas
+		# Il faut re-lancer les prédictions en cas de nouveau modèle d'HTR/Segmentation
+		target_transcription = f"results/ocr_prediction_{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
+		if not os.path.isfile(target_transcription):
+			print("Segmentation/Transcription with kraken")
+			self.current_page_transcription = self.transcribe(image=page["image_path"])
+			utils.save_as_dict(self.current_page_transcription, target_transcription)
+		else:
+			print("Found existing kraken transcription")
+			self.current_page_transcription = utils.load_json_to_dict(target_transcription)
+		# Puis ont travaille sur les zones qu'on extrait entièrement
+
+		# La liste qui suit permet de vérifier si une zone est manquante.
 		classes_page_1 = ["Description du Soldat",
 						  "Inculpation_antecedents",
 						  "Magistrats",
@@ -156,17 +166,27 @@ class Pipeline():
 						  "MainZone-orderNumber",
 						  "Nom du soldat"]
 		current_dict = {}
+		loaded_image = Image.open(page["image_path"])
 		zones_page_1, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
 																			  target_classes=classes_page_1,
 																			  confidence=0.5,
-																			  model=self.yolo_models["page_1"])
+																			  model=self.yolo_models["page_1"],
+																			  show_image=False)
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
+
+		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(ocr_prediction=self.current_page_transcription,
+																			  annotations=zones_page_1,
+																			  image=page["image_path"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  party_engine=self.party)
+
 
 		# On s'occupe de la table des magistrats
 		classes_magistrats = ["ligne",
 							  "Colonne"]
-		magistrats, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
+		magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
 																			target_classes=classes_magistrats,
 																			confidence=0.2,
 																			model=self.yolo_models["magistrats"],
@@ -175,20 +195,29 @@ class Pipeline():
 
 
 		# On extrait les noms de magistrats
-		magistrats_extraits = self.extractor.extract_magistrates_table(ocr_prediction,
-												 magistrats,
-												 image=page["image_path"],
-												 show_images=False)
-
-		current_dict["magistrats"] = magistrats_extraits
+		current_dict["magistrats"] = self.extractor.extraire_table_magistrats(ocr_prediction=self.current_page_transcription,
+																			  zones_magistrats=magistrats,
+																			  image=page["image_path"],
+																			  show_images=False)
 
 
-		nom_du_soldat = self.extractor.extract_nom_du_soldat(ocr_prediction=ocr_prediction,
-															 annotations=zones_page_1,
-															 image=page["image_path"],
-															 show_images=False,
-															 party_engine=self.party)
-		current_dict["Nom du soldat"] = nom_du_soldat
+		# On extrait le numéro d'ordre
+		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(ocr_prediction=self.current_page_transcription,
+																			  annotations=zones_page_1,
+																			  image=page["image_path"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  party_engine=self.party)
+
+		# Puis le nom et prénom du soldat
+		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(ocr_prediction=self.current_page_transcription,
+																		   annotations=zones_page_1,
+																		   image=page["image_path"],
+																		   show_images=False,
+																		   loaded_image=loaded_image,
+																		   party_engine=self.party)
+
+
 		return current_dict
 
 	def traitement_p2(self):

@@ -3,6 +3,10 @@ import re
 from Levenshtein import distance
 from difflib import SequenceMatcher
 from shapely.geometry import Polygon
+from collections import namedtuple
+import time
+from yaspin import yaspin
+
 
 def load(path):
 	return Image.open(path)
@@ -55,6 +59,30 @@ def point_in_box(coord, box_coord):
 	else:
 		return False
 
+# class Line:
+# 	def __init__(self, line):
+# 		self.baseline = line['baseline']
+# 		self.prediction = line['prediction']
+# 		self.cuts = line['cuts']
+#
+# class OCRannotation:
+# 	def __init__(self, annotation):
+# 		self.annotation = []
+# 		for line in annotation:
+# 			self.line = Line(annotation)
+# 			self.annotation.append(self.baseline,
+# 								   self.prediction,
+# 								   self.cuts)
+
+def vertical_order_lines(lines: list[dict]) -> list[dict]:
+	"""
+	Cette fonction trie les lignes de façon verticale (de haut en bas). Elle suppose un filtre
+	préalable des lignes au sein des zones pour être efficace
+	:param lines: la liste de dictionnaires (baseline, prediction, cuts)
+	:return: la liste ordonnée
+	"""
+	sorted_list = sorted(lines, key=lambda x: x["baseline"][0][1])
+	return sorted_list
 
 def vertical_order_zones(annotations:list[dict]) -> list[dict]:
 	"""
@@ -111,6 +139,15 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 	else:
 		return None
 
+def measured_party_inference(party_engine, segmentation, image, objet_transcrit):
+	with yaspin(text=f"Transcription de {objet_transcrit}") as sp:
+		start = time.time()
+		prediction = party_engine.inference(segmentation=segmentation, image=image)
+		end = time.time()
+	print(f"Transcription de {objet_transcrit} faite en {end - start} secondes")
+	return prediction
+
+
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	"""
 	Cette fonction utilise un NER pour extraire le prénom du soldat
@@ -120,11 +157,11 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	:param debug:
 	:return:
 	"""
-	result = pipeline(prediction)
-	words = [entity['word'] for entity in result]
+	result = pipeline(prediction.lower())
+	words = [prediction[entity['start']:entity['end']] for entity in result]
 	try:
 		# Si on a un nom, on prend l'entité qui le contient,
-		correct_entity = next(entity for entity in words if nom_du_soldat in entity)
+		correct_entity = next(entity for entity in words if nom_du_soldat.lower() in entity.lower())
 		forename = correct_entity.replace(nom_du_soldat, '').strip()
 		certainty = 0.8
 	except StopIteration:
@@ -135,6 +172,28 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	return forename, certainty
 
 	print(result)
+
+
+def match_lines_in_zones(ocr_prediction:list[dict], zone_as_rectangle:namedtuple, intersect_ratio=0.5):
+	"""
+	Cette fonction identifie toutes les lignes qui traversent une boîte
+	:param ocr_prediction: un objet de classe OCRPrediction. les lignes comme une liste de dictionnaires (baseline, prediction, cuts)
+	:param zone_as_rectangle: la boîte
+	:param intersect_ratio: la proportion minimale de la ligne comprise dans la boîte
+	:return: une liste avec les lignes filtrées
+	"""
+	corresponding_lines = []
+	for idx, line in enumerate(ocr_prediction):
+		baseline = line['baseline']
+
+		# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
+		converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+		is_in_box = check_if_line_in_box(box_coord=zone_as_rectangle,
+											   baseline=converted_baseline,
+											   intersect_ratio=intersect_ratio)
+		if is_in_box is True:
+			corresponding_lines.append(line)
+	return corresponding_lines
 
 def extract_magistrates_names(prediction, pipeline, debug=False):
 	if isinstance(prediction, list):

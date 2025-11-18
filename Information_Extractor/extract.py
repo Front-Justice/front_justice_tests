@@ -4,17 +4,18 @@
 
 ###############
 
-
+import time
+from yaspin import yaspin
 import unicodedata
-from shapely.geometry import Polygon
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
-import json
 import glob
 import re
 import Information_Extractor.utils as utils
 import copy
 import PIL.Image as Image
+import PIL
 from collections import namedtuple
+
 
 
 class Extractor:
@@ -61,15 +62,251 @@ class Extractor:
 		"""
 		return [annotation for annotation in annotations if annotation['label'] == category]
 
-	def horizontal_order_zones(self, annotations):
-		pass
+	def extraire_numero_jugement(self,
+							  ocr_prediction: list[dict],
+							  annotations: list[dict],
+							  party_engine,
+							  image: str = None,
+							  loaded_image: PIL.Image.Image = None,
+							  show_images: bool = True):
+		"""
+		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param party_engine: le moteur de transcription party
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+		  "Numéro": "501",
+		  "baseline": [
+			[2611, 555],
+			[3203, 555]
+		  ],
+		  "bbox": [
+			[2553, 178],
+			[3249, 634]
+		  ],
+		  "confidence": 0.8,
+		  "predictions": {
+			"party": "N^o 501 D'ORDRE.",
+			"kraken": "N^o 501 D'ORDRE."
+		  }
+		},
+		"""
 
-	def extract_nom_du_soldat(self,
-								  ocr_prediction:list[dict],
-								  annotations:list[dict],
-							  	  party_engine,
-								  image:str=None,
-								  show_images:bool=False):
+		# On récupère la boîte correspondante
+		numero_jugement = self.filter_zones(annotations, "MainZone-judgementNumber")
+
+		if len(numero_jugement) == 0:
+			return None
+
+		# On teste s'il y a plusieurs soldats
+		assert len(numero_jugement) == 1, "Erreur: plusieurs zones détectées"
+
+		# On va commencer par identifier le nom prédit par kraken
+		numero_jugement_zone = numero_jugement[0]['coordinates']
+		numero_jugement_as_rectangle = self.rectangle(numero_jugement_zone[0][0],
+												   numero_jugement_zone[0][1],
+												   numero_jugement_zone[1][0],
+												   numero_jugement_zone[1][1])
+
+		if show_images:
+			cropped = loaded_image.crop((numero_jugement_zone[0][0],
+										 numero_jugement_zone[0][1],
+										 numero_jugement_zone[1][0],
+										 numero_jugement_zone[1][1]))
+			cropped.show()
+
+		# On cherche la ligne qui entre dans la zone du nom du soldat
+		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
+														 zone_as_rectangle=numero_jugement_as_rectangle,
+														 intersect_ratio=0.7)
+		corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
+
+		target_line = []
+		for line in corresponding_lines:
+			prediction = line['prediction']
+			# On va chercher une ligne avec un nombre uniquement ici
+			expression_jugement = re.compile("\d+")
+			is_jugement = re.match(expression_jugement, prediction)
+			if is_jugement:
+				target_line.append(line)
+
+		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro de jugement."
+
+		# On transcrit avec party
+		party_segmentation = party_engine.create_baseline(target_line[0]['baseline'], image)
+		party_prediction = utils.measured_party_inference(party_engine=party_engine,
+														  segmentation=party_segmentation,
+														  image=loaded_image,
+														  objet_transcrit="numéro de jugement")
+		numero_jugement_party = party_prediction.prediction
+		target_line = target_line[0]
+		numero_jugement_kraken = target_line['prediction']
+
+
+		if numero_jugement_party == numero_jugement_kraken:
+			confidence = 0.8
+			target_number = numero_jugement_kraken
+		else:
+			confidence = 0.5
+			target_number = numero_jugement_party
+
+		return {"Numéro": target_number,
+				"baseline": target_line['baseline'],
+				"bbox": numero_jugement_zone,
+				"confidence": confidence,
+				"predictions": {"party": numero_jugement_party,
+								"kraken": numero_jugement_kraken}}
+
+
+
+
+	def extraire_numero_ordre(self,
+							  ocr_prediction:list[dict],
+							  annotations:list[dict],
+							  party_engine,
+							  image:str=None,
+							  loaded_image:PIL.Image.Image=None,
+							  show_images:bool=True):
+		"""
+		Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param party_engine: le moteur de transcription party
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+          "Numéro": "501",
+          "baseline": [
+            [2611, 555],
+            [3203, 555]
+          ],
+          "bbox": [
+            [2553, 178],
+            [3249, 634]
+          ],
+          "confidence": 0.8,
+          "predictions": {
+            "party": "N^o 501 D'ORDRE.",
+            "kraken": "N^o 501 D'ORDRE."
+          }
+        },
+		"""
+
+		# On récupère la boîte correspondante
+		numero_ordre = self.filter_zones(annotations, "MainZone-orderNumber")
+
+		if len(numero_ordre) == 0:
+			return None
+
+		# On teste s'il y a plusieurs soldats
+		assert len(numero_ordre) == 1, "Erreur: plusieurs zones détectées"
+
+
+		# On va commencer par identifier le nom prédit par kraken
+		numero_ordre_zone = numero_ordre[0]['coordinates']
+		numero_ordre_as_rectangle = self.rectangle(numero_ordre_zone[0][0],
+												  numero_ordre_zone[0][1],
+												  numero_ordre_zone[1][0],
+												  numero_ordre_zone[1][1])
+
+
+		if show_images:
+			cropped = loaded_image.crop((numero_ordre_zone[0][0],
+									 numero_ordre_zone[0][1],
+									 numero_ordre_zone[1][0],
+									 numero_ordre_zone[1][1]))
+			cropped.show()
+
+		# On cherche la ligne qui entre dans la zone du nom du soldat
+		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
+														 zone_as_rectangle=numero_ordre_as_rectangle,
+														 intersect_ratio=0.7)
+		corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
+
+		target_line = []
+		for line in corresponding_lines:
+			prediction = line['prediction']
+			similarity = utils.similarite_ratcliff(prediction, "D'ORDRE.")
+
+			# On condidère une valeur de similarité de 0.5, à modifier par l'expérience
+			if similarity > .5:
+				target_line.append(line)
+
+		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro d'ordre."
+
+
+
+		# On transcrit avec party
+		party_segmentation = party_engine.create_baseline(target_line[0]['baseline'], image)
+		party_prediction = utils.measured_party_inference(party_engine=party_engine,
+														  segmentation=party_segmentation,
+														  image=loaded_image,
+														  objet_transcrit="numéro d'ordre")
+		numero_ordre_party = party_prediction.prediction
+
+
+		target_line = target_line[0]
+
+		numero_regexp = re.compile("\d+")
+		target_number_kraken = re.search(numero_regexp, target_line['prediction']).group()
+		target_number_party = re.search(numero_regexp, numero_ordre_party).group()
+
+		if target_number_party == target_number_kraken:
+			confidence = 0.8
+			target_number = target_number_kraken
+		else:
+			confidence = 0.5
+			target_number = target_number_party
+
+
+		return {"Numéro": target_number,
+				"baseline": target_line['baseline'],
+				"bbox": numero_ordre_zone,
+				"confidence": confidence,
+				"predictions": {"party": numero_ordre_party,
+								"kraken": target_line['prediction']}}
+
+
+
+	def extraire_nom_soldat(self,
+							ocr_prediction:list[dict],
+							annotations:list[dict],
+							party_engine,
+							image:str=None,
+							loaded_image:PIL.Image.Image=None,
+							show_images:bool=False):
 		"""
 		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -103,7 +340,7 @@ class Extractor:
 				  "forename": "",
 				  "certainty": 0.5
 				},
-				"baseline": [
+				"bbox": [
 				[[225, 2137 ], [2631, 2194]],
 				[[2723,2114], [3005, 2114]]
 				],
@@ -128,15 +365,10 @@ class Extractor:
 												  soldat_zone[1][1])
 
 		# On cherche la ligne qui entre dans la zone du nom du soldat
-		corresponding_lines = []
-		for idx, line in enumerate(ocr_prediction):
-			baseline = line['baseline']
-			converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
-			is_in_box = utils.check_if_line_in_box(box_coord=soldat_zone_as_rectangle,
-												   baseline=converted_baseline,
-												   intersect_ratio=0.1)
-			if is_in_box is True:
-				corresponding_lines.append(line)
+
+		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
+														 zone_as_rectangle=soldat_zone_as_rectangle,
+														 intersect_ratio=0.1)
 
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
@@ -154,14 +386,12 @@ class Extractor:
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
 		# en polygones, pour ensuite vérifier les intersections entre la boîte et les intersections
 		nom_du_soldat_kraken = utils.extract_string_from_cuts(box=soldat_zone, line=name_line).strip()
-		print(name_line['prediction'])
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
 																	   nom_du_soldat_kraken,
 																	   pipeline=self.nlp)
 
 		if show_images:
-			as_image = Image.open(image)
-			cropped = as_image.crop((soldat_zone[0][0],
+			cropped = loaded_image.crop((soldat_zone[0][0],
 									 soldat_zone[0][1],
 									 soldat_zone[1][0],
 									 soldat_zone[1][1]))
@@ -169,7 +399,11 @@ class Extractor:
 
 		# On prédit à l'aide de party la baseline qui se trouve à l'intérieur de la boite
 		party_segmentation = party_engine.create_baseline(soldat_zone, image)
-		party_prediction = party_engine.inference(segmentation=party_segmentation, image=as_image)
+		party_prediction = utils.measured_party_inference(party_engine=party_engine,
+														  segmentation=party_segmentation,
+														  image=loaded_image,
+														  objet_transcrit="nom du soldat")
+
 		nom_soldat_party = party_prediction.prediction
 
 		# on produit le dictionnaire
@@ -186,12 +420,12 @@ class Extractor:
 													"party": nom_soldat_party}
 									}
 
-		return {"baseline": soldat_zone,
+		return {"bbox": soldat_zone,
 				"extracted": extracted}
 
 
 
-	def extract_magistrates_table(self,
+	def extraire_table_magistrats(self,
 								  ocr_prediction,
 								  zones_magistrats,
 								  image:str=None,
@@ -415,69 +649,9 @@ class Extractor:
 						del clean_annotations[document][category]
 
 
-	def extract(self):
-		for annotation in self.annotations:
-			corresp = self.images_dict[annotation["image_id"]]
-			image_id = corresp.replace(".jpg", "").split("/")[-1]
-			corresponding_tree = self.xml_dict[image_id]
-
-			corresponding_category = self.categories_dict[annotation["category_id"]]
-			# print(f"Corresponding image: {corresp}")
-			# print(f"Corresponding category: {corresponding_category}")
-			corresponding_box = annotation["bbox"]
-			converted = utils.convert_coco_coordinates(corresponding_box)
-			for line in corresponding_tree["lines"]:
-				baseline = [int(item) for item in line["baseline"].split(" ")]
-				# Dans les cas où il y aurait plus de 2 points
-				converted_baseline = [baseline[0], baseline[1], baseline[-2], baseline[-1]]
-				is_in_box = utils.check_if_line_in_box(box_coord=converted, baseline=converted_baseline)
-				if is_in_box is True:
-					try:
-						self.extracted_annotations[image_id]
-					except KeyError:
-						self.extracted_annotations[image_id] = {}
-					try:
-						self.extracted_annotations[image_id][corresponding_category]
-					except KeyError:
-						self.extracted_annotations[image_id] = {**self.extracted_annotations[image_id], **{corresponding_category: []}}
-					try:
-						self.extracted_annotations[image_id][corresponding_category].append(line["string"])
-					except KeyError:
-						self.extracted_annotations[image_id][corresponding_category] = [line["string"]]
-				# print([round(item) for item in corresponding_box])
-				# cropped = loaded_image.crop(converted)
-				# cropped.show()
-				# exit(0)
 
 
 
 
 
 
-
-
-if __name__ == '__main__':
-	annotations_first_page = "data/first_page/annotations.json"
-	annotations_table = "data/table_management/annotations.json"
-	extractor = Extractor(path_to_annotations=annotations_table)
-	extractor.extract()
-	extractor.finetune_categories()
-	final_dict = {}
-	table_magistrats = extractor.extract_magistrates_table()
-	print(table_magistrats)
-	for document, annotations in extractor.extracted_annotations.items():
-		print(document)
-		for document_magistrat, magistrats in table_magistrats.items():
-			print(document_magistrat)
-			if document_magistrat == document:
-				print("Merging.")
-				final_dict[document] = {**magistrats, **annotations}
-				print(final_dict[document])
-
-		del final_dict[document]["Magistrats"]
-		del final_dict[document]["Colonne"]
-		del final_dict[document]["Table"]
-		del final_dict[document]["ligne"]
-
-	with open("result/annotations.json", "w") as input_Json:
-		json.dump(final_dict, input_Json, indent=4)

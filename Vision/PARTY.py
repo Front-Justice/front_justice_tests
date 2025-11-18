@@ -14,7 +14,13 @@ class PartyPredict:
 			"/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 		)
 
-	def create_baseline(self, coords, corresponding_image):
+	def create_baseline(self, coords, corresponding_image:str) -> Containers.Segmentation:
+		"""
+		Crée un objet kraken Segmentation à partir des coordonnées de la baseline.
+		:param coords: les coordonnées
+		:param corresponding_image: le nom de l'image
+		:return:
+		"""
 		baseline = Containers.BaselineLine(id='test', baseline=coords, boundary=None)
 		segmentation = Containers.Segmentation(type="baselines",
 											   imagename=corresponding_image,
