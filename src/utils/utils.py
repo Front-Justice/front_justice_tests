@@ -11,7 +11,6 @@ from shapely.geometry import Polygon
 from collections import namedtuple
 import time
 from yaspin import yaspin
-from party.fusion import PartyModel
 
 
 def load(path):
@@ -168,21 +167,9 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 		return None
 
 
-def measured_party_inference(party_engine:party.fusion.PartyModel, segmentation, image, objet_transcrit):
-	"""
-	Prédit avec party, en utilisant le spinner yaspin, et en calculant le temps d'inférence.
-	:param party_engine:
-	:param segmentation:
-	:param image:
-	:param objet_transcrit:
-	:return:
-	"""
-	with yaspin(text=f"Transcription de {objet_transcrit} avec Party") as sp:
-		start = time.time()
-		prediction = party_engine.inference(segmentation=segmentation, image=image)
-		end = time.time()
-	print(f"Transcription de {objet_transcrit} faite en {end - start} secondes")
-	return prediction
+def clean_forename(name):
+	name = name.replace(",", "").strip()
+	return name
 
 
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
@@ -194,21 +181,22 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	:param debug:
 	:return:
 	"""
-	result = pipeline(prediction.lower())
+	# On nettoie pour faciliter le NER
+	result = pipeline(prediction.lower().replace(",", " "))
 	words = [prediction[entity['start']:entity['end']] for entity in result]
 	try:
 		# Si on a un nom, on prend l'entité qui le contient,
 		correct_entity = next(entity for entity in words if nom_du_soldat.lower() in entity.lower())
-		forename = correct_entity.replace(nom_du_soldat, '').strip()
+		forename = correct_entity.split(nom_du_soldat)[1].strip()
 		certainty = 0.8
 	except StopIteration:
 		# Si le nom est mal reconnu, on considère que l'entité nommée est la première de la ligne
 		correct_entity = words[0]
 		forename = correct_entity
 		certainty = 0.5
+	forename = clean_forename(forename)
 	return forename, certainty
 
-	print(result)
 
 
 def match_lines_in_zones(ocr_prediction:list[dict], zone_as_rectangle:namedtuple, intersect_ratio=0.5):
@@ -355,7 +343,8 @@ def unpickle_object(path):
 
 def save_as_dict(dictionnary, path):
 	with open(path, 'w') as f:
-		json.dump(dictionnary, f)
+		# https://stackoverflow.com/a/36142844 default permet de gérer la sérialisation des objets bizarres (dates...)
+		json.dump(dictionnary, f, indent=2, default=str)
 
 
 def list_depth(lst:list) -> int:

@@ -15,6 +15,8 @@ import copy
 import PIL.Image as Image
 import PIL
 from collections import namedtuple
+import dateparser
+import src.Vision.PARTY as PARTY
 
 
 class Extractor:
@@ -25,7 +27,12 @@ class Extractor:
 	 	- du même corpus d'images
 	"""
 
-	def __init__(self):
+	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor:int=1):
+		"""
+		Constructeur de la classe Extractor
+		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
+		:param resize_factor: le facteur de redimension des images (accélère l'ocr)
+		"""
 
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
@@ -36,7 +43,8 @@ class Extractor:
 		self.conversion_dict = {item.replace("(", "-").replace(")", "").split("/")[-1].replace(".jpg", ""): item for
 								item in
 								self.target_corpus}
-		# Le format doit être COCO
+		self.resize_factor: int = resize_factor
+		self.party = party_engine
 
 		self.rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
 
@@ -70,7 +78,7 @@ class Extractor:
 		:param annotations: L'ensemble des zones prédites
 		:param target_zone: Le nom de la zone à récupérer
 		:param show_images: Montrer l'image?
-		:param loaded_image: L'image chargée par PIL
+		:param loaded_image: L'image chargée par PIL (debug)
 		:param ocr_prediction: La liste de lignes transcrites (baseline, prediction, cuts)
 		:param intersect_ratio: La proportion d'intersection minimale pour considérer la ligne dans la zone ciblée
 		:return: La liste des lignes concernées par la zone
@@ -91,23 +99,23 @@ class Extractor:
 													 coordonnees_zones_filtrees[1][1])
 
 		if show_images:
-			cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0],
-										 coordonnees_zones_filtrees[0][1],
-										 coordonnees_zones_filtrees[1][0],
-										 coordonnees_zones_filtrees[1][1]))
+			# On doit adapter les dimensions à la taille de l'image chargée qui a été redimensionnée
+			cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0] * self.resize_factor,
+										 coordonnees_zones_filtrees[0][1] * self.resize_factor,
+										 coordonnees_zones_filtrees[1][0] * self.resize_factor,
+										 coordonnees_zones_filtrees[1][1] * self.resize_factor))
 			cropped.show()
 
 		# On cherche la ligne qui entre dans la zone du nom du soldat
 		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
 														 zone_as_rectangle=zones_filtrees_as_rectangle,
-														 intersect_ratio=0.7)
+														 intersect_ratio=intersect_ratio)
 		corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
 		return corresponding_lines, coordonnees_zones_filtrees
 
 	def extraire_lieu_jugement(self,
 							   ocr_prediction: list[dict],
 							   annotations: list[dict],
-							   party_engine,
 							   image: str = None,
 							   loaded_image: PIL.Image.Image = None,
 							   show_images: bool = True):
@@ -150,46 +158,59 @@ class Extractor:
 		  }
 		},
 		"""
-		corresponding_lines, numero_jugement_zone = self.extraction_ligne(annotations=annotations,
-																		  target_zone="MainZone-judgementPlace",
-																		  show_images=show_images,
-																		  loaded_image=loaded_image,
-																		  ocr_prediction=ocr_prediction,
-																		  intersect_ratio=0.7)
+		corresponding_lines, lieu_jugement_zone = self.extraction_ligne(annotations=annotations,
+																		target_zone="MainZone-judgementPlace",
+																		show_images=show_images,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=0.7)
 
 		kraken_prediction = " ".join([line['prediction'] for line in corresponding_lines]).strip()
 		corresponding_baselines = [line['baseline'] for line in corresponding_lines]
 		# On transcrit avec party
-		party_segmentation = party_engine.create_baseline(corresponding_baselines, image)
-		party_prediction = utils.measured_party_inference(party_engine=party_engine,
-														  segmentation=party_segmentation,
-														  image=loaded_image,
-														  objet_transcrit="lieu du jugement")
+		party_segmentation = self.party.create_baseline(corresponding_baselines, image)
+		party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
+															   image=loaded_image,
+															   objet_transcrit="lieu du jugement")
 		party_prediction = " ".join([item.prediction for item in party_prediction]).strip()
 
 		chaine_seant = "s[ée]ant à|s[ée]ant aux"
 		chaine_permanent = "⟦?permanent⟧? du|⟦?permanent⟧? de la"
 
-		avant_seant_kraken = utils.split_before_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[0]
+		avant_seant_kraken = utils.split_before_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[
+			0]
 		institution_kraken = \
-		utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
+			utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
 		lieu_kraken = utils.split_after_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[1]
 
 		avant_seant_party = utils.split_before_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[0]
-		institution_party = \
-		utils.split_after_keep_delimiter(avant_seant_party, delimiter=chaine_permanent)[1]
-		lieu_party = utils.split_after_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[1]
+		try:
+			institution_party = \
+				utils.split_after_keep_delimiter(avant_seant_party, delimiter=chaine_permanent)[1]
+		except IndexError:
+			institution_party = ""
+		try:
+			lieu_party = utils.split_after_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[1]
+		except IndexError:
+			lieu_party = ""
 
 		if party_prediction == kraken_prediction:
 			certitude = 1
 		else:
 			certitude = 0.5
-		institution = institution_party
-		lieu = lieu_party
+		if institution_party != "":
+			institution = institution_party
+		else:
+			institution = institution_kraken
+		if lieu_party != "":
+			lieu = lieu_party
+		else:
+			lieu = lieu_kraken
 
 		return {"institution": institution,
 				"siège": lieu,
-				"bbox": numero_jugement_zone,
+				"bbox": lieu_jugement_zone,
+				"baseline": corresponding_baselines,
 				"certitude": certitude,
 				"predictions": {"party": party_prediction,
 								"kraken": kraken_prediction}}
@@ -197,14 +218,12 @@ class Extractor:
 	def extraire_numero_jugement(self,
 								 ocr_prediction: list[dict],
 								 annotations: list[dict],
-								 party_engine,
 								 image: str = None,
 								 loaded_image: PIL.Image.Image = None,
 								 show_images: bool = True):
 		"""
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param party_engine: le moteur de transcription party
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
 		'''
 		[
@@ -240,35 +259,12 @@ class Extractor:
 		  }
 		},
 		"""
-
-		# On récupère la boîte correspondante
-		numero_jugement = self.filter_zones(annotations, "MainZone-judgementNumber")
-
-		if len(numero_jugement) == 0:
-			return None
-
-		# On teste s'il y a plusieurs soldats
-		assert len(numero_jugement) == 1, "Erreur: plusieurs zones détectées"
-
-		# On va commencer par identifier le nom prédit par kraken
-		numero_jugement_zone = numero_jugement[0]['coordinates']
-		numero_jugement_as_rectangle = self.rectangle(numero_jugement_zone[0][0],
-													  numero_jugement_zone[0][1],
-													  numero_jugement_zone[1][0],
-													  numero_jugement_zone[1][1])
-
-		if show_images:
-			cropped = loaded_image.crop((numero_jugement_zone[0][0],
-										 numero_jugement_zone[0][1],
-										 numero_jugement_zone[1][0],
-										 numero_jugement_zone[1][1]))
-			cropped.show()
-
-		# On cherche la ligne qui entre dans la zone du nom du soldat
-		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
-														 zone_as_rectangle=numero_jugement_as_rectangle,
-														 intersect_ratio=0.7)
-		corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
+		corresponding_lines, numero_jugement_zone = self.extraction_ligne(annotations=annotations,
+																		  target_zone="MainZone-judgementNumber",
+																		  show_images=show_images,
+																		  loaded_image=loaded_image,
+																		  ocr_prediction=ocr_prediction,
+																		  intersect_ratio=0.7)
 
 		target_line = []
 		for line in corresponding_lines:
@@ -282,11 +278,10 @@ class Extractor:
 		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro de jugement."
 
 		# On transcrit avec party
-		party_segmentation = party_engine.create_baseline(target_line[0]['baseline'], image)
-		party_prediction = utils.measured_party_inference(party_engine=party_engine,
-														  segmentation=party_segmentation,
-														  image=loaded_image,
-														  objet_transcrit="numéro de jugement")
+		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+		party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
+															   image=loaded_image,
+															   objet_transcrit="numéro de jugement")
 		numero_jugement_party = party_prediction.prediction
 		target_line = target_line[0]
 		numero_jugement_kraken = target_line['prediction']
@@ -305,17 +300,99 @@ class Extractor:
 				"predictions": {"party": numero_jugement_party,
 								"kraken": numero_jugement_kraken}}
 
+	def extraire_date_crime(self,
+							ocr_prediction: list[dict],
+							annotations: list[dict],
+							image: str = None,
+							loaded_image: PIL.Image.Image = None,
+							show_images: bool = True):
+		"""
+		Cette fonction extrait la date du crime à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+		  "Date": "501",
+		  "baseline": [
+			[2611, 555],
+			[3203, 555]
+		  ],
+		  "bbox": [
+			[2553, 178],
+			[3249, 634]
+		  ],
+		  "certitude": 0.8,
+		  "predictions": {
+			"party": "N^o 501 D'ORDRE.",
+			"kraken": "N^o 501 D'ORDRE."
+		  }
+		},
+		"""
+
+		# On récupère les lignes concernées par les zones
+		corresponding_lines, date_zone = self.extraction_ligne(annotations=annotations,
+															   target_zone="MainZone-crimeDate",
+															   show_images=show_images,
+															   loaded_image=loaded_image,
+															   ocr_prediction=ocr_prediction,
+															   intersect_ratio=0.7)
+
+		if len(corresponding_lines) == 2:
+			date_line = corresponding_lines[1]
+		target_line = [corresponding_lines[1]]
+
+		# On transcrit avec party
+		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+		party_prediction = self.party.measured_party_inference(
+			segmentation=party_segmentation,
+			image=loaded_image,
+			objet_transcrit="date du crime")
+		date_crime_party = party_prediction.prediction
+		target_line = target_line[0]
+		date_crime_kraken = target_line['prediction']
+
+		if date_crime_party == date_crime_kraken:
+			certitude = 0.8
+			target_date = date_crime_kraken
+		else:
+			certitude = 0.5
+			target_date = date_crime_party
+
+		normalized_date = dateparser.parse(target_date)
+
+		return {"Date": normalized_date,
+				"Date normalisée": date_crime_party,
+				"baseline": target_line['baseline'],
+				"bbox": date_zone,
+				"certitude": certitude,
+				"predictions": {"party": date_crime_party,
+								"kraken": date_crime_kraken}}
+
 	def extraire_numero_ordre(self,
 							  ocr_prediction: list[dict],
 							  annotations: list[dict],
-							  party_engine,
 							  image: str = None,
 							  loaded_image: PIL.Image.Image = None,
 							  show_images: bool = True):
 		"""
 		Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param party_engine: le moteur de transcription party
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
 		'''
 		[
@@ -351,35 +428,12 @@ class Extractor:
           }
         },
 		"""
-
-		# On récupère la boîte correspondante
-		numero_ordre = self.filter_zones(annotations, "MainZone-orderNumber")
-
-		if len(numero_ordre) == 0:
-			return None
-
-		# On teste s'il y a plusieurs soldats
-		assert len(numero_ordre) == 1, "Erreur: plusieurs zones détectées"
-
-		# On va commencer par identifier le nom prédit par kraken
-		numero_ordre_zone = numero_ordre[0]['coordinates']
-		numero_ordre_as_rectangle = self.rectangle(numero_ordre_zone[0][0],
-												   numero_ordre_zone[0][1],
-												   numero_ordre_zone[1][0],
-												   numero_ordre_zone[1][1])
-
-		if show_images:
-			cropped = loaded_image.crop((numero_ordre_zone[0][0],
-										 numero_ordre_zone[0][1],
-										 numero_ordre_zone[1][0],
-										 numero_ordre_zone[1][1]))
-			cropped.show()
-
-		# On cherche la ligne qui entre dans la zone du nom du soldat
-		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
-														 zone_as_rectangle=numero_ordre_as_rectangle,
-														 intersect_ratio=0.7)
-		corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
+		corresponding_lines, numero_ordre_zone = self.extraction_ligne(annotations=annotations,
+																	   target_zone="MainZone-orderNumber",
+																	   show_images=show_images,
+																	   loaded_image=loaded_image,
+																	   ocr_prediction=ocr_prediction,
+																	   intersect_ratio=0.7)
 
 		target_line = []
 		for line in corresponding_lines:
@@ -390,14 +444,15 @@ class Extractor:
 			if similarity > .5:
 				target_line.append(line)
 
-		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro d'ordre."
+		assert len(target_line) == 1, (f"Erreur. Plusieurs lignes trouvées pour le numéro d'ordre:\n"
+									   f"{target_line}")
 
 		# On transcrit avec party
-		party_segmentation = party_engine.create_baseline(target_line[0]['baseline'], image)
-		party_prediction = utils.measured_party_inference(party_engine=party_engine,
-														  segmentation=party_segmentation,
-														  image=loaded_image,
-														  objet_transcrit="numéro d'ordre")
+		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+		party_prediction = self.party.measured_party_inference(
+			segmentation=party_segmentation,
+			image=loaded_image,
+			objet_transcrit="numéro d'ordre")
 		numero_ordre_party = party_prediction.prediction
 
 		target_line = target_line[0]
@@ -420,10 +475,101 @@ class Extractor:
 				"predictions": {"party": numero_ordre_party,
 								"kraken": target_line['prediction']}}
 
+		def extraire_date_crime(self,
+								ocr_prediction: list[dict],
+								annotations: list[dict],
+								party_engine,
+								image: str = None,
+								loaded_image: PIL.Image.Image = None,
+								show_images: bool = True):
+			"""
+			Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
+			On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+			:param party_engine: le moteur de transcription party
+			:param ocr_prediction: Une liste de dictionnaires de la forme:
+			'''
+			[
+				{
+					'baseline': [[231, 5467], [2329, 5450]],
+					'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+				},
+				...,
+				{
+					'baseline': [[241, 5612], [731, 5619]],
+					'prediction': 'FORMULE N^o 16.'
+				}
+			]
+			'''
+			:param image: [Debug] le chemin vers l'image à afficher
+			:param loaded_image: l'image chargée (objet PIL.Image.Image)
+			:param show_images: [Debug] afficher l'image?
+			:return: Un dictionnaire de la forme:
+				{
+	          "Numéro": "501",
+	          "baseline": [
+	            [2611, 555],
+	            [3203, 555]
+	          ],
+	          "bbox": [
+	            [2553, 178],
+	            [3249, 634]
+	          ],
+	          "certitude": 0.8,
+	          "predictions": {
+	            "party": "N^o 501 D'ORDRE.",
+	            "kraken": "N^o 501 D'ORDRE."
+	          }
+	        },
+			"""
+			corresponding_lines, numero_ordre_zone = self.extraction_ligne(annotations=annotations,
+																		   target_zone="MainZone-judgementNumber",
+																		   show_images=show_images,
+																		   loaded_image=loaded_image,
+																		   ocr_prediction=ocr_prediction,
+																		   intersect_ratio=0.7)
+
+			target_line = []
+			for line in corresponding_lines:
+				prediction = line['prediction']
+				similarity = utils.similarite_ratcliff(prediction, "D'ORDRE.")
+
+				# On condidère une valeur de similarité de 0.5, à modifier par l'expérience
+				if similarity > .5:
+					target_line.append(line)
+
+			assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro d'ordre."
+
+			# On transcrit avec party
+			party_segmentation = party_engine.create_baseline([target_line[0]['baseline']], image)
+			party_prediction = self.party.measured_party_inference(party_engine=party_engine,
+																   segmentation=party_segmentation,
+																   image=loaded_image,
+																   objet_transcrit="numéro d'ordre")
+			numero_ordre_party = party_prediction.prediction
+
+			target_line = target_line[0]
+
+			numero_regexp = re.compile("\d+")
+			target_number_kraken = re.search(numero_regexp, target_line['prediction']).group()
+			target_number_party = re.search(numero_regexp, numero_ordre_party).group()
+
+			if target_number_party == target_number_kraken:
+				certitude = 0.8
+				target_number = target_number_kraken
+			else:
+				certitude = 0.5
+				target_number = target_number_party
+
+			return {"Numéro": target_number,
+					"baseline": target_line['baseline'],
+					"bbox": numero_ordre_zone,
+					"certitude": certitude,
+					"predictions": {"party": numero_ordre_party,
+									"kraken": target_line['prediction']}}
+
 	def extraire_nom_soldat(self,
 							ocr_prediction: list[dict],
 							annotations: list[dict],
-							party_engine,
 							image: str = None,
 							loaded_image: PIL.Image.Image = None,
 							show_images: bool = False):
@@ -469,25 +615,12 @@ class Extractor:
 				]
 			  }
 		"""
-
-		# On récupère la boîte correspondante
-		nom_du_soldat = self.filter_zones(annotations, "Nom du soldat")
-
-		# On teste s'il y a plusieurs soldats
-		assert len(nom_du_soldat) == 1, "Jugement de plusieurs soldats. À implémenter"
-
-		# On va commencer par identifier le nom prédit par kraken
-		soldat_zone = nom_du_soldat[0]['coordinates']
-		soldat_zone_as_rectangle = self.rectangle(soldat_zone[0][0],
-												  soldat_zone[0][1],
-												  soldat_zone[1][0],
-												  soldat_zone[1][1])
-
-		# On cherche la ligne qui entre dans la zone du nom du soldat
-
-		corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
-														 zone_as_rectangle=soldat_zone_as_rectangle,
-														 intersect_ratio=0.1)
+		corresponding_lines, soldat_zone = self.extraction_ligne(annotations=annotations,
+																 target_zone="Nom du soldat",
+																 show_images=show_images,
+																 loaded_image=loaded_image,
+																 ocr_prediction=ocr_prediction,
+																 intersect_ratio=0.1)
 
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
@@ -505,23 +638,39 @@ class Extractor:
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
 		# en polygones, pour ensuite vérifier les intersections entre la boîte et les intersections
 		nom_du_soldat_kraken = utils.extract_string_from_cuts(box=soldat_zone, line=name_line).strip()
+
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
 																	   nom_du_soldat_kraken,
 																	   pipeline=self.nlp)
-
 		if show_images:
-			cropped = loaded_image.crop((soldat_zone[0][0],
-										 soldat_zone[0][1],
-										 soldat_zone[1][0],
-										 soldat_zone[1][1]))
+			cropped = loaded_image.crop(
+				(soldat_zone[0][0] * self.resize_factor,
+				 soldat_zone[0][1] * self.resize_factor,
+				 soldat_zone[1][0] * self.resize_factor,
+				 soldat_zone[1][1] * self.resize_factor)
+			)
 			cropped.show()
 
-		# On prédit à l'aide de party la baseline qui se trouve à l'intérieur de la boite
-		party_segmentation = party_engine.create_baseline(soldat_zone, image)
-		party_prediction = utils.measured_party_inference(party_engine=party_engine,
-														  segmentation=party_segmentation,
-														  image=loaded_image,
-														  objet_transcrit="nom du soldat")
+		# On prédit à l'aide de party la section de baseline qui correspond à la boite identifiée par Yolo
+		baseline_soldat = name_line['baseline']
+
+		# On prend le premier et le dernier point de la ligne
+		# TODO: on peut améliorer cela en prenant les points qui encadrent les abcisses de la boîte
+		baseline_soldat = [baseline_soldat[0], baseline_soldat[-1]]
+		print(baseline_soldat)
+		(x1_soldat, _), (x2_soldat, _) = soldat_zone
+		(_, y1), (_, y2) = baseline_soldat
+		baseline_soldat_coupee = [
+			[round(x1_soldat / self.resize_factor), round(y1 / self.resize_factor)],
+			[round(x2_soldat / self.resize_factor), round(y2 / self.resize_factor)]
+		]
+		print(image)
+		exit(0)
+		party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
+		party_prediction = self.party.measured_party_inference(
+			segmentation=party_segmentation,
+			image=loaded_image,
+			objet_transcrit="nom du soldat")
 
 		nom_soldat_party = party_prediction.prediction
 

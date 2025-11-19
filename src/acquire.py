@@ -10,6 +10,7 @@ import PIL.Image as Image
 
 import Vision.yolo as yolo
 
+
 class Pipeline():
 	def __init__(self,
 				 page_classifier_model,
@@ -26,7 +27,6 @@ class Pipeline():
 		self.current_image_idx = 0
 		self.pages_classees = []
 
-
 		# Les modèles de zones
 		self.yolo_models = {}
 		for name, path in yolo_models.items():
@@ -41,16 +41,14 @@ class Pipeline():
 		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 
 		# L'outil d'extraction de l'information
-		self.extractor = extract.Extractor()
-
-		self.party = PARTY.PartyPredict()
+		self.resize_factor = 3
+		self.extractor = extract.Extractor(party_engine=PARTY.PartyPredict(), resize_factor=self.resize_factor)
 
 	def load_image(self, image):
 		self.current_image_path = image
 
 	def classify_image(self):
 		self.current_page_type = self.page_classifier.predict(image=self.current_image_path)
-
 
 	def classification_images(self, images):
 		"""
@@ -130,10 +128,10 @@ class Pipeline():
 		baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
 		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
 
-
 	def traitement_p_1(self, page):
 		"""
-		Extraction d'information de la première page du procès
+		Extraction d'information de la première page du procès. On propose une approche modulaire: une méthode par type
+		d'information recherchée
 		On extrait d'abord toutes les informations à l'aide d'un modèle généraliste
 		Puis on extrait les magistrats
 		:return: On amende le fichier JSON général.
@@ -167,6 +165,9 @@ class Pipeline():
 						  "Nom du soldat"]
 		current_dict = {}
 		loaded_image = Image.open(page["image_path"])
+		width, height = loaded_image.size
+		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
+		loaded_image = loaded_image.resize(new_size)
 		zones_page_1, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
 																			  target_classes=classes_page_1,
 																			  confidence=0.5,
@@ -175,60 +176,61 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
+		# On extrait le nom et prénom du soldat
+		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
-
-		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(ocr_prediction=self.current_page_transcription,
-																			  annotations=zones_page_1,
-																			  image=page["image_path"],
-																			  show_images=False,
-																			  loaded_image=loaded_image,
-																			  party_engine=self.party)
-
+		# On extrait la date du crime
+		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
 		# On extrait le numéro d'ordre
-		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(ocr_prediction=self.current_page_transcription,
-																			  annotations=zones_page_1,
-																			  image=page["image_path"],
-																			  show_images=False,
-																			  loaded_image=loaded_image,
-																			  party_engine=self.party)
+		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
+
+		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
 		# On s'occupe de la table des magistrats
 		classes_magistrats = ["ligne",
 							  "Colonne"]
 		magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
-																			target_classes=classes_magistrats,
-																			confidence=0.2,
-																			model=self.yolo_models["magistrats"],
-																			show_image=False)
-
-
+															 target_classes=classes_magistrats,
+															 confidence=0.2,
+															 model=self.yolo_models["magistrats"],
+															 show_image=False)
 
 		# On extrait les noms de magistrats
-		current_dict["magistrats"] = self.extractor.extraire_table_magistrats(ocr_prediction=self.current_page_transcription,
-																			  zones_magistrats=magistrats,
-																			  image=page["image_path"],
-																			  show_images=False)
-
-
+		current_dict["magistrats"] = self.extractor.extraire_table_magistrats(
+			ocr_prediction=self.current_page_transcription,
+			zones_magistrats=magistrats,
+			image=page["image_path"],
+			show_images=False)
 
 		# On extrait le numéro de jugement
-		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(ocr_prediction=self.current_page_transcription,
-																			  annotations=zones_page_1,
-																			  image=page["image_path"],
-																			  show_images=False,
-																			  loaded_image=loaded_image,
-																			  party_engine=self.party)
-
-		# Puis le nom et prénom du soldat
-		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(ocr_prediction=self.current_page_transcription,
-																		   annotations=zones_page_1,
-																		   image=page["image_path"],
-																		   show_images=False,
-																		   loaded_image=loaded_image,
-																		   party_engine=self.party)
-
+		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
 		return current_dict
 
@@ -244,7 +246,6 @@ class Pipeline():
 	def traitement_p_autre(self):
 		pass
 
-
 	def workflow(self, images):
 		self.classification_images(images)
 		self.regroupement_minutes()
@@ -258,9 +259,11 @@ class Pipeline():
 		exit(0)
 
 
-def main(images_dir):
+def main(images_dir, target):
 	images = glob.glob(f"{images_dir}/*.jpg")
-	images.sort(key=lambda x:int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
+	if target:
+		images = [item for item in images if item == target]
+	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov11_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -270,6 +273,11 @@ def main(images_dir):
 						yolo_models=yolo_models)
 	pipeline.workflow(images)
 
+
 if __name__ == '__main__':
 	images_dir = sys.argv[1]
-	main(images_dir)
+	if len(sys.argv) > 2:
+		target = sys.argv[2]
+	else:
+		target = None
+	main(images_dir, target)

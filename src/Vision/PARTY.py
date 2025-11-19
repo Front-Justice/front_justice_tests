@@ -5,6 +5,8 @@ import lightning.fabric as Fabric
 import kraken.containers as Containers
 from party.fusion import PartyModel
 import src.utils.utils as utils
+from yaspin import yaspin
+import time
 
 class PartyPredict:
 	def __init__(self):
@@ -23,10 +25,12 @@ class PartyPredict:
 		:return:
 		"""
 		# En général, on ne transcrira qu'une ligne avec Party, mais dans certains cas on a besoin de plusieurs lignes
-		if len(coords) != 1:
-			baseline = [Containers.BaselineLine(id='test', baseline=coord, boundary=None) for coord in coords]
-		else:
-			baseline = [Containers.BaselineLine(id='test', baseline=coords, boundary=None)]
+		# On va donc vérifier la profondeur des coordonnées: si elle est de 2, on a une seule ligne. En cas de plusieurs
+		# lignes elle sera de 3.
+		profondeur = utils.list_depth(coords)
+		assert profondeur == 3, ("Les coordonnées doivent être encapsulées dans une liste même en cas de ligne unique:\n"
+								 "[[[2611, 555], [3203, 555]]]")
+		baseline = [Containers.BaselineLine(id='test', baseline=coord, boundary=None) for coord in coords]
 		segmentation = Containers.Segmentation(type="baselines",
 											   imagename=corresponding_image,
 											   text_direction="horizontal-lr",
@@ -41,6 +45,21 @@ class PartyPredict:
 			return lines
 		else:
 			return lines[0]
+
+	def measured_party_inference(self, segmentation, image, objet_transcrit):
+		"""
+		Prédit avec party, en utilisant le spinner yaspin, et en calculant le temps d'inférence.
+		:param segmentation:
+		:param image:
+		:param objet_transcrit:
+		:return:
+		"""
+		with yaspin(text=f"Transcription de {objet_transcrit} avec Party") as sp:
+			start = time.time()
+			prediction = self.inference(segmentation=segmentation, image=image)
+			end = time.time()
+		print(f"Transcription de {objet_transcrit} faite en {end - start} secondes")
+		return prediction
 
 if __name__ == '__main__':
 	corresponding_image = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/11_J_77-0355.jpg"
