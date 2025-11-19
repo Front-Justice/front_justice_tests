@@ -3,12 +3,15 @@ import pickle
 import unicodedata
 import PIL.Image as Image
 import re
+
+import party.fusion
 from Levenshtein import distance
 from difflib import SequenceMatcher
 from shapely.geometry import Polygon
 from collections import namedtuple
 import time
 from yaspin import yaspin
+from party.fusion import PartyModel
 
 
 def load(path):
@@ -165,7 +168,7 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 		return None
 
 
-def measured_party_inference(party_engine:party.party., segmentation, image, objet_transcrit):
+def measured_party_inference(party_engine:party.fusion.PartyModel, segmentation, image, objet_transcrit):
 	"""
 	Prédit avec party, en utilisant le spinner yaspin, et en calculant le temps d'inférence.
 	:param party_engine:

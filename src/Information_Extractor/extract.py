@@ -10,7 +10,7 @@ import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import glob
 import re
-import src.Information_Extractor.utils as utils
+import src.utils.utils as utils
 import copy
 import PIL.Image as Image
 import PIL
