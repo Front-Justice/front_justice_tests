@@ -175,6 +175,8 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
+
+
 		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(ocr_prediction=self.current_page_transcription,
 																			  annotations=zones_page_1,
 																			  image=page["image_path"],
@@ -183,6 +185,13 @@ class Pipeline():
 																			  party_engine=self.party)
 
 
+		# On extrait le numéro d'ordre
+		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(ocr_prediction=self.current_page_transcription,
+																			  annotations=zones_page_1,
+																			  image=page["image_path"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  party_engine=self.party)
 
 
 		# On s'occupe de la table des magistrats
@@ -203,13 +212,6 @@ class Pipeline():
 																			  show_images=False)
 
 
-		# On extrait le numéro d'ordre
-		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(ocr_prediction=self.current_page_transcription,
-																			  annotations=zones_page_1,
-																			  image=page["image_path"],
-																			  show_images=False,
-																			  loaded_image=loaded_image,
-																			  party_engine=self.party)
 
 		# On extrait le numéro de jugement
 		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(ocr_prediction=self.current_page_transcription,
@@ -260,11 +262,11 @@ def main(images_dir):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	images.sort(key=lambda x:int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	yolo_models = {
-		"page_1": "Vision/models/yolov11_page_1.pt",
-		"magistrats": "Vision/models/yolov11_table_magistrats.pt",
+		"page_1": "src/Vision/models/yolov11_page_1.pt",
+		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
 	}
-	pipeline = Pipeline(page_classifier_model="Page_Classifier/models/PageClassifier.joblib",
-						page_classifier_vocab="Page_Classifier/models/vocab.joblib",
+	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier.joblib",
+						page_classifier_vocab="src/Page_Classifier/models/vocab.joblib",
 						yolo_models=yolo_models)
 	pipeline.workflow(images)
 

@@ -10,7 +10,7 @@ import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import glob
 import re
-import Information_Extractor.utils as utils
+import src.Information_Extractor.utils as utils
 import copy
 import PIL.Image as Image
 import PIL
@@ -145,40 +145,54 @@ class Extractor:
 		  ],
 		  "certitude": 0.8,
 		  "predictions": {
-			"party": "N^o 501 D'ORDRE.",
+			"party": "rendu par le CONSEIL DE GUERRE permanent du Q. G. de la 2^e Armée séant aux Armées",
 			"kraken": "N^o 501 D'ORDRE."
 		  }
 		},
 		"""
 		corresponding_lines, numero_jugement_zone = self.extraction_ligne(annotations=annotations,
-													target_zone="MainZone-judgementPlace",
-													show_images=show_images,
-													loaded_image=loaded_image,
-													ocr_prediction=ocr_prediction,
-													intersect_ratio=0.7)
+																		  target_zone="MainZone-judgementPlace",
+																		  show_images=show_images,
+																		  loaded_image=loaded_image,
+																		  ocr_prediction=ocr_prediction,
+																		  intersect_ratio=0.7)
 
-		kraken_prediction = " ".join([line['prediction'] for line in corresponding_lines])
+		kraken_prediction = " ".join([line['prediction'] for line in corresponding_lines]).strip()
 		corresponding_baselines = [line['baseline'] for line in corresponding_lines]
-		# On transcrit avec par	ty
+		# On transcrit avec party
 		party_segmentation = party_engine.create_baseline(corresponding_baselines, image)
-		# party_prediction = utils.measured_party_inference(party_engine=party_engine,
-														# segmentation=party_segmentation,
-														  # image=loaded_image,
-														  # objet_transcrit="lieu du jugement")
-		# party_prediction = " ".join([item.prediction for item in party_prediction])
-		print(kraken_prediction)
-		seant_split = re.compile("s[ée]ant")
-		permanent_split = re.compile("permanent")
-		avant_seant = utils.split_before_keep_delimiter(kraken_prediction, delimiter=seant_split)[0]
-		apres_permament = utils.split_after_keep_delimiter(avant_seant, delimiter=permanent_split)[1]
-		print(apres_permament)
-		exit(0)
-		return {"institution": target_number,
-				"séant_à": target_line['baseline'],
+		party_prediction = utils.measured_party_inference(party_engine=party_engine,
+														  segmentation=party_segmentation,
+														  image=loaded_image,
+														  objet_transcrit="lieu du jugement")
+		party_prediction = " ".join([item.prediction for item in party_prediction]).strip()
+
+		chaine_seant = "s[ée]ant à|s[ée]ant aux"
+		chaine_permanent = "⟦?permanent⟧? du|⟦?permanent⟧? de la"
+
+		avant_seant_kraken = utils.split_before_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[0]
+		institution_kraken = \
+		utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
+		lieu_kraken = utils.split_after_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[1]
+
+		avant_seant_party = utils.split_before_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[0]
+		institution_party = \
+		utils.split_after_keep_delimiter(avant_seant_party, delimiter=chaine_permanent)[1]
+		lieu_party = utils.split_after_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[1]
+
+		if party_prediction == kraken_prediction:
+			certitude = 1
+		else:
+			certitude = 0.5
+		institution = institution_party
+		lieu = lieu_party
+
+		return {"institution": institution,
+				"siège": lieu,
 				"bbox": numero_jugement_zone,
 				"certitude": certitude,
-				"predictions": {"party": numero_jugement_party,
-								"kraken": numero_jugement_kraken}}
+				"predictions": {"party": party_prediction,
+								"kraken": kraken_prediction}}
 
 	def extraire_numero_jugement(self,
 								 ocr_prediction: list[dict],

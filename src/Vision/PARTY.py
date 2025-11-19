@@ -4,6 +4,7 @@ import PIL.Image as Image
 import lightning.fabric as Fabric
 import kraken.containers as Containers
 from party.fusion import PartyModel
+import src.utils.utils as utils
 
 class PartyPredict:
 	def __init__(self):

@@ -1,3 +1,6 @@
+import json
+import pickle
+import unicodedata
 import PIL.Image as Image
 import re
 from Levenshtein import distance
@@ -11,39 +14,61 @@ from yaspin import yaspin
 def load(path):
 	return Image.open(path)
 
-def split_after_keep_delimiter(string, delimiter):
-	print("---")
-	print(string)
-	print(delimiter)
-	print(len(string))
+def split_after_keep_delimiter(target_string:str, delimiter:str) -> list:
+	"""
+		Cette fonction coupe une phrase selon un délimiteur qui est une expression régulière, et garde le délimiteur.
+		La coupe se fait après le délimiteur.
+		:param target_string: la chaîne à couper
+		:param delimiter: le délimiteur sous la forme d'une chaîne de caractères qui sera compilée après normalisation
+		:return: la liste voulue
+		"""
+	# On commence par normaliser les chaînes de caractères
+	delimiter = normalize_string(delimiter)
+	delimiter_as_regexp = re.compile(delimiter)
+	target_string = normalize_string(target_string)
 	out_split = []
-	results = re.finditer(delimiter, string)
+	results = re.finditer(delimiter_as_regexp, target_string)
 	delimiters = [0]
 	for result in results:
-		print(result.span())
 		delimiters.append(result.span()[1])
-	delimiters.append(len(string))
-	print(delimiters)
+	delimiters.append(len(target_string))
 
 	for position in range(len(delimiters[1:])):
 		pos = position + 1
-		print(f"appending ({delimiters[pos - 1], delimiters[pos]}) |{string[delimiters[pos - 1]: delimiters[pos]]}|")
-		out_split.append(string[delimiters[pos - 1]: delimiters[pos]])
-	print(out_split)
-	print(len(out_split))
+		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]])
 	return out_split
 
-def split_before_keep_delimiter(string:str, delimiter:re.Pattern):
+def normalize_string(input_string:str) -> str:
+	"""
+	Cette fonction applique une normalisation unicode NFC à la chaîne de caractères voulue.
+	:param input_string:
+	:return:
+	"""
+	return unicodedata.normalize('NFC', input_string)
+
+def split_before_keep_delimiter(target_string:str, delimiter:str) -> list:
+	"""
+	Cette fonction coupe une phrase selon un délimiteur qui est une expression régulière, et garde le délimiteur.
+	La coupe se fait avant le délimiteur.
+	:param target_string: la chaîne à couper
+	:param delimiter: le délimiteur sous la forme d'une chaîne de caractères qui sera compilée après normalisation
+	:return: la liste voulue
+	"""
+	# On commence par normaliser les chaînes de caractères
+	delimiter = normalize_string(delimiter)
+	delimiter_as_regexp = re.compile(delimiter)
+	target_string = normalize_string(target_string)
+
 	out_split = []
-	results = re.finditer(delimiter, string)
+	results = re.finditer(delimiter_as_regexp, target_string)
 	delimiters = [0]
 	for result in results:
 		delimiters.append(result.span()[0])
-	delimiters.append(len(string))
+	delimiters.append(len(target_string))
 
 	for position in range(len(delimiters[1:])):
 		pos = position + 1
-		out_split.append(string[delimiters[pos - 1]: delimiters[pos]])
+		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]].strip())
 	return out_split
 
 def produce_line_function(baseline):
@@ -139,8 +164,17 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 	else:
 		return None
 
-def measured_party_inference(party_engine, segmentation, image, objet_transcrit):
-	with yaspin(text=f"Transcription de {objet_transcrit}") as sp:
+
+def measured_party_inference(party_engine:party.party., segmentation, image, objet_transcrit):
+	"""
+	Prédit avec party, en utilisant le spinner yaspin, et en calculant le temps d'inférence.
+	:param party_engine:
+	:param segmentation:
+	:param image:
+	:param objet_transcrit:
+	:return:
+	"""
+	with yaspin(text=f"Transcription de {objet_transcrit} avec Party") as sp:
 		start = time.time()
 		prediction = party_engine.inference(segmentation=segmentation, image=image)
 		end = time.time()
@@ -300,3 +334,46 @@ def check_if_line_in_box(box_coord, baseline, intersect_ratio=.5) -> bool:
 		return True
 	else:
 		return False
+
+
+def check_if_missing(list_target, list_source):
+	set1 = set(list_target)
+	set2 = set(list_source)
+	missing = list(sorted(set1 - set2))
+	return missing
+
+def pickle_object(obj, path):
+	with open(path, "wb") as segmentation_as_file:
+		pickle.dump(obj, segmentation_as_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+def unpickle_object(path):
+	with open(path, "rb") as segmentation_as_file:
+		return pickle.load(segmentation_as_file)
+
+def save_as_dict(dictionnary, path):
+	with open(path, 'w') as f:
+		json.dump(dictionnary, f)
+
+
+def list_depth(lst:list) -> int:
+	"""
+	Retourne la profondeur maximale d'une liste
+	:param lst: la liste à analyser
+	:return: un entier
+	"""
+	return isinstance(lst, list) and max(map(list_depth, lst)) + 1
+
+def load_json_to_dict(path):
+	with open(path, 'r') as f:
+		return json.load(f)
+
+def get_name_from_path(path):
+	basename = path.split('/')[-1].split('.')[0]
+	dossier = "_".join(basename.split('_')[:-1])
+	ident = basename.split('_')[-1]
+	return dossier, int(ident)
+
+
+def format_coordinates(coords):
+	rounded = [round(item) for item in coords]
+	return [[rounded[0], rounded[1]], [rounded[2], rounded[3]]]
