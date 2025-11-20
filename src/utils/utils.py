@@ -1,6 +1,8 @@
 import json
 import pickle
 import unicodedata
+from datetime import datetime
+import dateparser
 import PIL.Image as Image
 import re
 
@@ -11,12 +13,14 @@ from shapely.geometry import Polygon
 from collections import namedtuple
 import time
 from yaspin import yaspin
+import dateutil
 
 
 def load(path):
 	return Image.open(path)
 
-def split_after_keep_delimiter(target_string:str, delimiter:str) -> list:
+
+def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
 		Cette fonction coupe une phrase selon un délimiteur qui est une expression régulière, et garde le délimiteur.
 		La coupe se fait après le délimiteur.
@@ -40,7 +44,8 @@ def split_after_keep_delimiter(target_string:str, delimiter:str) -> list:
 		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]])
 	return out_split
 
-def normalize_string(input_string:str) -> str:
+
+def normalize_string(input_string: str) -> str:
 	"""
 	Cette fonction applique une normalisation unicode NFC à la chaîne de caractères voulue.
 	:param input_string:
@@ -48,7 +53,8 @@ def normalize_string(input_string:str) -> str:
 	"""
 	return unicodedata.normalize('NFC', input_string)
 
-def split_before_keep_delimiter(target_string:str, delimiter:str) -> list:
+
+def split_before_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
 	Cette fonction coupe une phrase selon un délimiteur qui est une expression régulière, et garde le délimiteur.
 	La coupe se fait avant le délimiteur.
@@ -73,11 +79,13 @@ def split_before_keep_delimiter(target_string:str, delimiter:str) -> list:
 		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]].strip())
 	return out_split
 
+
 def produce_line_function(baseline):
 	x_1, y_1, x_2, y_2 = baseline
 	a = (y_2 - y_1) / (x_2 - x_1)
 	b = y_1 - a * x_1
 	return a, b
+
 
 def point_in_box(coord, box_coord):
 	x, y = coord
@@ -85,6 +93,7 @@ def point_in_box(coord, box_coord):
 		return True
 	else:
 		return False
+
 
 # class Line:
 # 	def __init__(self, line):
@@ -111,7 +120,8 @@ def vertical_order_lines(lines: list[dict]) -> list[dict]:
 	sorted_list = sorted(lines, key=lambda x: x["baseline"][0][1])
 	return sorted_list
 
-def vertical_order_zones(annotations:list[dict]) -> list[dict]:
+
+def vertical_order_zones(annotations: list[dict]) -> list[dict]:
 	"""
 	Fonction pour ordonner les zones verticalement (du plus haut au plus bas).
 	On ordonne par la deuxième coordonnée de la boîte (y1)
@@ -131,8 +141,10 @@ def vertical_order_zones(annotations:list[dict]) -> list[dict]:
 	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0][1])
 	return sorted_list
 
+
 def rectanglify(coords):
 	return
+
 
 def horizontal_order_zones(annotations):
 	"""
@@ -159,8 +171,8 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 	dx = min(target.xmax, source.xmax) - max(target.xmin, source.xmin)
 	dy = min(target.ymax, source.ymax) - max(target.ymin, source.ymin)
 	area_source = round((source.xmax - source.xmin) * (source.ymax - source.ymin))
-	if (dx>=0) and (dy>=0):
-		overlap_area = round(dx*dy)
+	if (dx >= 0) and (dy >= 0):
+		overlap_area = round(dx * dy)
 		ratio = round(overlap_area / area_source, 2)
 		return ratio
 	else:
@@ -170,6 +182,54 @@ def check_if_overlap(target, source):  # returns None if rectangles don't inters
 def clean_forename(name):
 	name = name.replace(",", "").strip()
 	return name
+
+def normalize_string_and_strip_spaces(string:str) -> str:
+	return string.lower().strip()
+
+class MyParserInfo(dateutil.parser._parser.parserinfo):
+    def convertyear(self, year, *args, **kwargs):
+        if year < 100:
+            year += 1900
+        return year
+
+def date_extraction(string: str) -> datetime.date:
+	dates_examples = ["13 janvier et 18 mars 1918",
+					  "17 mars 1918",
+					  "mars et avril 1917",
+					  "courant de 1915 et 1916",
+					  "courant juin 1917",
+					  "16 au 28 juillet 1918",
+					  "an 1917 et an 1918",
+					  "avril à juillet 1917",
+					  "janvier 1917",
+					  "année 1915",
+					  "19 février - 21 mars 1915",
+					  "17 août 17"]
+	for string in dates_examples:
+		print("---")
+		print(string)
+		normalized_date:dateparser.date = dateparser.parse(string, settings={'DEFAULT_LANGUAGES': ["fr"]})
+		if normalized_date:
+			check = 1913 < normalized_date.year < 1919
+			print(check)
+		if normalized_date is None or check is False:
+			splits = string.split()
+			mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre",
+					"décembre"]
+			stopwords = ["courant", "en"]
+			annee = re.search(re.compile(r"(\d{4})"), string)
+			if "et" in splits:
+				index_et = splits.index("et")
+				coord = (splits[index_et - 1], splits[index_et + 1] )
+			for split in splits:
+				if normalize_string_and_strip_spaces(split) in mois:
+					pass
+		else:
+			# Dans le cas où le siècle n'est pas indiqué, c'est le siècle en cours qui est déduit. Il faut enlever 100 ans
+			if normalized_date.year > 2000:
+				normalized_date = datetime(normalized_date.year - 100, normalized_date.month, normalized_date.day)
+		print(normalized_date)
+	exit(0)
 
 
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
@@ -198,8 +258,7 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	return forename, certainty
 
 
-
-def match_lines_in_zones(ocr_prediction:list[dict], zone_as_rectangle:namedtuple, intersect_ratio=0.5):
+def match_lines_in_zones(ocr_prediction: list[dict], zone_as_rectangle: namedtuple, intersect_ratio=0.5):
 	"""
 	Cette fonction identifie toutes les lignes qui traversent une boîte
 	:param ocr_prediction: un objet de classe OCRPrediction. les lignes comme une liste de dictionnaires (baseline, prediction, cuts)
@@ -214,11 +273,12 @@ def match_lines_in_zones(ocr_prediction:list[dict], zone_as_rectangle:namedtuple
 		# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
 		converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
 		is_in_box = check_if_line_in_box(box_coord=zone_as_rectangle,
-											   baseline=converted_baseline,
-											   intersect_ratio=intersect_ratio)
+										 baseline=converted_baseline,
+										 intersect_ratio=intersect_ratio)
 		if is_in_box is True:
 			corresponding_lines.append(line)
 	return corresponding_lines
+
 
 def extract_magistrates_names(prediction, pipeline, debug=False):
 	if isinstance(prediction, list):
@@ -252,7 +312,8 @@ def extract_magistrates_names(prediction, pipeline, debug=False):
 			"role": role,
 			"certainty": certainty}
 
-def extract_string_from_cuts(box:list[list[int]], line:dict) -> str:
+
+def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 	"""
 	Cette fonction extrait les caractères compris dans une boîte par la comparaison
 	entre cette boîte et les polygones individuels de la prédiction
@@ -288,14 +349,18 @@ def extract_string_from_cuts(box:list[list[int]], line:dict) -> str:
 			out_string += char
 	return out_string
 
+
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
+
 
 def levensthein_distance(string_a, string_b):
 	return distance(string_a, string_b)
 
+
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
+
 
 def check_if_line_in_box(box_coord, baseline, intersect_ratio=.5) -> bool:
 	"""
@@ -316,7 +381,7 @@ def check_if_line_in_box(box_coord, baseline, intersect_ratio=.5) -> bool:
 	steps = x_distance // number_points
 
 	# On crée 20 points le long de la droite. Si la moitié sont dans la zone, on renvoie True
-	n_points = [(item , round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
+	n_points = [(item, round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
 	number_in = 0
 	for point in n_points:
 		if point_in_box(coord=point, box_coord=box_coord):
@@ -333,13 +398,16 @@ def check_if_missing(list_target, list_source):
 	missing = list(sorted(set1 - set2))
 	return missing
 
+
 def pickle_object(obj, path):
 	with open(path, "wb") as segmentation_as_file:
 		pickle.dump(obj, segmentation_as_file, protocol=pickle.HIGHEST_PROTOCOL)
 
+
 def unpickle_object(path):
 	with open(path, "rb") as segmentation_as_file:
 		return pickle.load(segmentation_as_file)
+
 
 def save_as_dict(dictionnary, path):
 	with open(path, 'w') as f:
@@ -347,7 +415,7 @@ def save_as_dict(dictionnary, path):
 		json.dump(dictionnary, f, indent=2, default=str)
 
 
-def list_depth(lst:list) -> int:
+def list_depth(lst: list) -> int:
 	"""
 	Retourne la profondeur maximale d'une liste
 	:param lst: la liste à analyser
@@ -355,9 +423,11 @@ def list_depth(lst:list) -> int:
 	"""
 	return isinstance(lst, list) and max(map(list_depth, lst)) + 1
 
+
 def load_json_to_dict(path):
 	with open(path, 'r') as f:
 		return json.load(f)
+
 
 def get_name_from_path(path):
 	basename = path.split('/')[-1].split('.')[0]

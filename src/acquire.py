@@ -41,8 +41,9 @@ class Pipeline():
 		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 
 		# L'outil d'extraction de l'information
-		self.resize_factor = 3
-		self.extractor = extract.Extractor(party_engine=PARTY.PartyPredict(), resize_factor=self.resize_factor)
+		self.resize_factor = 1
+		self.extractor = extract.Extractor(party_engine=PARTY.PartyPredict(),
+										   resize_factor=self.resize_factor)
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -176,6 +177,13 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
+		# On extrait la date du crime
+		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 		# On extrait le nom et prénom du soldat
 		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
 			ocr_prediction=self.current_page_transcription,
@@ -184,13 +192,6 @@ class Pipeline():
 			show_images=False,
 			loaded_image=loaded_image)
 
-		# On extrait la date du crime
-		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
 
 		# On extrait le numéro d'ordre
 		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(

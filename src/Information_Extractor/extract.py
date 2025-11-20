@@ -15,7 +15,6 @@ import copy
 import PIL.Image as Image
 import PIL
 from collections import namedtuple
-import dateparser
 import src.Vision.PARTY as PARTY
 
 
@@ -27,7 +26,7 @@ class Extractor:
 	 	- du même corpus d'images
 	"""
 
-	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor:int=1):
+	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor: int = 1):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
@@ -359,13 +358,14 @@ class Extractor:
 
 		# On transcrit avec party
 		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-		party_prediction = self.party.measured_party_inference(
-			segmentation=party_segmentation,
-			image=loaded_image,
-			objet_transcrit="date du crime")
-		date_crime_party = party_prediction.prediction
+		# party_prediction = self.party.measured_party_inference(
+		# 	segmentation=party_segmentation,
+		# 	image=loaded_image,
+		# 	objet_transcrit="date du crime")
+		# date_crime_party = party_prediction.prediction
 		target_line = target_line[0]
 		date_crime_kraken = target_line['prediction']
+		date_crime_party = date_crime_kraken
 
 		if date_crime_party == date_crime_kraken:
 			certitude = 0.8
@@ -373,11 +373,14 @@ class Extractor:
 		else:
 			certitude = 0.5
 			target_date = date_crime_party
+		print(target_date)
+		extrait = utils.date_extraction(target_date)
+		exit(0)
+		print(normalized_date)
+		exit()
 
-		normalized_date = dateparser.parse(target_date)
-
-		return {"Date": normalized_date,
-				"Date normalisée": date_crime_party,
+		return {"Date normalisée": normalized_date,
+				"Date": date_crime_party,
 				"baseline": target_line['baseline'],
 				"bbox": date_zone,
 				"certitude": certitude,
@@ -475,98 +478,6 @@ class Extractor:
 				"predictions": {"party": numero_ordre_party,
 								"kraken": target_line['prediction']}}
 
-		def extraire_date_crime(self,
-								ocr_prediction: list[dict],
-								annotations: list[dict],
-								party_engine,
-								image: str = None,
-								loaded_image: PIL.Image.Image = None,
-								show_images: bool = True):
-			"""
-			Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
-			On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-			:param party_engine: le moteur de transcription party
-			:param ocr_prediction: Une liste de dictionnaires de la forme:
-			'''
-			[
-				{
-					'baseline': [[231, 5467], [2329, 5450]],
-					'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-				},
-				...,
-				{
-					'baseline': [[241, 5612], [731, 5619]],
-					'prediction': 'FORMULE N^o 16.'
-				}
-			]
-			'''
-			:param image: [Debug] le chemin vers l'image à afficher
-			:param loaded_image: l'image chargée (objet PIL.Image.Image)
-			:param show_images: [Debug] afficher l'image?
-			:return: Un dictionnaire de la forme:
-				{
-	          "Numéro": "501",
-	          "baseline": [
-	            [2611, 555],
-	            [3203, 555]
-	          ],
-	          "bbox": [
-	            [2553, 178],
-	            [3249, 634]
-	          ],
-	          "certitude": 0.8,
-	          "predictions": {
-	            "party": "N^o 501 D'ORDRE.",
-	            "kraken": "N^o 501 D'ORDRE."
-	          }
-	        },
-			"""
-			corresponding_lines, numero_ordre_zone = self.extraction_ligne(annotations=annotations,
-																		   target_zone="MainZone-judgementNumber",
-																		   show_images=show_images,
-																		   loaded_image=loaded_image,
-																		   ocr_prediction=ocr_prediction,
-																		   intersect_ratio=0.7)
-
-			target_line = []
-			for line in corresponding_lines:
-				prediction = line['prediction']
-				similarity = utils.similarite_ratcliff(prediction, "D'ORDRE.")
-
-				# On condidère une valeur de similarité de 0.5, à modifier par l'expérience
-				if similarity > .5:
-					target_line.append(line)
-
-			assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro d'ordre."
-
-			# On transcrit avec party
-			party_segmentation = party_engine.create_baseline([target_line[0]['baseline']], image)
-			party_prediction = self.party.measured_party_inference(party_engine=party_engine,
-																   segmentation=party_segmentation,
-																   image=loaded_image,
-																   objet_transcrit="numéro d'ordre")
-			numero_ordre_party = party_prediction.prediction
-
-			target_line = target_line[0]
-
-			numero_regexp = re.compile("\d+")
-			target_number_kraken = re.search(numero_regexp, target_line['prediction']).group()
-			target_number_party = re.search(numero_regexp, numero_ordre_party).group()
-
-			if target_number_party == target_number_kraken:
-				certitude = 0.8
-				target_number = target_number_kraken
-			else:
-				certitude = 0.5
-				target_number = target_number_party
-
-			return {"Numéro": target_number,
-					"baseline": target_line['baseline'],
-					"bbox": numero_ordre_zone,
-					"certitude": certitude,
-					"predictions": {"party": numero_ordre_party,
-									"kraken": target_line['prediction']}}
-
 	def extraire_nom_soldat(self,
 							ocr_prediction: list[dict],
 							annotations: list[dict],
@@ -644,10 +555,12 @@ class Extractor:
 																	   pipeline=self.nlp)
 		if show_images:
 			cropped = loaded_image.crop(
-				(soldat_zone[0][0] * self.resize_factor,
-				 soldat_zone[0][1] * self.resize_factor,
-				 soldat_zone[1][0] * self.resize_factor,
-				 soldat_zone[1][1] * self.resize_factor)
+				(
+					round(soldat_zone[0][0] / self.resize_factor),
+					round(soldat_zone[0][1] / self.resize_factor),
+					round(soldat_zone[1][0] / self.resize_factor),
+					round(soldat_zone[1][1] / self.resize_factor)
+				)
 			)
 			cropped.show()
 
@@ -664,8 +577,6 @@ class Extractor:
 			[round(x1_soldat / self.resize_factor), round(y1 / self.resize_factor)],
 			[round(x2_soldat / self.resize_factor), round(y2 / self.resize_factor)]
 		]
-		print(image)
-		exit(0)
 		party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
 		party_prediction = self.party.measured_party_inference(
 			segmentation=party_segmentation,
