@@ -1,14 +1,14 @@
 import re
-import sys
-import parser
-import lexer
+import src.date.parser as parser
+import src.date.lexer as lexer
 import json
-import datetime
-
-datetime.datetime(2014, 10, 21, 0, 0)
 
 
 class Date:
+	"""
+	Objet de classe date, permettant de manipuler les items de date (mois, mois_annee, annee, jour_mois_annee)
+	et de les convertir en format jjmmyyyy
+	"""
 	def __init__(self):
 		self.month_dict = {"janvier": "01",
 						   "février": "02",
@@ -43,7 +43,13 @@ class Date:
 		return self.converted_date
 
 def second_pass(parsed_tree):
-	print(parsed_tree)
+	"""
+	Seconde passe après le parsing récursif de l'arbre. On est devant un objet linéaire
+	que l'on va convertir pour avoir la date la plus complète possible, et les
+	alternatives (range, and, range/and, approx, etc)
+	:param parsed_tree:
+	:return:
+	"""
 	if isinstance(parsed_tree, str):
 		return {"when": parsed_tree}
 	elif isinstance(parsed_tree, dict):
@@ -74,8 +80,9 @@ def second_pass(parsed_tree):
 					result.append(correct_date)
 				return {"and": result}
 
-def parse_ast(ast) -> None:
-	# On fait 2 cas principaux: le premier cas où la complexité est absente
+def parse_ast(ast) -> str|dict:
+	# On fait 2 cas principaux: le premier cas où la complexité est absente: c'est
+	# le cas des "dates atomiques", à savoir un dictionnaire pouvant comprendre un jour, un mois, une année
 	if isinstance(ast, dict) and all([item not in ast for item in ['range', 'and', 'courant', 'andor']]):
 		myDate = Date()
 		for key, value in ast.items():
@@ -136,17 +143,39 @@ def parse_ast(ast) -> None:
 				return items
 
 
-def build_grammar(debug: bool, query: str) -> list:
+def clean_date(text):
+	"""
+	Cette fonction nettoie une date des scories que l'on peut y trouver (majuscules, exposants, etc)
+	:param text: la date à nettoyer
+	:return: la date nettoyee
+	"""
+	date = text.lower().strip()
+	clean_regexp = re.compile(r"(\d+)\^?e")
+	subs = re.sub(clean_regexp, r'\g<1>', date)
+	print("Clean date: {}".format(subs))
+	return subs
+
+def process_date(text):
+	"""
+	Cette fonction initialise le lexeur et le parseur prévu pour le traitement des dates
+	:param text: le texte
+	:return: l'objet date parsé
+	"""
+	text = clean_date(text)
+	ast = build_grammar(debug=True, text=text)
+	parsed = parse_ast(ast)
+	result = second_pass(parsed)
+	return result
+
+def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915") -> list:
 	"""
 	This function builds an Abstract Syntax Tree from a query
 	:param debug: outputs parsing information
 	:param query: the query to build the AST from
 	:return: the ast
 	"""
-	print("---")
-	print(query)
 	MyLexer = lexer.Lexer()
-	MyLexer.tokenize(query, debug=debug)
+	MyLexer.tokenize(text, debug=debug)
 	MyParser = parser.Parser(MyLexer, debug=debug)
 	if debug:
 		print(json.dumps(MyParser.ast,
@@ -169,10 +198,12 @@ def test():
 		"19 février - 21 mars 1915",
 		"17 août 17",
 		"19 février 1914 - 21 mars 1915",
-		"19 février 1914, 21 mars 1915"]
+		"19 février 1914, 21 mars 1915",
+		"mai et juin 1917"]
 	# dates_examples = ["16 au 28 juillet 1918"]
 	for example in dates_examples:
-		ast = build_grammar(debug=False, query=example)
+		print("---")
+		ast = build_grammar(debug=False, text=example)
 		parsed = parse_ast(ast)
 		result = second_pass(parsed)
 		print(f"Résultat: {result}")
@@ -180,4 +211,7 @@ def test():
 			print("ERROR")
 
 if __name__ == '__main__':
+	date = process_date("25 mai - 1^e Juin 1917")
+	print(date)
+	exit(0)
 	test()

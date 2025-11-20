@@ -1,6 +1,5 @@
 import ply.yacc as yacc
-import lexer as lexer
-from collections import OrderedDict
+import src.date.lexer as lexer
 
 class Parser(lexer.Lexer):
     """
@@ -76,7 +75,7 @@ class Parser(lexer.Lexer):
                      | jour_mois ANNEE
                      | groupe_annee
                      | courant_de_groupe
-                     | JOUR_OU_ANNEE mois JOUR_OU_ANNEE
+                     | JOUR mois ANNEE
                      | mois_annee
                      | annee
                      | range_mois ANNEE
@@ -109,8 +108,8 @@ class Parser(lexer.Lexer):
 
     def p_range_jour(self, p):
         '''
-        range_jour : JOUR_OU_ANNEE RANGE JOUR_OU_ANNEE
-                    | JOUR_OU_ANNEE RANGE JOUR_OU_ANNEE mois
+        range_jour : JOUR RANGE JOUR
+                    | JOUR RANGE JOUR mois
         '''
         if len(p) == 4:
             p[0] = {"range": [{"jour": p[1]},
@@ -122,7 +121,7 @@ class Parser(lexer.Lexer):
 
     def p_jour_mois(self, p):
         '''
-        jour_mois : JOUR_OU_ANNEE mois
+        jour_mois : JOUR mois
         '''
         p[0] = {"jour": p[1], **p[2]}
 
@@ -134,7 +133,7 @@ class Parser(lexer.Lexer):
 
 
     def p_jour_mois_annee(self, p):
-        'jour_mois_annee : JOUR_OU_ANNEE mois ANNEE'
+        'jour_mois_annee : JOUR mois ANNEE'
         p[0] = {"jour": p[1], **p[2], "annee": p[3]}
 
     def p_andor_jour_mois(self, p):

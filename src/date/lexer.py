@@ -10,7 +10,7 @@ class Lexer(object):
         'COURANT',
 		'ANNEE',
 		'MOIS',
-		'JOUR_OU_ANNEE',
+		'JOUR',
 		'AND',
         'ANDOR',
 		'RANGE',
@@ -18,8 +18,9 @@ class Lexer(object):
         "SPACE"
     )
 
-    t_ANNEE = r"\d{4}"
-    t_JOUR_OU_ANNEE = r"\d{2}"
+    # Pour l'instant les années à 2 chiffres n'apparaissent qu'en fin de chaîne
+    t_ANNEE = r"\d{4}|\d{2}$"
+    t_JOUR = r"\d{1,2}"
     t_MOIS = r"janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre"
     t_AND = r"et|,"
     t_ANDOR = r"-"
@@ -41,11 +42,12 @@ class Lexer(object):
         print("Illegal character '%s'" % t.value[0])
         t.lexer.skip(1)
 
-    def tokenize(self, query:str, debug:bool=False):
+    def tokenize(self, text:str, debug:bool=False):
         self.lexer = lex.lex(module=self)
-        self.lexer.input(query)
+        self.lexer.input(text)
 
         if debug:
+            print(f"Date normalisée: {text}")
             debug_lexer = copy.deepcopy(self.lexer)
             while True:
                 tok = debug_lexer.token()

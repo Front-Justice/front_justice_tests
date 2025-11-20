@@ -257,7 +257,7 @@ class Pipeline():
 					annotations = self.traitement_p_1(page)
 					page["annotations"] = annotations
 				utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
-		exit(0)
+			exit(0)
 
 
 def main(images_dir, target):

@@ -16,6 +16,7 @@ import PIL.Image as Image
 import PIL
 from collections import namedtuple
 import src.Vision.PARTY as PARTY
+import src.date.parse_date as date
 
 
 class Extractor:
@@ -358,14 +359,13 @@ class Extractor:
 
 		# On transcrit avec party
 		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-		# party_prediction = self.party.measured_party_inference(
-		# 	segmentation=party_segmentation,
-		# 	image=loaded_image,
-		# 	objet_transcrit="date du crime")
-		# date_crime_party = party_prediction.prediction
+		party_prediction = self.party.measured_party_inference(
+			segmentation=party_segmentation,
+			image=loaded_image,
+			objet_transcrit="date du crime")
+		date_crime_party = party_prediction.prediction
 		target_line = target_line[0]
 		date_crime_kraken = target_line['prediction']
-		date_crime_party = date_crime_kraken
 
 		if date_crime_party == date_crime_kraken:
 			certitude = 0.8
@@ -373,11 +373,8 @@ class Extractor:
 		else:
 			certitude = 0.5
 			target_date = date_crime_party
-		print(target_date)
-		extrait = utils.date_extraction(target_date)
-		exit(0)
-		print(normalized_date)
-		exit()
+
+		normalized_date = date.process_date(target_date)
 
 		return {"Date normalisée": normalized_date,
 				"Date": date_crime_party,

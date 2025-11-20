@@ -184,6 +184,11 @@ def clean_forename(name):
 	return name
 
 def normalize_string_and_strip_spaces(string:str) -> str:
+	"""
+	Cette fonction neutralise la casse et supprime les espace de début et fin de chaîne
+	:param string: le texte à normaliser
+	:return: le texte normalisé
+	"""
 	return string.lower().strip()
 
 class MyParserInfo(dateutil.parser._parser.parserinfo):
