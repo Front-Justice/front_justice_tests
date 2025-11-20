@@ -30,6 +30,10 @@ class Date:
 		self.converted_date = None
 
 	def clean_date(self):
+		"""
+		Cette fonction nettoie la date formatée et supprime les / superflus
+		:return:
+		"""
 		self.converted_date = self.converted_date.replace("//", "/")
 		begin_regexp = re.compile(r"^/")
 		end_regexp = re.compile(r"/$")
@@ -39,6 +43,8 @@ class Date:
 	def convert_to_dd_mm_yyyy(self):
 		self.month = self.month_dict[self.month] if self.month != "" else ""
 		self.converted_date = f"{self.day}/{self.month}/{self.year}"
+		if len(str(self.day)) == 1:
+			self.day = f"0{self.day}"
 		self.clean_date()
 		return self.converted_date
 
@@ -162,7 +168,7 @@ def process_date(text):
 	:return: l'objet date parsé
 	"""
 	text = clean_date(text)
-	ast = build_grammar(debug=True, text=text)
+	ast = build_grammar(debug=False, text=text)
 	parsed = parse_ast(ast)
 	result = second_pass(parsed)
 	return result

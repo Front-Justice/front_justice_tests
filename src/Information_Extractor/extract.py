@@ -27,24 +27,30 @@ class Extractor:
 	 	- du même corpus d'images
 	"""
 
-	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor: int = 1):
+	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor: int = 1, debug:bool=False):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
 		:param resize_factor: le facteur de redimension des images (accélère l'ocr)
+		:param debug: Active le mode debug, ne charge pas le modèle party (va créer des erreurs)
 		"""
 
+		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
+		self.ner = pipeline('ner',
+							model=self.ner_model,
+							tokenizer=self.tokenizer,
+							aggregation_strategy="simple")
 
-		self.nlp = pipeline('ner', model=self.ner_model, tokenizer=self.tokenizer, aggregation_strategy="simple")
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
 		self.conversion_dict = {item.replace("(", "-").replace(")", "").split("/")[-1].replace(".jpg", ""): item for
 								item in
 								self.target_corpus}
 		self.resize_factor: int = resize_factor
-		self.party = party_engine
+		if debug is False:
+			self.party = party_engine
 
 		self.rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
 
@@ -374,6 +380,7 @@ class Extractor:
 			certitude = 0.5
 			target_date = date_crime_party
 
+		# On utilise le parseur pour produire la date normalisée
 		normalized_date = date.process_date(target_date)
 
 		return {"Date normalisée": normalized_date,
@@ -434,6 +441,29 @@ class Extractor:
 																	   loaded_image=loaded_image,
 																	   ocr_prediction=ocr_prediction,
 																	   intersect_ratio=0.7)
+
+
+		# On va commencer par tester si la page est bien classifiée, et identifier des formulaires différents
+		first_line = corresponding_lines[0]["prediction"]
+		num_regexp = re.compile(r"N\^o (\d+)")
+		num_regexp_2 = re.compile(r"\d+")
+
+		# On teste 2 expressions régulières puis une présence de substring dans la première ligne.
+		try:
+			numero_nomenclature = re.search(num_regexp, first_line).group(1)
+		except AttributeError:
+			try:
+				numero_nomenclature = re.search(num_regexp_2, first_line).group()
+			except AttributeError:
+				numero_nomenclature = "967" if "967" in first_line else None
+		if numero_nomenclature == "967":
+			print("Formulaire n°967 trouvé, on continue.")
+		elif numero_nomenclature == "974":
+			print("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
+			exit(0)
+		else:
+			print("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
+				  "ou de classification de la page.")
 
 		target_line = []
 		for line in corresponding_lines:
@@ -532,6 +562,7 @@ class Extractor:
 
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
+		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
 		distances = []
 		if len(corresponding_lines) > 1:
 			for idx, ligne in enumerate(corresponding_lines):
@@ -549,7 +580,7 @@ class Extractor:
 
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
 																	   nom_du_soldat_kraken,
-																	   pipeline=self.nlp)
+																	   pipeline=self.ner)
 		if show_images:
 			cropped = loaded_image.crop(
 				(
@@ -684,9 +715,10 @@ class Extractor:
 		"""
 
 		table_dict = {}
+		zone_englobante_magistrats = self.filter_zones(zones_magistrats, "Magistrats")
 		column_annotation = self.filter_zones(zones_magistrats, "Colonne")
 		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
-		sorted_lines = utils.vertical_order_zones(lines_annotation)
+		lignes_table_triees = utils.vertical_order_zones(lines_annotation)
 		first_column, _ = utils.horizontal_order_zones(column_annotation)
 		first_column = first_column["coordinates"]
 		first_column_as_rectangle = self.rectangle(first_column[0][0],
@@ -694,13 +726,13 @@ class Extractor:
 												   first_column[1][0],
 												   first_column[1][1])
 		if show_images:
-			for line in sorted_lines:
+			for line in lignes_table_triees:
 				loaded_image = Image.open(image)
 				cropped = loaded_image.crop(line["coordinates"])
 				cropped.show()
 
 		# On itère sur les zones identifiées par YOLO
-		for idx, line in enumerate(sorted_lines):
+		for idx, line in enumerate(lignes_table_triees):
 			corresponding_box = line["coordinates"]
 			box_as_rectangle = self.rectangle(corresponding_box[0][0],
 											  corresponding_box[0][1],
@@ -739,24 +771,49 @@ class Extractor:
 								"baseline": baseline
 							}
 						]
-		table_list = [item for item in table_dict.values()]
+		table_des_magistrats = [item for item in table_dict.values()]
 
 		# On récupère les informations, en sachant que le premier est toujours le président
 		# TODO: on peut vérifier la présence du mot `président` dans la ligne transcrite
-		president = table_list[0]
-		jures = table_list[1:]
+		president = table_des_magistrats[0]
+		jures = table_des_magistrats[1:]
 		processed_jures = []
 
 		# On va itérer jury par jury
 		for jure in jures:
 			extracted_entities = utils.extract_magistrates_names(" ".join(line['prediction'] for line in jure),
-																 self.nlp)
+																 self.ner)
 			jury_dict = {"extracted": extracted_entities,
 						 "baseline": [line['baseline'] for line in jure],
 						 "predictions": [line['prediction'] for line in jure]}
 			processed_jures.append(jury_dict)
 		processed_president = utils.extract_magistrates_names(" ".join(line['prediction'] for line in president),
-															  self.nlp)
+															  self.ner)
+
+		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
+		print(table_des_magistrats)
+		coords_zone_englobante_magistrats = zone_englobante_magistrats[0]['coordinates']
+		zone_magistrat_as_rectangle = self.rectangle(coords_zone_englobante_magistrats[0][0],
+												   coords_zone_englobante_magistrats[0][1],
+												   coords_zone_englobante_magistrats[1][0],
+												   coords_zone_englobante_magistrats[1][1])
+		lignes_correspondantes = []
+		for predicted_line in ocr_prediction:
+			prediction = predicted_line["prediction"]
+			baseline = predicted_line["baseline"]
+			# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
+			converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+			is_in_box = utils.check_if_line_in_box(box_coord=zone_magistrat_as_rectangle, baseline=converted_baseline)
+			if is_in_box is True:
+				lignes_correspondantes.append(predicted_line)
+		print([ligne['prediction'] for ligne in lignes_correspondantes])
+		# TODO: continuer ici. trouver les lignes intéressantes:
+		# - près ledit Conseil
+		# - tous nommés par le
+		# - Commissaire du gouvernement
+		exit(0)
+
+
 		return {"Président": {"extracted": processed_president,
 							  "baseline": [line['baseline'] for line in president],
 							  "predictions": [line['prediction'] for line in president]},

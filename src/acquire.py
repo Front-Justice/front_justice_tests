@@ -1,10 +1,12 @@
+import argparse
+import json
 import os
 import sys
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
-import Vision.PARTY as PARTY
 import Information_Extractor.extract as extract
+import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
 
@@ -15,7 +17,9 @@ class Pipeline():
 	def __init__(self,
 				 page_classifier_model,
 				 page_classifier_vocab,
-				 yolo_models):
+				 yolo_models,
+				 debug:bool = False):
+		self.debug = debug
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
 												 vocab=page_classifier_vocab)
@@ -32,7 +36,6 @@ class Pipeline():
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
 			self.yolo_models[name] = yolo.load(path)
-
 		self.YOLO_Segmenter_P1 = yolo.YOLOSegmenter(models=self.yolo_models)
 
 		# Les modèles d'OCR
@@ -42,8 +45,13 @@ class Pipeline():
 
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
-		self.extractor = extract.Extractor(party_engine=PARTY.PartyPredict(),
-										   resize_factor=self.resize_factor)
+		if debug == True:
+			party_engine = None
+		else:
+			party_engine = PARTY.PartyPredict()
+		self.extractor = extract.Extractor(party_engine=party_engine,
+										   resize_factor=self.resize_factor,
+										   debug=debug)
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -54,7 +62,7 @@ class Pipeline():
 	def classification_images(self, images):
 		"""
 		Cette fonction classe toutes les images à l'aide d'un Random Forest
-		:param images:
+		:param images: la liste d'images
 		:return:
 		"""
 		# On commence par classer toutes les images du dossier
@@ -177,38 +185,6 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
-		# On extrait la date du crime
-		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
-		# On extrait le nom et prénom du soldat
-		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
-
-
-		# On extrait le numéro d'ordre
-		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
-
-
-		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
-
 		# On s'occupe de la table des magistrats
 		classes_magistrats = ["ligne",
 							  "Colonne"]
@@ -224,6 +200,45 @@ class Pipeline():
 			zones_magistrats=magistrats,
 			image=page["image_path"],
 			show_images=False)
+
+
+		# On extrait le numéro d'ordre
+		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
+		# On extrait la date du crime
+		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
+		# On extrait le nom et prénom du soldat
+		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
+
+
+
+		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
+
+
+
 
 		# On extrait le numéro de jugement
 		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(
@@ -248,8 +263,14 @@ class Pipeline():
 		pass
 
 	def workflow(self, images):
-		self.classification_images(images)
-		self.regroupement_minutes()
+		print("Début du workflow")
+		# Il faudra supprimer ça pour la mise en production
+		if os.path.isfile("results/minutes.json"):
+			self.minutes = utils.load_json_to_dict("results/minutes.json")
+		else:
+			self.classification_images(images)
+			self.regroupement_minutes()
+		print("Pages classées, minutes regroupées")
 
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
@@ -257,10 +278,10 @@ class Pipeline():
 					annotations = self.traitement_p_1(page)
 					page["annotations"] = annotations
 				utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
-			exit(0)
+		exit(0)
 
 
-def main(images_dir, target):
+def main(images_dir:str, target:str=None, debug:bool=False):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
@@ -271,14 +292,18 @@ def main(images_dir, target):
 	}
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab.joblib",
-						yolo_models=yolo_models)
+						yolo_models=yolo_models,
+						debug=debug)
 	pipeline.workflow(images)
 
 
 if __name__ == '__main__':
-	images_dir = sys.argv[1]
-	if len(sys.argv) > 2:
-		target = sys.argv[2]
-	else:
-		target = None
-	main(images_dir, target)
+	arguments = argparse.ArgumentParser()
+	arguments.add_argument("-i", "--images", help="Input folder")
+	arguments.add_argument("-d", "--debug", help="Debug mode", default=False, type=bool)
+	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
+	arguments = arguments.parse_args()
+	images_dir = arguments.images
+	target = arguments.target
+	debug = arguments.debug
+	main(images_dir, target, debug)
