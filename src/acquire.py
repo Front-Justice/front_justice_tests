@@ -18,7 +18,8 @@ class Pipeline():
 				 page_classifier_model,
 				 page_classifier_vocab,
 				 yolo_models,
-				 debug:bool = False):
+				 debug:bool = False,
+				 use_party=True):
 		self.debug = debug
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
@@ -51,7 +52,8 @@ class Pipeline():
 			party_engine = PARTY.PartyPredict()
 		self.extractor = extract.Extractor(party_engine=party_engine,
 										   resize_factor=self.resize_factor,
-										   debug=debug)
+										   debug=debug,
+										   use_party=use_party)
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -176,6 +178,9 @@ class Pipeline():
 		current_dict = {}
 		loaded_image = Image.open(page["image_path"])
 		width, height = loaded_image.size
+
+		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
+		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
 		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
 		loaded_image = loaded_image.resize(new_size)
 		zones_page_1, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
@@ -184,73 +189,90 @@ class Pipeline():
 																			  model=self.yolo_models["page_1"],
 																			  show_image=False)
 		current_dict["general"] = zones_page_1
-		current_dict["manquantes"] = zones_manquantes
+		current_dict["zones_manquantes"] = zones_manquantes
 
-
+		# On extrait le numéro d'ordre en premier, cas il y a une vérification de la classification.
+		if "MainZone-orderNumber" in current_dict["zones_manquantes"]:
+			current_dict["numer_ordre"] = None
+		else:
+			current_dict["numer_ordre"] = self.extractor.extraire_numero_ordre(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
 		# On extrait les noms de magistrats
-		classes_magistrats = ["ligne",
-							  "Colonne"]
-		magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
-															 target_classes=classes_magistrats,
-															 confidence=0.5,
-															 model=self.yolo_models["magistrats"],
-															 show_image=False)
-		current_dict["magistrats"] = self.extractor.extraire_magistrats(
-			ocr_prediction=self.current_page_transcription,
-			zones_magistrats=magistrats,
-			image=page["image_path"],
-			show_images=False)
-		return current_dict
+		if "Magistrats" in current_dict["zones_manquantes"]:
+			current_dict["magistrats"] = None
+		else:
+			classes_magistrats = ["ligne",
+								  "Colonne"]
+			magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
+																 target_classes=classes_magistrats,
+																 confidence=0.5,
+																 model=self.yolo_models["magistrats"],
+																 show_image=False)
+			current_dict["magistrats"] = self.extractor.extraire_magistrats(
+				ocr_prediction=self.current_page_transcription,
+				zones_magistrats=magistrats,
+				image=page["image_path"],
+				show_images=False)
 
 
 		# On extrait le nom et prénom du soldat
-		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		# TODO: normaliser les noms de zone
+		if "Nom du soldat" in current_dict["zones_manquantes"]:
+			current_dict["nom_du_soldat"] = None
+		else:
+			current_dict["nom_du_soldat"] = self.extractor.extraire_nom_soldat(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
-		# On extrait le numéro d'ordre
-		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+
 
 		# On extrait la date du crime
-		current_dict["Date du crime"] = self.extractor.extraire_date_crime(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		# TODO: normaliser les noms de zone
+		if "MainZone-crimeDate" in current_dict["zones_manquantes"]:
+			current_dict["date_du_crime_ou_delit"] = None
+		else:
+			current_dict["date_du_crime_ou_delit"] = self.extractor.extraire_date_crime(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
-
-
-
-
-
-		current_dict["Lieu du jugement"] = self.extractor.extraire_lieu_jugement(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		# On extrait le lieu du jugement
+		# TODO: normaliser les noms de zone
+		if "MainZone-judgementPlace" in current_dict["zones_manquantes"]:
+			current_dict["lieu_du_jugement"] = None
+		else:
+			current_dict["lieu_du_jugement"] = self.extractor.extraire_lieu_jugement(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
 
 
 
 
 		# On extrait le numéro de jugement
-		current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		# TODO: normaliser les noms de zone
+		if "MainZone-judgementNumber" in current_dict["zones_manquantes"]:
+			current_dict["Numéro de jugement"] = None
+		else:
+			current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
 		return current_dict
 
@@ -296,7 +318,7 @@ class Pipeline():
 		exit(0)
 
 
-def main(images_dir:str, target:str=None, debug:bool=False):
+def main(images_dir:str, target:str=None, debug:bool=False, use_party:bool=True):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
@@ -313,7 +335,8 @@ def main(images_dir:str, target:str=None, debug:bool=False):
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab.joblib",
 						yolo_models=yolo_models,
-						debug=debug)
+						debug=debug,
+						use_party=use_party)
 	pipeline.workflow(images, target)
 
 
@@ -322,8 +345,10 @@ if __name__ == '__main__':
 	arguments.add_argument("-i", "--images", help="Input folder")
 	arguments.add_argument("-d", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
+	arguments.add_argument("-up", "--use_party", help="Use party to confirm key OCR predictions", default=True)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	target = arguments.target
+	use_party = True if arguments.use_party == "True" else False
 	debug = True if arguments.debug == "True" else False
-	main(images_dir, target, debug)
+	main(images_dir, target, debug, use_party)

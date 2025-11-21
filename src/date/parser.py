@@ -63,6 +63,8 @@ class Parser(lexer.Lexer):
         p[0] = {"and": [p[1], p[3]]}
 
 
+
+
     def p_mois(self, p):
         '''
         mois : MOIS
@@ -85,11 +87,16 @@ class Parser(lexer.Lexer):
                      | andor_date_complete
                      | jour_mois_annee
                      | deux_dates_completes
+                     | range_jour_mois ANNEE
         '''
         if len(p) == 3:
             p[0] = {**p[1], "annee": int(p[2])}
         elif len(p) == 4:
-            p[0] = {"jour": int(p[1]), **p[2], "annee": int(p[3]) + 1900}
+            if int(p[3]) < 100:
+                annee = int(p[3]) + 1900
+            else:
+                annee = int(p[3])
+            p[0] = {"jour": int(p[1]), **p[2], "annee": annee}
         else:
             p[0] = p[1]
 
@@ -102,6 +109,14 @@ class Parser(lexer.Lexer):
     def p_range_mois(self, p):
         '''
         range_mois : mois RANGE mois
+        '''
+        p[0] = {"range": [p[1],
+                          p[3]]}
+
+
+    def p_range_jour_mois(self, p):
+        '''
+        range_jour_mois : jour_mois RANGE jour_mois
         '''
         p[0] = {"range": [p[1],
                           p[3]]}

@@ -6,9 +6,9 @@ _tabversion = '3.10'
 
 _lr_method = 'LALR'
 
-_lr_signature = 'startleftANDAN AND ANDOR ANNEE COURANT JOUR MOIS RANGE SPACE\n        mois_annee : mois ANNEE\n        \n        plage : jour_mois AND jour_mois\n        \n        annee_et_annee : annee AND annee\n        \n        courant_de_groupe : COURANT annee_et_annee\n                            | COURANT ANNEE\n                            | COURANT mois_annee\n        \n        groupe_annee : succession_mois ANNEE\n        \n        annee : AN ANNEE\n                    | ANNEE\n        \n        deux_dates_completes : jour_mois_annee AND jour_mois_annee\n        \n        mois : MOIS\n        \n        date_complete : plage ANNEE\n                     | jour_mois ANNEE\n                     | groupe_annee\n                     | courant_de_groupe\n                     | JOUR mois ANNEE\n                     | mois_annee\n                     | annee\n                     | range_mois ANNEE\n                     | range_jour ANNEE\n                     | annee_et_annee\n                     | andor_jour_mois\n                     | andor_date_complete\n                     | jour_mois_annee\n                     | deux_dates_completes\n        \n        start : date_complete\n        \n        range_mois : mois RANGE mois\n        \n        range_jour : JOUR RANGE JOUR\n                    | JOUR RANGE JOUR mois\n        \n        jour_mois : JOUR mois\n        \n        andor_date_complete : jour_mois_annee ANDOR jour_mois_annee\n        jour_mois_annee : JOUR mois ANNEE\n        andor_jour_mois : jour_mois ANDOR jour_mois\n                        | jour_mois ANDOR jour_mois ANNEE\n        \n        succession_mois : mois AND mois\n        '
+_lr_signature = 'startleftANDA AN AND ANDOR ANNEE COURANT DE JOUR MOIS RANGE SPACE\n        mois_annee : mois ANNEE\n        \n        plage : jour_mois AND jour_mois\n        \n        annee_et_annee : annee AND annee\n        \n        courant_de_groupe : COURANT annee_et_annee\n                            | COURANT ANNEE\n                            | COURANT mois_annee\n        \n        groupe_annee : succession_mois ANNEE\n        \n        annee : AN ANNEE\n                    | ANNEE\n        \n        deux_dates_completes : jour_mois_annee AND jour_mois_annee\n        \n        mois : MOIS\n        \n        date_complete : plage ANNEE\n                     | jour_mois ANNEE\n                     | groupe_annee\n                     | courant_de_groupe\n                     | JOUR mois ANNEE\n                     | mois_annee\n                     | annee\n                     | range_mois ANNEE\n                     | range_jour ANNEE\n                     | annee_et_annee\n                     | andor_jour_mois\n                     | andor_date_complete\n                     | jour_mois_annee\n                     | deux_dates_completes\n                     | range_jour_mois ANNEE\n        \n        start : date_complete\n        \n        range_mois : mois RANGE mois\n        \n        range_jour_mois : jour_mois RANGE jour_mois\n        \n        range_jour : JOUR RANGE JOUR\n                    | JOUR RANGE JOUR mois\n        \n        jour_mois : JOUR mois\n        \n        andor_date_complete : jour_mois_annee ANDOR jour_mois_annee\n        jour_mois_annee : JOUR mois ANNEE\n        andor_jour_mois : jour_mois ANDOR jour_mois\n                        | jour_mois ANDOR jour_mois ANNEE\n        \n        succession_mois : mois AND mois\n        '
     
-_lr_action_items = {'JOUR':([0,25,26,28,35,36,],[8,45,45,48,53,53,]),'COURANT':([0,],[20,]),'AN':([0,20,32,],[21,21,21,]),'ANNEE':([0,3,5,9,12,13,19,20,21,22,27,32,42,44,46,48,49,50,55,57,58,],[4,23,24,29,33,34,37,39,43,-11,47,4,29,-2,56,-28,-27,-35,-30,-29,59,]),'MOIS':([0,8,20,30,31,45,48,53,],[22,22,22,22,22,22,22,22,]),'$end':([1,2,4,6,7,10,11,14,15,16,17,18,22,23,24,29,33,34,37,38,39,40,43,46,47,51,52,54,55,56,59,],[0,-26,-9,-14,-15,-17,-18,-21,-22,-23,-24,-25,-11,-12,-13,-1,-19,-20,-7,-4,-5,-6,-8,-33,-16,-3,-31,-10,-30,-34,-32,]),'AND':([4,5,9,11,17,22,27,39,41,43,47,],[-9,25,31,32,36,-11,-30,-9,32,-8,-32,]),'ANDOR':([5,17,22,27,47,],[26,35,-11,-30,-32,]),'RANGE':([8,9,22,],[28,30,-11,]),}
+_lr_action_items = {'JOUR':([0,26,27,28,30,37,38,],[8,48,48,48,52,57,57,]),'COURANT':([0,],[21,]),'AN':([0,21,34,],[22,22,22,]),'ANNEE':([0,3,5,9,12,13,19,20,21,22,23,29,34,45,47,49,50,52,53,54,59,61,62,],[4,24,25,31,35,36,39,40,42,46,-11,51,4,31,-2,60,-29,-30,-28,-37,-32,-31,63,]),'MOIS':([0,8,21,32,33,48,52,57,],[23,23,23,23,23,23,23,23,]),'$end':([1,2,4,6,7,10,11,14,15,16,17,18,23,24,25,31,35,36,39,40,41,42,43,46,49,51,55,56,58,59,60,63,],[0,-27,-9,-14,-15,-17,-18,-21,-22,-23,-24,-25,-11,-12,-13,-1,-19,-20,-26,-7,-4,-5,-6,-8,-35,-16,-3,-33,-10,-32,-36,-34,]),'AND':([4,5,9,11,17,23,29,42,44,46,51,],[-9,26,33,34,38,-11,-32,-9,34,-8,-34,]),'ANDOR':([5,17,23,29,51,],[27,37,-11,-32,-34,]),'RANGE':([5,8,9,23,29,],[28,30,32,-11,-32,]),}
 
 _lr_action = {}
 for _k, _v in _lr_action_items.items():
@@ -17,7 +17,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'start':([0,],[1,]),'date_complete':([0,],[2,]),'plage':([0,],[3,]),'jour_mois':([0,25,26,],[5,44,46,]),'groupe_annee':([0,],[6,]),'courant_de_groupe':([0,],[7,]),'mois':([0,8,20,30,31,45,48,53,],[9,27,42,49,50,55,57,58,]),'mois_annee':([0,20,],[10,40,]),'annee':([0,20,32,],[11,41,51,]),'range_mois':([0,],[12,]),'range_jour':([0,],[13,]),'annee_et_annee':([0,20,],[14,38,]),'andor_jour_mois':([0,],[15,]),'andor_date_complete':([0,],[16,]),'jour_mois_annee':([0,35,36,],[17,52,54,]),'deux_dates_completes':([0,],[18,]),'succession_mois':([0,],[19,]),}
+_lr_goto_items = {'start':([0,],[1,]),'date_complete':([0,],[2,]),'plage':([0,],[3,]),'jour_mois':([0,26,27,28,],[5,47,49,50,]),'groupe_annee':([0,],[6,]),'courant_de_groupe':([0,],[7,]),'mois':([0,8,21,32,33,48,52,57,],[9,29,45,53,54,59,61,62,]),'mois_annee':([0,21,],[10,43,]),'annee':([0,21,34,],[11,44,55,]),'range_mois':([0,],[12,]),'range_jour':([0,],[13,]),'annee_et_annee':([0,21,],[14,41,]),'andor_jour_mois':([0,],[15,]),'andor_date_complete':([0,],[16,]),'jour_mois_annee':([0,37,38,],[17,56,58,]),'deux_dates_completes':([0,],[18,]),'range_jour_mois':([0,],[19,]),'succession_mois':([0,],[20,]),}
 
 _lr_goto = {}
 for _k, _v in _lr_goto_items.items():
@@ -37,29 +37,31 @@ _lr_productions = [
   ('annee -> AN ANNEE','annee',2,'p_annee','parser.py',51),
   ('annee -> ANNEE','annee',1,'p_annee','parser.py',52),
   ('deux_dates_completes -> jour_mois_annee AND jour_mois_annee','deux_dates_completes',3,'p_date_complete_date_complete','parser.py',61),
-  ('mois -> MOIS','mois',1,'p_mois','parser.py',68),
-  ('date_complete -> plage ANNEE','date_complete',2,'p_date_complete','parser.py',74),
-  ('date_complete -> jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',75),
-  ('date_complete -> groupe_annee','date_complete',1,'p_date_complete','parser.py',76),
-  ('date_complete -> courant_de_groupe','date_complete',1,'p_date_complete','parser.py',77),
-  ('date_complete -> JOUR mois ANNEE','date_complete',3,'p_date_complete','parser.py',78),
-  ('date_complete -> mois_annee','date_complete',1,'p_date_complete','parser.py',79),
-  ('date_complete -> annee','date_complete',1,'p_date_complete','parser.py',80),
-  ('date_complete -> range_mois ANNEE','date_complete',2,'p_date_complete','parser.py',81),
-  ('date_complete -> range_jour ANNEE','date_complete',2,'p_date_complete','parser.py',82),
-  ('date_complete -> annee_et_annee','date_complete',1,'p_date_complete','parser.py',83),
-  ('date_complete -> andor_jour_mois','date_complete',1,'p_date_complete','parser.py',84),
-  ('date_complete -> andor_date_complete','date_complete',1,'p_date_complete','parser.py',85),
-  ('date_complete -> jour_mois_annee','date_complete',1,'p_date_complete','parser.py',86),
-  ('date_complete -> deux_dates_completes','date_complete',1,'p_date_complete','parser.py',87),
-  ('start -> date_complete','start',1,'p_start','parser.py',98),
-  ('range_mois -> mois RANGE mois','range_mois',3,'p_range_mois','parser.py',104),
-  ('range_jour -> JOUR RANGE JOUR','range_jour',3,'p_range_jour','parser.py',111),
-  ('range_jour -> JOUR RANGE JOUR mois','range_jour',4,'p_range_jour','parser.py',112),
-  ('jour_mois -> JOUR mois','jour_mois',2,'p_jour_mois','parser.py',124),
-  ('andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee','andor_date_complete',3,'p_andor_date_complete','parser.py',130),
-  ('jour_mois_annee -> JOUR mois ANNEE','jour_mois_annee',3,'p_jour_mois_annee','parser.py',136),
-  ('andor_jour_mois -> jour_mois ANDOR jour_mois','andor_jour_mois',3,'p_andor_jour_mois','parser.py',141),
-  ('andor_jour_mois -> jour_mois ANDOR jour_mois ANNEE','andor_jour_mois',4,'p_andor_jour_mois','parser.py',142),
-  ('succession_mois -> mois AND mois','succession_mois',3,'p_succession_mois','parser.py',151),
+  ('mois -> MOIS','mois',1,'p_mois','parser.py',70),
+  ('date_complete -> plage ANNEE','date_complete',2,'p_date_complete','parser.py',76),
+  ('date_complete -> jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',77),
+  ('date_complete -> groupe_annee','date_complete',1,'p_date_complete','parser.py',78),
+  ('date_complete -> courant_de_groupe','date_complete',1,'p_date_complete','parser.py',79),
+  ('date_complete -> JOUR mois ANNEE','date_complete',3,'p_date_complete','parser.py',80),
+  ('date_complete -> mois_annee','date_complete',1,'p_date_complete','parser.py',81),
+  ('date_complete -> annee','date_complete',1,'p_date_complete','parser.py',82),
+  ('date_complete -> range_mois ANNEE','date_complete',2,'p_date_complete','parser.py',83),
+  ('date_complete -> range_jour ANNEE','date_complete',2,'p_date_complete','parser.py',84),
+  ('date_complete -> annee_et_annee','date_complete',1,'p_date_complete','parser.py',85),
+  ('date_complete -> andor_jour_mois','date_complete',1,'p_date_complete','parser.py',86),
+  ('date_complete -> andor_date_complete','date_complete',1,'p_date_complete','parser.py',87),
+  ('date_complete -> jour_mois_annee','date_complete',1,'p_date_complete','parser.py',88),
+  ('date_complete -> deux_dates_completes','date_complete',1,'p_date_complete','parser.py',89),
+  ('date_complete -> range_jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',90),
+  ('start -> date_complete','start',1,'p_start','parser.py',105),
+  ('range_mois -> mois RANGE mois','range_mois',3,'p_range_mois','parser.py',111),
+  ('range_jour_mois -> jour_mois RANGE jour_mois','range_jour_mois',3,'p_range_jour_mois','parser.py',119),
+  ('range_jour -> JOUR RANGE JOUR','range_jour',3,'p_range_jour','parser.py',126),
+  ('range_jour -> JOUR RANGE JOUR mois','range_jour',4,'p_range_jour','parser.py',127),
+  ('jour_mois -> JOUR mois','jour_mois',2,'p_jour_mois','parser.py',139),
+  ('andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee','andor_date_complete',3,'p_andor_date_complete','parser.py',145),
+  ('jour_mois_annee -> JOUR mois ANNEE','jour_mois_annee',3,'p_jour_mois_annee','parser.py',151),
+  ('andor_jour_mois -> jour_mois ANDOR jour_mois','andor_jour_mois',3,'p_andor_jour_mois','parser.py',156),
+  ('andor_jour_mois -> jour_mois ANDOR jour_mois ANNEE','andor_jour_mois',4,'p_andor_jour_mois','parser.py',157),
+  ('succession_mois -> mois AND mois','succession_mois',3,'p_succession_mois','parser.py',166),
 ]

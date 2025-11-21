@@ -14,7 +14,7 @@ from collections import namedtuple
 import time
 from yaspin import yaspin
 import dateutil
-
+import spellchecker
 
 def load(path):
 	return Image.open(path)
@@ -29,9 +29,9 @@ def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 		:return: la liste voulue
 		"""
 	# On commence par normaliser les chaînes de caractères
-	delimiter = normalize_string(delimiter)
+	delimiter = nfc_normalize(delimiter)
 	delimiter_as_regexp = re.compile(delimiter)
-	target_string = normalize_string(target_string)
+	target_string = nfc_normalize(target_string)
 	out_split = []
 	results = re.finditer(delimiter_as_regexp, target_string)
 	delimiters = [0]
@@ -44,8 +44,24 @@ def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]])
 	return out_split
 
+def tokenize_sent(sentence:str) -> list:
+	punctuation_and_space = re.compile(r'(["\'\-?,!;\.:\s])')
+	tokenized = re.split(punctuation_and_space, sentence)
+	tokenized = [item for item in tokenized if item != " "]
+	return tokenized
 
-def normalize_string(input_string: str) -> str:
+def correct_string(string:str) -> str:
+	correcteur = spellchecker.spellchecker.SpellChecker(language='fr')
+	corrected_string = []
+	tokens = tokenize_sent(string)
+	for token in tokens:
+		corr = correcteur.correction(token)
+		corrected_string.append(corr)
+	return " ".join(corrected_string)
+
+
+
+def nfc_normalize(input_string: str) -> str:
 	"""
 	Cette fonction applique une normalisation unicode NFC à la chaîne de caractères voulue.
 	:param input_string:
@@ -63,9 +79,9 @@ def split_before_keep_delimiter(target_string: str, delimiter: str) -> list:
 	:return: la liste voulue
 	"""
 	# On commence par normaliser les chaînes de caractères
-	delimiter = normalize_string(delimiter)
+	delimiter = nfc_normalize(delimiter)
 	delimiter_as_regexp = re.compile(delimiter)
-	target_string = normalize_string(target_string)
+	target_string = nfc_normalize(target_string)
 
 	out_split = []
 	results = re.finditer(delimiter_as_regexp, target_string)
@@ -211,10 +227,13 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 		certainty = 0.8
 	except StopIteration:
 		# Si le nom est mal reconnu, on considère que l'entité nommée est la première de la ligne
-		correct_entity = words[0]
-		forename = correct_entity
-		certainty = 0.5
-	forename = clean_forename(forename)
+		try:
+			correct_entity = words[0]
+			forename = clean_forename(correct_entity)
+			certainty = 0.5
+		except IndexError:
+			forename = None
+			certainty = None
 	return forename, certainty
 
 
@@ -266,7 +285,6 @@ def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	ligne_greffier = match_line_by_similarity(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier['baseline']
 	ligne_greffier = ligne_greffier['prediction']
-	print(ligne_greffier)
 	greffier, form_greffier = check_word_in_sentence(ligne_greffier, "Greffier")
 	if greffier is True:
 		debut_de_chaine = ligne_greffier.split(form_greffier)[0]
@@ -306,7 +324,6 @@ def extraire_commissaire(lignes_zone_magistrat:dict, ner_pipeline):
 	ligne_commissaire = match_line_by_similarity(lignes_zone_magistrat, "commissaire du gouvernement")
 	baseline = ligne_commissaire['baseline']
 	ligne_commissaire = ligne_commissaire['prediction']
-	print(ligne_commissaire)
 	commissaire, form_commissaire = check_word_in_sentence(ligne_commissaire, "commissaire")
 	if commissaire is True:
 		debut_de_chaine = ligne_commissaire.split(form_commissaire)[0]
@@ -486,13 +503,12 @@ def match_line_by_similarity(corresponding_lines:list, string_to_match:str):
 	# On commence par normaliser la chaîne à matcher
 	string_to_match = string_to_match.lower()
 	distances = []
-	if len(corresponding_lines) > 1:
-		for idx, ligne in enumerate(corresponding_lines):
-			prediction = ligne['prediction']
-			prediction = prediction.lower()
-			# On identifie la ligne pouvant contenir à l'effet de juger
-			dist = similarite_ratcliff(prediction, string_to_match)
-			distances.append(dist)
+	for idx, ligne in enumerate(corresponding_lines):
+		prediction = ligne['prediction']
+		prediction = prediction.lower()
+		# On identifie la ligne pouvant contenir à l'effet de juger
+		dist = similarite_ratcliff(prediction, string_to_match)
+		distances.append(dist)
 	correct_line_index = distances.index(max(distances))
 	name_line = corresponding_lines[correct_line_index]
 	return name_line

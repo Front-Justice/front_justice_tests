@@ -60,7 +60,7 @@ class YOLOSegmenter():
 		if len(missing) > 0:
 			print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
 		else:
-			missing = None
+			missing = []
 		return results_list, missing
 
 	def process_nom_soldat(self, image, coordinate):

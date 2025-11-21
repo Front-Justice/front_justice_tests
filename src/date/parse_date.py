@@ -1,6 +1,7 @@
 import re
 import src.date.parser as parser
 import src.date.lexer as lexer
+import src.utils.utils as utils
 import json
 
 
@@ -158,20 +159,22 @@ def clean_date(text):
 	date = text.lower().strip()
 	clean_regexp = re.compile(r"(\d+)\^?e")
 	subs = re.sub(clean_regexp, r'\g<1>', date)
-	print("Clean date: {}".format(subs))
+	subs = utils.nfc_normalize(subs)
+	subs = utils.strip_punctuation(subs)
+	subs = utils.correct_string(subs)
 	return subs
 
-def process_date(text):
+def process_date(text, debug=False):
 	"""
 	Cette fonction initialise le lexeur et le parseur prévu pour le traitement des dates
 	:param text: le texte
 	:return: l'objet date parsé
 	"""
-	text = clean_date(text)
-	ast = build_grammar(debug=False, text=text)
+	corr_date = clean_date(text)
+	ast = build_grammar(debug=debug, text=corr_date)
 	parsed = parse_ast(ast)
 	result = second_pass(parsed)
-	return result
+	return result, corr_date
 
 def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915") -> list:
 	"""
@@ -205,19 +208,21 @@ def test():
 		"17 août 17",
 		"19 février 1914 - 21 mars 1915",
 		"19 février 1914, 21 mars 1915",
-		"mai et juin 1917"]
-	# dates_examples = ["16 au 28 juillet 1918"]
+		"mai et juin 1917",
+		"juin 1917 et 25 septembre 17",
+		"du 27 au 28 septembre 1915",
+		"5 janvier au 21 fevrier 1917"]
+	dates_examples = [utils.nfc_normalize("17 août 1918")]
 	for example in dates_examples:
 		print("---")
-		ast = build_grammar(debug=False, text=example)
-		parsed = parse_ast(ast)
-		result = second_pass(parsed)
-		print(f"Résultat: {result}")
-		if result is None:
-			print("ERROR")
+		print(example)
+		date, corr_date = process_date(example, debug=True)
+		print(f"Date: {date}")
+		print(f"Corrected date: {corr_date}")
+		print(f"Processed date: {date}")
 
 if __name__ == '__main__':
-	date = process_date("25 mai - 1^e Juin 1917")
-	print(date)
-	exit(0)
 	test()
+	# date = process_date("5 janvier au 21 fevrier 1917")
+	# print(date)
+	exit(0)

@@ -1,5 +1,7 @@
 import ply.lex as lex
 import copy
+import src.utils.utils as utils
+
 
 class Lexer(object):
     """
@@ -13,19 +15,24 @@ class Lexer(object):
 		'JOUR',
 		'AND',
         'ANDOR',
+        "A",
 		'RANGE',
         "AN",
-        "SPACE"
+        "SPACE",
+        "DE"
     )
+
+    tokens = [utils.nfc_normalize(token) for token in tokens]
 
     # Pour l'instant les années à 2 chiffres n'apparaissent qu'en fin de chaîne
     t_ANNEE = r"\d{4}|\d{2}$"
     t_JOUR = r"\d{1,2}"
-    t_MOIS = r"janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre"
+    t_MOIS = utils.nfc_normalize(r"janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre")
     t_AND = r"et|,"
     t_ANDOR = r"-"
-    t_RANGE = r"à|au"
-    t_AN = r"ann[ée]e|an"
+    t_DE = r"de|du|d'"
+    t_RANGE = utils.nfc_normalize(r"à\s|au\s|a\s")
+    t_AN = utils.nfc_normalize(r"ann[ée]e\s|an\s")
 
 
     def t_COURANT(self, t):

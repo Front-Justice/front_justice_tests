@@ -27,7 +27,10 @@ class Extractor:
 	 	- du même corpus d'images
 	"""
 
-	def __init__(self, party_engine: PARTY.PartyPredict, resize_factor: int = 1, debug:bool=False):
+	def __init__(self, party_engine: PARTY.PartyPredict,
+				 resize_factor: int = 1,
+				 debug:bool=False,
+				 use_party=True):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
@@ -49,6 +52,7 @@ class Extractor:
 								item in
 								self.target_corpus}
 		self.resize_factor: int = resize_factor
+		self.use_party = use_party
 		if debug is False:
 			self.party = party_engine
 
@@ -93,9 +97,10 @@ class Extractor:
 		zones_filtrees = self.filter_zones(annotations=annotations, category=target_zone)
 
 		if len(zones_filtrees) == 0:
-			return None
-
-		assert len(zones_filtrees) == 1, "Erreur: plusieurs zones détectées"
+			return None, None
+		elif len(zones_filtrees) > 1:
+			print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
+			return None, None
 
 		# On va commencer par identifier le nom prédit par kraken
 		coordonnees_zones_filtrees = zones_filtrees[0]['coordinates']
@@ -173,21 +178,31 @@ class Extractor:
 
 		kraken_prediction = " ".join([line['prediction'] for line in corresponding_lines]).strip()
 		corresponding_baselines = [line['baseline'] for line in corresponding_lines]
+
 		# On transcrit avec party
-		party_segmentation = self.party.create_baseline(corresponding_baselines, image)
-		party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
-															   image=loaded_image,
-															   objet_transcrit="lieu du jugement")
-		party_prediction = " ".join([item.prediction for item in party_prediction]).strip()
+		if self.use_party:
+			party_segmentation = self.party.create_baseline(corresponding_baselines, image)
+			party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
+																   image=loaded_image,
+																   objet_transcrit="lieu du jugement")
+			party_prediction = " ".join([item.prediction for item in party_prediction]).strip()
+		else:
+			party_prediction = kraken_prediction
 
 		chaine_seant = "s[ée]ant à|s[ée]ant aux"
 		chaine_permanent = "⟦?permanent⟧? du|⟦?permanent⟧? de la"
 
 		avant_seant_kraken = utils.split_before_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[
 			0]
-		institution_kraken = \
-			utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
-		lieu_kraken = utils.split_after_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[1]
+		try:
+			institution_kraken = \
+				utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
+		except IndexError:
+			institution_kraken = None
+		try:
+			lieu_kraken = utils.split_after_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[1]
+		except IndexError:
+			lieu_kraken = None
 
 		avant_seant_party = utils.split_before_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[0]
 		try:
@@ -280,17 +295,27 @@ class Extractor:
 			is_jugement = re.match(expression_jugement, prediction)
 			if is_jugement:
 				target_line.append(line)
-
+		if len(target_line) == 0:
+			return {"Numéro": None,
+				"baseline": None,
+				"bbox": numero_jugement_zone,
+				"certitude": None,
+				"predictions": {"party": None,
+								"kraken": None}}
 		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro de jugement."
 
+		numero_jugement_kraken = target_line[0]['prediction']
 		# On transcrit avec party
-		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-		party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
-															   image=loaded_image,
-															   objet_transcrit="numéro de jugement")
-		numero_jugement_party = party_prediction.prediction
+		if self.use_party:
+			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+			party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
+																   image=loaded_image,
+																   objet_transcrit="numéro de jugement")
+			numero_jugement_party = party_prediction.prediction
+		else:
+			numero_jugement_party = numero_jugement_kraken
+
 		target_line = target_line[0]
-		numero_jugement_kraken = target_line['prediction']
 
 		if numero_jugement_party == numero_jugement_kraken:
 			certitude = 0.8
@@ -359,19 +384,29 @@ class Extractor:
 															   ocr_prediction=ocr_prediction,
 															   intersect_ratio=0.7)
 
-		if len(corresponding_lines) == 2:
-			date_line = corresponding_lines[1]
-		target_line = [corresponding_lines[1]]
+		# La date du crime est toujours sur la deuxième ligne
+		# sauf quand elle n'est pas renseignée
+		try:
+			target_line = [corresponding_lines[1]]
+		except IndexError:
+			return {"bbox": date_zone,
+					"Date normalisee": None,
+					"Date": None}
+
+		date_crime_kraken = target_line[0]['prediction']
 
 		# On transcrit avec party
-		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-		party_prediction = self.party.measured_party_inference(
-			segmentation=party_segmentation,
-			image=loaded_image,
-			objet_transcrit="date du crime")
-		date_crime_party = party_prediction.prediction
+		if self.use_party:
+			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+			party_prediction = self.party.measured_party_inference(
+				segmentation=party_segmentation,
+				image=loaded_image,
+				objet_transcrit="date du crime")
+			date_crime_party = party_prediction.prediction
+		else:
+			date_crime_party = date_crime_kraken
+
 		target_line = target_line[0]
-		date_crime_kraken = target_line['prediction']
 
 		if date_crime_party == date_crime_kraken:
 			certitude = 0.8
@@ -381,10 +416,15 @@ class Extractor:
 			target_date = date_crime_party
 
 		# On utilise le parseur pour produire la date normalisée
-		normalized_date = date.process_date(target_date)
+		print(target_date)
+		try:
+			normalized_date, corrected_date = date.process_date(target_date)
+		except:
+			normalized_date, corrected_date = None, None
 
 		return {"Date normalisée": normalized_date,
-				"Date": date_crime_party,
+				"Date corrigée": corrected_date,
+				"Date retenue": date_crime_party,
 				"baseline": target_line['baseline'],
 				"bbox": date_zone,
 				"certitude": certitude,
@@ -478,18 +518,27 @@ class Extractor:
 									   f"{target_line}")
 
 		# On transcrit avec party
-		party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-		party_prediction = self.party.measured_party_inference(
-			segmentation=party_segmentation,
-			image=loaded_image,
-			objet_transcrit="numéro d'ordre")
-		numero_ordre_party = party_prediction.prediction
+		if self.use_party:
+			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
+			party_prediction = self.party.measured_party_inference(
+				segmentation=party_segmentation,
+				image=loaded_image,
+				objet_transcrit="numéro d'ordre")
+			numero_ordre_party = party_prediction.prediction
+		else:
+			numero_ordre_party = target_line[0]['prediction']
 
 		target_line = target_line[0]
 
 		numero_regexp = re.compile("\d+")
-		target_number_kraken = re.search(numero_regexp, target_line['prediction']).group()
-		target_number_party = re.search(numero_regexp, numero_ordre_party).group()
+		try:
+			target_number_kraken = re.search(numero_regexp, target_line['prediction']).group()
+		except AttributeError:
+			target_number_kraken = None
+		try:
+			target_number_party = re.search(numero_regexp, numero_ordre_party).group()
+		except AttributeError:
+			target_number_party = None
 
 		if target_number_party == target_number_kraken:
 			certitude = 0.8
@@ -559,20 +608,15 @@ class Extractor:
 																 loaded_image=loaded_image,
 																 ocr_prediction=ocr_prediction,
 																 intersect_ratio=0.1)
+		if corresponding_lines is None:
+			print("Plusieurs soldats trouvés, pas encore pris en charge.")
+			return {"extracted": "Plusieurs soldats"}
 
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
 		name_line = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="A l'effet de juger")
-		# distances = []
-		# if len(corresponding_lines) > 1:
-		# 	for idx, ligne in enumerate(corresponding_lines):
-		# 		prediction = ligne['prediction']
-		# 		# On identifie la ligne pouvant contenir à l'effet de juger
-		# 		dist = utils.similarite_ratcliff(prediction, "A l'effet de juger")
-		# 		distances.append(dist)
-		# correct_line_index = distances.index(max(distances))
-		# name_line = corresponding_lines[correct_line_index]
+
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
@@ -599,20 +643,22 @@ class Extractor:
 		# On prend le premier et le dernier point de la ligne
 		# TODO: on peut améliorer cela en prenant les points qui encadrent les abcisses de la boîte
 		baseline_soldat = [baseline_soldat[0], baseline_soldat[-1]]
-		print(baseline_soldat)
 		(x1_soldat, _), (x2_soldat, _) = soldat_zone
 		(_, y1), (_, y2) = baseline_soldat
 		baseline_soldat_coupee = [
 			[round(x1_soldat / self.resize_factor), round(y1 / self.resize_factor)],
 			[round(x2_soldat / self.resize_factor), round(y2 / self.resize_factor)]
 		]
-		party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
-		party_prediction = self.party.measured_party_inference(
-			segmentation=party_segmentation,
-			image=loaded_image,
-			objet_transcrit="nom du soldat")
 
-		nom_soldat_party = party_prediction.prediction
+		if self.use_party:
+			party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
+			party_prediction = self.party.measured_party_inference(
+				segmentation=party_segmentation,
+				image=loaded_image,
+				objet_transcrit="nom du soldat")
+			nom_soldat_party = party_prediction.prediction
+		else:
+			nom_soldat_party = nom_du_soldat_kraken
 
 		# on produit le dictionnaire
 		extracted = {}
@@ -792,7 +838,6 @@ class Extractor:
 															 self.ner)
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
-		print(table_des_magistrats)
 		coords_zone_englobante_magistrats = zone_englobante_magistrats[0]['coordinates']
 		zone_magistrat_as_rectangle = self.rectangle(coords_zone_englobante_magistrats[0][0],
 												   coords_zone_englobante_magistrats[0][1],
@@ -809,12 +854,6 @@ class Extractor:
 				lignes_zone_magistrat.append(predicted_line)
 
 
-		# TODO: continuer ici. trouver les lignes intéressantes:
-		# - près ledit Conseil
-		# - tous nommés par le
-		# - Commissaire du gouvernement
-		# print(ligne_grade['prediction'])
-		# print(ligne_commissaire['prediction'])
 
 		# On extrait le nom du greffier:
 		greffier = utils.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
@@ -879,13 +918,11 @@ class Extractor:
 						clean_annotations[document]["antécédents"] = None
 					else:
 						merged = " ".join(annotation)
-						print(merged)
 						condamnations = \
 							utils.split_after_keep_delimiter(merged, delimiter=condamnation_split_regexp)[1]
 						clean_annotations[document]["antécédents"] = condamnations
 
 					merged = " ".join(annotation)
-					print(merged)
 					inculpation = \
 						utils.split_before_keep_delimiter(merged, delimiter=condamnation_split_regexp)[0]
 					clean_annotations[document]["inculpation"] = inculpation
