@@ -563,15 +563,16 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		distances = []
-		if len(corresponding_lines) > 1:
-			for idx, ligne in enumerate(corresponding_lines):
-				prediction = ligne['prediction']
-				# On identifie la ligne pouvant contenir à l'effet de juger
-				dist = utils.similarite_ratcliff(prediction, "A l'effet de juger")
-				distances.append(dist)
-		correct_line_index = distances.index(max(distances))
-		name_line = corresponding_lines[correct_line_index]
+		name_line = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="A l'effet de juger")
+		# distances = []
+		# if len(corresponding_lines) > 1:
+		# 	for idx, ligne in enumerate(corresponding_lines):
+		# 		prediction = ligne['prediction']
+		# 		# On identifie la ligne pouvant contenir à l'effet de juger
+		# 		dist = utils.similarite_ratcliff(prediction, "A l'effet de juger")
+		# 		distances.append(dist)
+		# correct_line_index = distances.index(max(distances))
+		# name_line = corresponding_lines[correct_line_index]
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
@@ -630,11 +631,11 @@ class Extractor:
 		return {"bbox": soldat_zone,
 				"extracted": extracted}
 
-	def extraire_table_magistrats(self,
-								  ocr_prediction,
-								  zones_magistrats,
-								  image: str = None,
-								  show_images: bool = True):
+	def extraire_magistrats(self,
+							ocr_prediction,
+							zones_magistrats,
+							image: str = None,
+							show_images: bool = True):
 		"""
 		Cette fonction extrait les noms des magistrats et leur statut à parti
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
@@ -719,7 +720,7 @@ class Extractor:
 		column_annotation = self.filter_zones(zones_magistrats, "Colonne")
 		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
 		lignes_table_triees = utils.vertical_order_zones(lines_annotation)
-		first_column, _ = utils.horizontal_order_zones(column_annotation)
+		first_column, *_ = utils.horizontal_order_zones(column_annotation)
 		first_column = first_column["coordinates"]
 		first_column_as_rectangle = self.rectangle(first_column[0][0],
 												   first_column[0][1],
@@ -745,7 +746,7 @@ class Extractor:
 				continue
 
 			# On itère sur les lignes identifiées par Kraken
-			for predicted_line in ocr_prediction:
+			for idx, predicted_line in enumerate(ocr_prediction):
 				prediction = predicted_line["prediction"]
 				baseline = predicted_line["baseline"]
 				# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
@@ -781,14 +782,14 @@ class Extractor:
 
 		# On va itérer jury par jury
 		for jure in jures:
-			extracted_entities = utils.extract_magistrates_names(" ".join(line['prediction'] for line in jure),
-																 self.ner)
+			extracted_entities = utils.extraire_nom_et_fonction(prediction=" ".join(line['prediction'] for line in jure),
+																pipeline=self.ner)
 			jury_dict = {"extracted": extracted_entities,
 						 "baseline": [line['baseline'] for line in jure],
 						 "predictions": [line['prediction'] for line in jure]}
 			processed_jures.append(jury_dict)
-		processed_president = utils.extract_magistrates_names(" ".join(line['prediction'] for line in president),
-															  self.ner)
+		processed_president = utils.extraire_nom_et_fonction(" ".join(line['prediction'] for line in president),
+															 self.ner)
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
 		print(table_des_magistrats)
@@ -797,7 +798,7 @@ class Extractor:
 												   coords_zone_englobante_magistrats[0][1],
 												   coords_zone_englobante_magistrats[1][0],
 												   coords_zone_englobante_magistrats[1][1])
-		lignes_correspondantes = []
+		lignes_zone_magistrat = []
 		for predicted_line in ocr_prediction:
 			prediction = predicted_line["prediction"]
 			baseline = predicted_line["baseline"]
@@ -805,19 +806,30 @@ class Extractor:
 			converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
 			is_in_box = utils.check_if_line_in_box(box_coord=zone_magistrat_as_rectangle, baseline=converted_baseline)
 			if is_in_box is True:
-				lignes_correspondantes.append(predicted_line)
-		print([ligne['prediction'] for ligne in lignes_correspondantes])
+				lignes_zone_magistrat.append(predicted_line)
+
+
 		# TODO: continuer ici. trouver les lignes intéressantes:
 		# - près ledit Conseil
 		# - tous nommés par le
 		# - Commissaire du gouvernement
-		exit(0)
+		# print(ligne_grade['prediction'])
+		# print(ligne_commissaire['prediction'])
 
-
+		# On extrait le nom du greffier:
+		greffier = utils.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		commissaire = utils.extraire_commissaire(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		general = utils.extraire_general(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
+		if general == {"grade": None}:
+			general = utils.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.ner)
 		return {"Président": {"extracted": processed_president,
 							  "baseline": [line['baseline'] for line in president],
 							  "predictions": [line['prediction'] for line in president]},
-				"Jurés": processed_jures}
+				"Jurés": processed_jures,
+				"greffier": greffier,
+				"commissaire": commissaire,
+				"Général": general}
 
 	def finetune_categories(self):
 		"""

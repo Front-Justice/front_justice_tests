@@ -66,6 +66,7 @@ class Pipeline():
 		:return:
 		"""
 		# On commence par classer toutes les images du dossier
+		print("Classification des images")
 		for image in images:
 			dossier, ident = utils.get_name_from_path(image)
 			# On vérifie s'il n'y a pas de problème de disparition d'image
@@ -77,7 +78,7 @@ class Pipeline():
 			if image == images[-1]:
 				print("Dossier terminé")
 
-	def regroupement_minutes(self):
+	def regroupement_minutes(self, out_dir):
 		"""
 		Cette fonction regroupe les minutes
 		:return: None, mais produit le dictionnaire self.minutes de la forme:
@@ -94,6 +95,7 @@ class Pipeline():
 		 'classe': 'page_4'}]
 		 }```
 		"""
+		print("Reconstitution des minutes")
 		current_minute = []
 		current_minute_number = 0
 		# Puis on rassemble les minutes
@@ -114,7 +116,7 @@ class Pipeline():
 				current_minute = []
 				current_minute_number += 1
 		print(self.minutes)
-		utils.save_as_dict(self.minutes, "results/minutes.json")
+		utils.save_as_dict(self.minutes, out_dir)
 
 	def check_image_consistency(self, current_image):
 		"""
@@ -128,7 +130,6 @@ class Pipeline():
 			print(f"Image courante: {current_image}. \n"
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
-			exit(0)
 
 	def transcription_kraken(self, image):
 		loaded_page = Image.open(image)
@@ -153,7 +154,7 @@ class Pipeline():
 
 		# TODO: à supprimer, éventuellement, utile pour le debug. On vérifie si le fichier n'existe pas
 		# Il faut re-lancer les prédictions en cas de nouveau modèle d'HTR/Segmentation
-		target_transcription = f"results/ocr_prediction_{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
+		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription):
 			print("Segmentation/Transcription with kraken")
 			self.current_page_transcription = self.transcription_kraken(image=page["image_path"])
@@ -185,22 +186,31 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["manquantes"] = zones_manquantes
 
-		# On s'occupe de la table des magistrats
+
+
+		# On extrait les noms de magistrats
 		classes_magistrats = ["ligne",
 							  "Colonne"]
 		magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
 															 target_classes=classes_magistrats,
-															 confidence=0.2,
+															 confidence=0.5,
 															 model=self.yolo_models["magistrats"],
 															 show_image=False)
-
-		# On extrait les noms de magistrats
-		current_dict["magistrats"] = self.extractor.extraire_table_magistrats(
+		current_dict["magistrats"] = self.extractor.extraire_magistrats(
 			ocr_prediction=self.current_page_transcription,
 			zones_magistrats=magistrats,
 			image=page["image_path"],
 			show_images=False)
+		return current_dict
 
+
+		# On extrait le nom et prénom du soldat
+		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
 
 		# On extrait le numéro d'ordre
 		current_dict["Numéro d'ordre"] = self.extractor.extraire_numero_ordre(
@@ -218,13 +228,7 @@ class Pipeline():
 			show_images=False,
 			loaded_image=loaded_image)
 
-		# On extrait le nom et prénom du soldat
-		current_dict["Nom du soldat"] = self.extractor.extraire_nom_soldat(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+
 
 
 
@@ -262,22 +266,33 @@ class Pipeline():
 	def traitement_p_autre(self):
 		pass
 
-	def workflow(self, images):
+	def workflow(self, images:list, target:str|None):
+		"""
+		La fonction qui classe les pages, produit les minutes
+		et distribue les tâches en fonction de la classe de la page
+		:param images: Les images à traiter
+		:param target: [DEBUG] l'image à traiter dans le corpus
+		:return:
+		"""
 		print("Début du workflow")
 		# Il faudra supprimer ça pour la mise en production
-		if os.path.isfile("results/minutes.json"):
-			self.minutes = utils.load_json_to_dict("results/minutes.json")
+		self.images_basedir = "_".join(images[0].split("/")[:-1])
+		if os.path.isfile(f"results/{self.images_basedir}_minutes.json"):
+			self.minutes = utils.load_json_to_dict(f"results/{self.images_basedir}_minutes.json")
 		else:
 			self.classification_images(images)
-			self.regroupement_minutes()
+			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
 
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
+				if target:
+					if page['image_path'] != target:
+						continue
 				if page["classe"] == "page_1":
 					annotations = self.traitement_p_1(page)
 					page["annotations"] = annotations
-				utils.save_as_dict(self.minutes, "results/minutes_annotations.json")
+				utils.save_as_dict(self.minutes, f"results/{self.images_basedir}_minutes_annotations.json")
 		exit(0)
 
 
@@ -285,7 +300,12 @@ def main(images_dir:str, target:str=None, debug:bool=False):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
-	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
+	else:
+		target = None
+	try:
+		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
+	except:
+		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov11_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -294,16 +314,16 @@ def main(images_dir:str, target:str=None, debug:bool=False):
 						page_classifier_vocab="src/Page_Classifier/models/vocab.joblib",
 						yolo_models=yolo_models,
 						debug=debug)
-	pipeline.workflow(images)
+	pipeline.workflow(images, target)
 
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("-i", "--images", help="Input folder")
-	arguments.add_argument("-d", "--debug", help="Debug mode", default=False, type=bool)
+	arguments.add_argument("-d", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	target = arguments.target
-	debug = arguments.debug
+	debug = True if arguments.debug == "True" else False
 	main(images_dir, target, debug)

@@ -191,51 +191,6 @@ def normalize_string_and_strip_spaces(string:str) -> str:
 	"""
 	return string.lower().strip()
 
-class MyParserInfo(dateutil.parser._parser.parserinfo):
-    def convertyear(self, year, *args, **kwargs):
-        if year < 100:
-            year += 1900
-        return year
-
-def date_extraction(string: str) -> datetime.date:
-	dates_examples = ["13 janvier et 18 mars 1918",
-					  "17 mars 1918",
-					  "mars et avril 1917",
-					  "courant de 1915 et 1916",
-					  "courant juin 1917",
-					  "16 au 28 juillet 1918",
-					  "an 1917 et an 1918",
-					  "avril à juillet 1917",
-					  "janvier 1917",
-					  "année 1915",
-					  "19 février - 21 mars 1915",
-					  "17 août 17"]
-	for string in dates_examples:
-		print("---")
-		print(string)
-		normalized_date:dateparser.date = dateparser.parse(string, settings={'DEFAULT_LANGUAGES': ["fr"]})
-		if normalized_date:
-			check = 1913 < normalized_date.year < 1919
-			print(check)
-		if normalized_date is None or check is False:
-			splits = string.split()
-			mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre",
-					"décembre"]
-			stopwords = ["courant", "en"]
-			annee = re.search(re.compile(r"(\d{4})"), string)
-			if "et" in splits:
-				index_et = splits.index("et")
-				coord = (splits[index_et - 1], splits[index_et + 1] )
-			for split in splits:
-				if normalize_string_and_strip_spaces(split) in mois:
-					pass
-		else:
-			# Dans le cas où le siècle n'est pas indiqué, c'est le siècle en cours qui est déduit. Il faut enlever 100 ans
-			if normalized_date.year > 2000:
-				normalized_date = datetime(normalized_date.year - 100, normalized_date.month, normalized_date.day)
-		print(normalized_date)
-	exit(0)
-
 
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	"""
@@ -284,22 +239,153 @@ def match_lines_in_zones(ocr_prediction: list[dict], zone_as_rectangle: namedtup
 			corresponding_lines.append(line)
 	return corresponding_lines
 
+def strip_punctuation(string:str, debug=False) -> str:
+	"""
+	Cette fonction supprime la ponctuation en début et fin de chaîne
+	:param string: la chaîne à nettoyer
+	:return: la chaîne nettoyée
+	"""
+	orig_string = string
+	punctuation = "[\(\),;.!?\-:]"
+	expression = "^"+ punctuation + "\s{0,}|\s{0,}"+ punctuation + "$"
+	punct_regexp = re.compile(expression)
+	string = string.strip()
+	string = re.sub(punct_regexp, "", string)
+	if debug:
+		print(f"|{orig_string}| -> |{string}|")
+	return string
 
-def extract_magistrates_names(prediction, pipeline, debug=False):
-	if isinstance(prediction, list):
-		example = " ".join(prediction)
+def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
+	"""
+	Cette fonction extrait les informations concernant le greffier à partir de la ligne complète:
+	"M. Arnould, Off. d'Adm^n Greffier près ledit Conseil;"
+	:param ligne_greffier: la ligne
+	:param ner_pipeline:
+	:return: un dictionnaire contenant les informations importantes
+	"""
+	ligne_greffier = match_line_by_similarity(lignes_zone_magistrat, "pres ledit conseil")
+	baseline = ligne_greffier['baseline']
+	ligne_greffier = ligne_greffier['prediction']
+	print(ligne_greffier)
+	greffier, form_greffier = check_word_in_sentence(ligne_greffier, "Greffier")
+	if greffier is True:
+		debut_de_chaine = ligne_greffier.split(form_greffier)[0]
+	else:
+		print("Ligne mal reconnue")
+		return {"greffier": None}
+
+	# TODO: gérer le problème avec maréchal des logis
+	commis, form_commis = check_word_in_sentence(debut_de_chaine, target_word="commis", sensibility=0.7)
+	if commis is True:
+		nom_et_statut = debut_de_chaine.replace(form_commis, "").replace("M.", "")
+	else:
+		commis_abrege, form_commis_abrege = check_word_in_sentence(debut_de_chaine, "c^is")
+		if commis_abrege is True:
+			nom_et_statut = debut_de_chaine.replace(form_commis_abrege, "").replace("M.", "")
+		else:
+			nom_et_statut = debut_de_chaine.replace("M.", "")
+	nom_et_fonction_du_greffier = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
+	if commis is True:
+		nom_et_fonction_du_greffier["commis"] = True
+	else:
+		nom_et_fonction_du_greffier["commis"] = False
+	nom_et_fonction_du_greffier["baseline"] = baseline
+	nom_et_fonction_du_greffier["prediction_kraken"] = ligne_greffier
+
+	return nom_et_fonction_du_greffier
+
+
+def extraire_commissaire(lignes_zone_magistrat:dict, ner_pipeline):
+	"""
+	Cette fonction extrait les informations concernant le commissaire à partir de la ligne complète:
+	"M. Le Clerc, S.Eicmtu^e Slsttut de Commissaire du Gouvernement;"
+	:param ligne_commissaire: la ligne
+	:param ner_pipeline:
+	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
+	"""
+	ligne_commissaire = match_line_by_similarity(lignes_zone_magistrat, "commissaire du gouvernement")
+	baseline = ligne_commissaire['baseline']
+	ligne_commissaire = ligne_commissaire['prediction']
+	print(ligne_commissaire)
+	commissaire, form_commissaire = check_word_in_sentence(ligne_commissaire, "commissaire")
+	if commissaire is True:
+		debut_de_chaine = ligne_commissaire.split(form_commissaire)[0]
+	else:
+		print("Ligne mal reconnue")
+		return {"commissaire": None}
+
+	substitut, form_substitut = check_word_in_sentence(debut_de_chaine, target_word="substitut", sensibility=0.5)
+	if substitut is True:
+		nom_et_statut = debut_de_chaine.split(form_substitut)[0].replace("M.", "")
+	else:
+		# Parfois l'indication de substitut est mise en fin de ligne. On relance sur toute la ligne.
+		substitut, form_substitut = check_word_in_sentence(ligne_commissaire, target_word="substitut", sensibility=0.5)
+		nom_et_statut = debut_de_chaine.replace("M.", "")
+	nom_et_fonction_du_commissaire = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
+	if substitut is True:
+		nom_et_fonction_du_commissaire["substitut"] = True
+	else:
+		nom_et_fonction_du_commissaire["substitut"] = False
+	nom_et_fonction_du_commissaire["baseline"] = baseline
+	nom_et_fonction_du_commissaire["prediction_kraken"] = ligne_commissaire
+
+	return nom_et_fonction_du_commissaire
+
+
+def extraire_general(lignes_zone_magistrat:dict, ner_pipeline):
+	"""
+	Cette fonction extrait les informations concernant le militaire gradé nommant les magistrats:
+	"tous nommés par le (1) Général Commandant la 2^e Armée"
+	:param ligne_grade: la ligne
+	:param ner_pipeline:
+	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
+	"""
+	ligne_grade = match_line_by_similarity(lignes_zone_magistrat, "nommés par le (1) général")
+	baseline = ligne_grade['baseline']
+	ligne_grade = ligne_grade['prediction']
+	grade, form_grade = check_word_in_sentence(ligne_grade, "général")
+	if grade is True:
+		grade_extrait = f"{form_grade} {ligne_grade.split(form_grade)[1].strip()}"
+	else:
+		print("Ligne mal reconnue")
+		return {"grade": None}
+
+	nom_et_fonction_du_grade = {"fonction": grade_extrait}
+	nom_et_fonction_du_grade["baseline"] = baseline
+	nom_et_fonction_du_grade["prediction_kraken"] = ligne_grade
+	return nom_et_fonction_du_grade
+
+
+def extraire_nom_et_fonction(prediction:str, pipeline, debug:bool=False):
+	"""
+	Cette fonction extrait le nom du magistrat qui siège au procès. On considère que la phrase est composée
+	de deux éléments: le nom et la fonction
+	:param prediction: La ligne à traiter
+	:param pipeline: la pipeline de NER
+	:param debug:
+	:return:
+	"""
 	result = pipeline(prediction.lower())
 	if debug:
 		print("---")
 		print(prediction)
 		print(result)
-	persName_NER = prediction[result[0]['start']: result[0]['end']] if result[0]["entity_group"] == "PER" else None
+	try:
+		persName_NER = prediction[result[0]['start']: result[0]['end']].strip() if result[0]["entity_group"] == "PER" else None
+	except IndexError:
+		print(f"La phrase suivante: {prediction} n'a pas mené à reconnaissance d'entité. "
+			  f"Une erreur en amont (zonage, OCR) est possible.")
+		return {"persName": "UNK",
+			"role": "UNK",
+			"certainty": 0}
+
+	# La fonction s'extrait après le nom identifié
 	role_NER = prediction[result[0]['end']:] if result[0]["entity_group"] == "PER" else None
 
 	# Extraction simple: le premier mot. Pour les noms à particule c'est plus compliqué: aller chercher la virgule?
 	match_first_word = re.search(re.compile(r"[^\s,.]+"), prediction)
 	spans = match_first_word.span()
-	homemade_NER = prediction[spans[0]: spans[1]]
+	homemade_NER = prediction[spans[0]: spans[1]].strip()
 	homemade_role = prediction[spans[1]:]
 	if persName_NER == homemade_NER:
 		certainty = 1
@@ -313,6 +399,8 @@ def extract_magistrates_names(prediction, pipeline, debug=False):
 		certainty = 0.3
 		persName = homemade_NER
 		role = homemade_role
+	role = strip_punctuation(role)
+	persName = strip_punctuation(persName)
 	return {"persName": persName,
 			"role": role,
 			"certainty": certainty}
@@ -358,6 +446,58 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
+def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> (bool, str|None):
+	"""
+	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
+	:param sentence: la phrase cible
+	:param target_word: le mot à chercher
+	:return: vrai ou faux et le mot identifié (ou None)
+	"""
+	target_word = target_word.lower()
+	split_regexp = re.compile(r'[.!?,.:;\-\s]')
+	sentence = re.split(split_regexp, sentence)
+	distances = []
+	matching_word = []
+	for word in sentence:
+		word_lower = word.lower()
+		dist = similarite_ratcliff(word_lower, target_word)
+		if dist > sensibility:
+			distances.append(dist)
+			matching_word.append(word)
+	if len(distances) == 0:
+		return False, None
+	elif len(distances) > 1:
+		print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
+			  f"On prend le dernier mot identifié.")
+		# Dans ce cas on considère le dernier mot identifié, Greffier étant imprimé en fin de ligne.
+		return True, matching_word[1]
+	else:
+		return True, matching_word[0]
+
+
+
+def match_line_by_similarity(corresponding_lines:list, string_to_match:str):
+	"""
+	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
+	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
+	:param string_to_match: la chaîne à trouver
+	:return: la ligne qui contient la chaîne de caractères
+	"""
+	# On commence par normaliser la chaîne à matcher
+	string_to_match = string_to_match.lower()
+	distances = []
+	if len(corresponding_lines) > 1:
+		for idx, ligne in enumerate(corresponding_lines):
+			prediction = ligne['prediction']
+			prediction = prediction.lower()
+			# On identifie la ligne pouvant contenir à l'effet de juger
+			dist = similarite_ratcliff(prediction, string_to_match)
+			distances.append(dist)
+	correct_line_index = distances.index(max(distances))
+	name_line = corresponding_lines[correct_line_index]
+	return name_line
+
+
 
 def levensthein_distance(string_a, string_b):
 	return distance(string_a, string_b)
@@ -386,7 +526,11 @@ def check_if_line_in_box(box_coord, baseline, intersect_ratio=.5) -> bool:
 	steps = x_distance // number_points
 
 	# On crée 20 points le long de la droite. Si la moitié sont dans la zone, on renvoie True
-	n_points = [(item, round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
+	try:
+		n_points = [(item, round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
+	except ValueError as e:
+		print(f"La ligne est verticale, on passe: {baseline}.")
+		return False
 	number_in = 0
 	for point in n_points:
 		if point_in_box(coord=point, box_coord=box_coord):
@@ -414,7 +558,7 @@ def unpickle_object(path):
 		return pickle.load(segmentation_as_file)
 
 
-def save_as_dict(dictionnary, path):
+def save_as_dict(dictionnary:dict, path:str):
 	with open(path, 'w') as f:
 		# https://stackoverflow.com/a/36142844 default permet de gérer la sérialisation des objets bizarres (dates...)
 		json.dump(dictionnary, f, indent=2, default=str)
