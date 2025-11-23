@@ -50,6 +50,74 @@ def tokenize_sent(sentence:str) -> list:
 	tokenized = [item for item in tokenized if item != " "]
 	return tokenized
 
+
+def correct_date(date:str) -> str:
+	number_dict = {"un": 1,
+						"deux": 2,
+						"trois": 3,
+						"quatre": 4,
+						"cinq": 5,
+						"six": 6,
+						"sept": 7,
+						"huit": 8,
+						"neuf": 9,
+						"dix": 10,
+						"onze": 11,
+						"douze": 12,
+						"treize": 13,
+						"quatorze": 14,
+						"quinze": 15,
+						"seize": 16,
+						"dix sept": 17,
+						"dix huit": 18,
+						"dix neuf": 19,
+						"vingt": 20,
+						"vingt-et-un": 21,
+						"vingt deux": 22,
+						"vingt trois": 23,
+						"vingt quatre": 24,
+						"vingt cinq": 25,
+						"vingt six": 26,
+						"vingt sept": 27,
+						"vingt huit": 28,
+						"vingt neuf": 29,
+						"trente": 30,
+						"trente et un": 31,
+						"mil": 1000,
+						"cent": 100}
+
+	month_dict = {"janvier": "01",
+					   "février": "02",
+					   "mars": "03",
+					   "avril": "04",
+					   "mai": "05",
+					   "juin": "06",
+					   "juillet": "07",
+					   "août": "08",
+					   "septembre": "09",
+					   "octobre": "10",
+					   "novembre": "11",
+					   "décembre": "12",
+					   }
+	splits = re.compile(r"[\s\-]")
+	splitted = re.split(splits, date)
+	result = []
+	print(splitted)
+	for date in splitted:
+		if date in month_dict or date in number_dict:
+			result.append(date)
+		else:
+			matching, corrected = check_word_in_list(list(month_dict.keys()) + list(number_dict.keys()),
+													 date,
+													 sensibility=0.7)
+			if matching:
+				result.append(corrected)
+			else:
+				result.append(date)
+	return " ".join([item for item in result if item != ""])
+
+
+
 def correct_string(string:str) -> str:
 	correcteur = spellchecker.spellchecker.SpellChecker(language='fr')
 	corrected_string = []
@@ -463,6 +531,42 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
+def approximate_split(sentence, word):
+	"""
+	Cette fonction découpe une phrase selon un mot qui peut être approximatif
+	:param sentence:
+	:param word:
+	:return:
+	"""
+	match, matching_word = check_word_in_sentence(sentence, word)
+	if match:
+		return sentence.split(matching_word)
+	else:
+		return None
+
+
+def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (bool, str|None):
+	"""
+	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une liste de mots
+	:param sentence: la phrase cible
+	:param target_word: le mot à chercher
+	:return: vrai ou faux et le mot identifié (ou None)
+	"""
+	distances = []
+	matching_words = []
+	target_word = target_word.lower()
+	for word in word_list:
+		word_lower = word.lower()
+		dist = similarite_ratcliff(word_lower, target_word)
+		if dist > sensibility:
+			matching_words.append(word)
+			distances.append(dist)
+	if len(distances) == 0:
+		return False, target_word
+	max_dist = distances.index(max(distances))
+	return True, matching_words[max_dist]
+
+
 def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> (bool, str|None):
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
@@ -486,7 +590,7 @@ def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> (b
 	elif len(distances) > 1:
 		print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
 			  f"On prend le dernier mot identifié.")
-		# Dans ce cas on considère le dernier mot identifié, Greffier étant imprimé en fin de ligne.
+		# Dans ce cas on considère le dernier mot identifié, étant imprimé en fin de ligne.
 		return True, matching_word[1]
 	else:
 		return True, matching_word[0]

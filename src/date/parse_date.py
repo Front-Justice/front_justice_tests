@@ -11,6 +11,41 @@ class Date:
 	et de les convertir en format jjmmyyyy
 	"""
 	def __init__(self):
+
+		self.number_dict = {"un": 1,
+							"deux": 2,
+							"trois": 3,
+							"quatre": 4,
+							"cinq": 5,
+							"six": 6,
+							"sept": 7,
+							"huit": 8,
+							"neuf": 9,
+							"dix": 10,
+							"onze": 11,
+							"douze": 12,
+							"treize": 13,
+							"quatorze": 14,
+							"quinze": 15,
+							"seize": 16,
+							"dix sept":17,
+							"dix huit": 18,
+							"dix neuf": 19,
+							"vingt": 20,
+							"vingt-et-un": 21,
+							"vingt deux": 22,
+							"vingt trois": 23,
+							"vingt quatre": 24,
+							"vingt cinq": 25,
+							"vingt six": 26,
+							"vingt sept": 27,
+							"vingt huit": 28,
+							"vingt neuf": 29,
+							"trente": 30,
+							"trente et un": 31,
+							"mil": 1000,
+							"cent": 100}
+
 		self.month_dict = {"janvier": "01",
 						   "février": "02",
 						   "mars": "03",
@@ -164,17 +199,16 @@ def clean_date(text):
 	subs = utils.correct_string(subs)
 	return subs
 
-def process_date(text, debug=False):
+def process_date(date, debug=False):
 	"""
 	Cette fonction initialise le lexeur et le parseur prévu pour le traitement des dates
 	:param text: le texte
 	:return: l'objet date parsé
 	"""
-	corr_date = clean_date(text)
-	ast = build_grammar(debug=debug, text=corr_date)
+	ast = build_grammar(debug=debug, text=date)
 	parsed = parse_ast(ast)
 	result = second_pass(parsed)
-	return result, corr_date
+	return result
 
 def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915") -> list:
 	"""

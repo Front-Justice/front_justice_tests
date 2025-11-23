@@ -17,6 +17,8 @@ import PIL
 from collections import namedtuple
 import src.Vision.PARTY as PARTY
 import src.date.parse_date as date
+import dateparser
+import dateutil
 
 
 class Extractor:
@@ -417,10 +419,11 @@ class Extractor:
 
 		# On utilise le parseur pour produire la date normalisée
 		print(target_date)
+		corrected_date = date.clean_date(target_date)
 		try:
-			normalized_date, corrected_date = date.process_date(target_date)
+			normalized_date = date.process_date(corrected_date)
 		except:
-			normalized_date, corrected_date = None, None
+			normalized_date = None
 
 		return {"Date normalisée": normalized_date,
 				"Date corrigée": corrected_date,
@@ -676,6 +679,102 @@ class Extractor:
 
 		return {"bbox": soldat_zone,
 				"extracted": extracted}
+
+
+	def extraire_date_du_proces(self,
+							ocr_prediction: list[dict],
+							annotations: list[dict],
+							image: str = None,
+							loaded_image: PIL.Image.Image = None,
+							show_images: bool = False):
+		"""
+		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param zones_nom: une liste de dictionnaires de la forme:
+		[
+			{
+				'label': 'Nom du soldat',
+				'coordinates': [[212, 2400], [2735, 2551]]
+			}
+		]
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param show_images: [Debug] afficher l'image
+		:return: Un dictionnaire de la forme:
+			{
+				"extracted": {
+				  "surname": "Delin",
+				  "forename": "",
+				  "certainty": 0.5
+				},
+				"bbox": [
+				[[225, 2137 ], [2631, 2194]],
+				[[2723,2114], [3005, 2114]]
+				],
+				"prediction": [
+				  "",
+				]
+			  }
+		"""
+		corresponding_lines, zone_magistrats = self.extraction_ligne(annotations=annotations,
+																 target_zone="Magistrats",
+																 show_images=show_images,
+																 loaded_image=loaded_image,
+																 ocr_prediction=ocr_prediction,
+																 intersect_ratio=0.1)
+
+		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
+		cejourdui_date = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+														string_to_match="CEJOURD'HUI")
+		an_mil_neuf_date = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+														string_to_match="an mil neuf cent")
+		if cejourdui_date == an_mil_neuf_date:
+			correct_line = cejourdui_date
+			line_as_string = cejourdui_date['prediction']
+			baseline = correct_line['baseline']
+		else:
+			correct_lines = [cejourdui_date, an_mil_neuf_date]
+			line_as_string = f"{cejourdui_date['prediction']} {an_mil_neuf_date['prediction']}"
+			baseline = [item['baseline'] for item in correct_lines]
+		date_span = utils.approximate_split(line_as_string, "CEJOURD'HUI")
+
+		# TODO: Faire une fonction à partir d'ici
+		date = date_span[-1]
+		corrected_date = utils.correct_date(date)
+		regexp_splitter_an = re.compile("\sde l'?\s?an\s|\san\s")
+		try:
+			jour, annee = re.split(regexp_splitter_an, corrected_date)
+		except ValueError:
+			return {
+				"bbox": zone_magistrats,
+				"baseline": baseline,
+				"prediction": line_as_string,
+				"corrected_date": corrected_date,
+				"extracted": {"date": None}
+			}
+		annee = annee.split("cent")[1].strip()
+		date = {"année": annee,
+				"jour": jour}
+		return {
+				"bbox": zone_magistrats,
+				"baseline": baseline,
+				"prediction": line_as_string,
+				"corrected_date": corrected_date,
+				"extracted": {"date": date}
+				}
 
 	def extraire_magistrats(self,
 							ocr_prediction,

@@ -191,6 +191,14 @@ class Pipeline():
 		current_dict["general"] = zones_page_1
 		current_dict["zones_manquantes"] = zones_manquantes
 
+		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+		return current_dict
+
 		# On extrait le numéro d'ordre en premier, cas il y a une vérification de la classification.
 		if "MainZone-orderNumber" in current_dict["zones_manquantes"]:
 			current_dict["numer_ordre"] = None

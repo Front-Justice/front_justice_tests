@@ -36,7 +36,7 @@ class Lexer(object):
 
 
     def t_COURANT(self, t):
-        r'courant(\sde)?'
+        r'courant(\sde)?|en\s'
         return t
 
     def t_SPACE(self, t):
