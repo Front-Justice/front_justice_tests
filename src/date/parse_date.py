@@ -78,9 +78,9 @@ class Date:
 
 	def convert_to_dd_mm_yyyy(self):
 		self.month = self.month_dict[self.month] if self.month != "" else ""
-		self.converted_date = f"{self.day}/{self.month}/{self.year}"
 		if len(str(self.day)) == 1:
 			self.day = f"0{self.day}"
+		self.converted_date = f"{self.day}/{self.month}/{self.year}"
 		self.clean_date()
 		return self.converted_date
 
@@ -185,19 +185,6 @@ def parse_ast(ast) -> str|dict:
 				return items
 
 
-def clean_date(text):
-	"""
-	Cette fonction nettoie une date des scories que l'on peut y trouver (majuscules, exposants, etc)
-	:param text: la date à nettoyer
-	:return: la date nettoyee
-	"""
-	date = text.lower().strip()
-	clean_regexp = re.compile(r"(\d+)\^?e")
-	subs = re.sub(clean_regexp, r'\g<1>', date)
-	subs = utils.nfc_normalize(subs)
-	subs = utils.strip_punctuation(subs)
-	subs = utils.correct_string(subs)
-	return subs
 
 def process_date(date, debug=False):
 	"""
@@ -228,6 +215,7 @@ def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915")
 
 def test():
 	dates_examples = [
+		"17 septembre 1918",
 		"17 mars 1918",
 		"13 janvier et 18 mars 1918",
 		"mars et avril 1917",
@@ -242,17 +230,24 @@ def test():
 		"17 août 17",
 		"19 février 1914 - 21 mars 1915",
 		"19 février 1914, 21 mars 1915",
+		"en août 1917."
 		"mai et juin 1917",
 		"juin 1917 et 25 septembre 17",
 		"du 27 au 28 septembre 1915",
-		"5 janvier au 21 fevrier 1917"]
-	dates_examples = [utils.nfc_normalize("17 août 1918")]
+		"5 janvier au 21 février 1917",
+	"vingt neuf novembre l'an mil neuf cent dix sept",
+	"vingt septembre an mil neuf cent dix sept",
+	"sept avril de l'an mil neuf cent dix sept",
+	"trente et un octobre de l'an mil neuf cent dixsept"]
+	dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")
 		print(example)
-		date, corr_date = process_date(example, debug=True)
+		example = example.lower()
+		corrected = utils.correct_date(example)
+		date = process_date(corrected, debug=True)
 		print(f"Date: {date}")
-		print(f"Corrected date: {corr_date}")
+		print(f"Corrected date: {corrected}")
 		print(f"Processed date: {date}")
 
 if __name__ == '__main__':

@@ -1,11 +1,36 @@
 import ply.yacc as yacc
 import src.date.lexer as lexer
 
+chiffre_dict = {"un": 1,
+                "premier": 1,
+              "deux": 2,
+              "trois": 3,
+              "quatre": 4,
+              "cinq": 5,
+              "six": 6,
+              "sept": 7,
+              "huit": 8,
+              "neuf": 9,
+                "dix": 10,
+                "onze": 11,
+                "douze": 12,
+                "treize": 13,
+                "quatorze": 14,
+                "quinze": 15,
+                "seize": 16,
+                "vingt": 20,
+                "trente": 30,
+                "mil": 1000,
+                "cent": 100
+                }
+
+
 class Parser(lexer.Lexer):
     """
     The parser. Builds the Ast with the tokens produced by the lexer.
     """
     tokens = lexer.Lexer.tokens
+
 
     precedence = (
         ('left', 'AND'),  # Priorité pour "et"
@@ -36,9 +61,88 @@ class Parser(lexer.Lexer):
         '''
         courant_de_groupe : COURANT annee_et_annee
                             | COURANT ANNEE
+                            | COURANT AN annee
                             | COURANT mois_annee
         '''
-        p[0] = {"courant": p[2]}
+        if len(p) == 3:
+            p[0] = {"courant": p[2]}
+        else:
+            p[0] = {"courant": p[3]}
+
+
+    def p_date_jour(self, p):
+        '''
+        jour_toutes_lettres : unite
+            | dizaine unite
+            | dizaine
+        '''
+        p[0] = {"jour": sum([item for item in p[1:]])}
+
+
+    def p_mois(self, p):
+        '''
+        mois : MOIS
+        '''
+        p[0] = {"mois": p[1]}
+
+    def p_jour_toutes_lettres_mois(self, p):
+        '''
+        jour_toutes_lettres_mois : jour_toutes_lettres mois
+        '''
+        p[0] = {**p[1], **p[2]}
+
+
+    def p_unite(self, p):
+        '''
+        unite : CHIFFRE_UNITE
+        '''
+        p[0] = chiffre_dict[p[1]]
+
+    def p_centaine(self, p):
+        '''
+        centaine : CHIFFRE_CENTAINE
+                | unite CHIFFRE_CENTAINE
+        '''
+        if len(p) == 3:
+            p[0] = p[1] * chiffre_dict[p[2]]
+        else:
+            p[0] = chiffre_dict[p[1]]
+
+    def p_dizaine(self, p):
+        '''
+        dizaine : CHIFFRE_DIZAINE unite
+                | CHIFFRE_DIZAINE
+                | CHIFFRE_DIZAINE AND unite
+        '''
+        if len(p) == 3:
+            p[0] = chiffre_dict[p[1]] + p[2]
+        elif len(p) == 4:
+            p[0] = chiffre_dict[p[1]] + p[3]
+        else:
+            p[0] = chiffre_dict[p[1]]
+
+
+    def p_millier(self, p):
+        '''
+        millier : CHIFFRE_MILLIER
+        '''
+        p[0] = chiffre_dict[p[1]]
+
+    def p_an_date_toute_lettre(self, p):
+        '''
+        token_an_toutes_lettres : DE AN
+                                | AN
+        '''
+        p[0] = None
+
+    def p_date_an(self, p):
+        '''
+        an_toutes_lettres : token_an_toutes_lettres millier centaine dizaine unite
+                            | token_an_toutes_lettres millier centaine dizaine
+        '''
+
+        p[0] = {"annee": sum([item for item in p[2:]])}
+
 
     def p_succession_mois_annees(self, p):
         '''
@@ -63,13 +167,12 @@ class Parser(lexer.Lexer):
         p[0] = {"and": [p[1], p[3]]}
 
 
-
-
-    def p_mois(self, p):
+    def p_date_complete_toutes_lettres(self, p):
         '''
-        mois : MOIS
+        date_toutes_lettres : jour_toutes_lettres_mois an_toutes_lettres
         '''
-        p[0] = {"mois": p[1]}
+        p[0] = {**p[1], **p[2]}
+
 
     def p_date_complete(self, p):
         '''
@@ -88,6 +191,7 @@ class Parser(lexer.Lexer):
                      | jour_mois_annee
                      | deux_dates_completes
                      | range_jour_mois ANNEE
+                     | date_toutes_lettres
         '''
         if len(p) == 3:
             p[0] = {**p[1], "annee": int(p[2])}

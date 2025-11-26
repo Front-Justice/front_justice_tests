@@ -41,8 +41,8 @@ class Extractor:
 		"""
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
-		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
-		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
+		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
+		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner = pipeline('ner',
 							model=self.ner_model,
 							tokenizer=self.tokenizer,
@@ -97,6 +97,7 @@ class Extractor:
 		"""
 		# On récupère la boîte correspondante
 		zones_filtrees = self.filter_zones(annotations=annotations, category=target_zone)
+
 
 		if len(zones_filtrees) == 0:
 			return None, None
@@ -229,6 +230,7 @@ class Extractor:
 			lieu = lieu_party
 		else:
 			lieu = lieu_kraken
+
 
 		return {"institution": institution,
 				"siège": lieu,
@@ -393,7 +395,8 @@ class Extractor:
 		except IndexError:
 			return {"bbox": date_zone,
 					"Date normalisee": None,
-					"Date": None}
+					"Date": None,
+					"predictions": None}
 
 		date_crime_kraken = target_line[0]['prediction']
 
@@ -418,11 +421,20 @@ class Extractor:
 			target_date = date_crime_party
 
 		# On utilise le parseur pour produire la date normalisée
-		print(target_date)
-		corrected_date = date.clean_date(target_date)
 		try:
-			normalized_date = date.process_date(corrected_date)
-		except:
+			corrected_date = utils.correct_date(target_date)
+		except TypeError:
+			return {"Date normalisée": None,
+					"Date corrigée": None,
+					"Date retenue": date_crime_party,
+					"baseline": target_line['baseline'],
+					"bbox": date_zone,
+					"certitude": certitude,
+					"predictions": {"party": date_crime_party,
+									"kraken": date_crime_kraken}}
+		try:
+			normalized_date = date.process_date(corrected_date, debug=False)
+		except TypeError:
 			normalized_date = None
 
 		return {"Date normalisée": normalized_date,
@@ -484,7 +496,15 @@ class Extractor:
 																	   loaded_image=loaded_image,
 																	   ocr_prediction=ocr_prediction,
 																	   intersect_ratio=0.7)
-
+		if (corresponding_lines, numero_ordre_zone) == (None, None):
+			# TODO: reprendre cela, ça semble bizarre.
+			print("Error")
+			return {"Numéro": None,
+				"baseline": None,
+				"bbox": None,
+				"certitude": None,
+				"predictions": {"party": None,
+								"kraken": None}}
 
 		# On va commencer par tester si la page est bien classifiée, et identifier des formulaires différents
 		first_line = corresponding_lines[0]["prediction"]
@@ -618,7 +638,7 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="A l'effet de juger")
+		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="A l'effet de juger")
 
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
@@ -681,6 +701,143 @@ class Extractor:
 				"extracted": extracted}
 
 
+	def extraire_description_soldat(self,
+							ocr_prediction: list[dict],
+							annotations: list[dict],
+							image: str = None,
+							loaded_image: PIL.Image.Image = None,
+							show_images: bool = False):
+		"""
+		Cette fonction extrait la description du soldat à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param zones_nom: une liste de dictionnaires de la forme:
+		[
+			{
+				'label': 'Nom du soldat',
+				'coordinates': [[212, 2400], [2735, 2551]]
+			}
+		]
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param show_images: [Debug] afficher l'image
+		:return: Un dictionnaire de la forme:
+			{
+				"extracted": {
+				  "surname": "Delin",
+				  "forename": "",
+				  "certainty": 0.5
+				},
+				"bbox": [
+				[[225, 2137 ], [2631, 2194]],
+				[[2723,2114], [3005, 2114]]
+				],
+				"prediction": [
+				  "",
+				]
+			  }
+		"""
+		description = {}
+		corresponding_lines, soldat_zone = self.extraction_ligne(annotations=annotations,
+																 target_zone="Description du Soldat",
+																 show_images=show_images,
+																 loaded_image=loaded_image,
+																 ocr_prediction=ocr_prediction,
+																 intersect_ratio=0.1)
+
+		corresponding_lines = utils.vertical_order_lines(corresponding_lines)
+		effet_de_juger_line, debug = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+																	string_to_match="A l'effet de juger le")
+		first_line_index = corresponding_lines.index(effet_de_juger_line)
+		filtered_lines = corresponding_lines[first_line_index:]
+
+		# On commence par la date de naissance
+		# TODO: en faire une fonction
+		# naissance = utils.match_line_by_similarity(corresponding_lines=filtered_lines, string_to_match="né le")
+		# date_naissance = utils.approximate_split(naissance['prediction'], "né le")[1]
+		lines_as_string = utils.nfc_normalize(" ".join([item['prediction'] for item in filtered_lines]))
+		try:
+			date_naissance_ner = [item['word'] for item in self.ner(lines_as_string) if item['entity_group'] == 'DATE'][0]
+			print(date_naissance_ner)
+		except IndexError:
+			print(f"Not found: {debug}")
+			print([item['prediction'] for item in corresponding_lines])
+			print([item['prediction'] for item in filtered_lines])
+			exit(0)
+		regexp = re.compile("[^\d]*(\d*.*\d+)[^\d]*")
+		date_naissance_extraite = re.sub(regexp, '\g<1>', date_naissance_ner)
+		print(date_naissance_extraite)
+		date_naissance_corrigee = utils.correct_date(date_naissance_extraite)
+		try:
+			date_normalisee = date.process_date(date_naissance_corrigee)
+		except TypeError:
+			print(f"Error with date {date_naissance_ner}")
+			date_naissance = {"Date normalisée": "Échec",
+							  "Date naissance extraite": date_naissance_extraite,
+							  "Date corrigée": date_naissance_corrigee,
+							  "prediction": lines_as_string}
+			description["Date de naissance"] = date_naissance
+			return description
+		date_naissance = {"Date normalisée": date_normalisee,
+						  "Date naissance extraite": date_naissance_extraite,
+						  "Date corrigée": date_naissance_corrigee,
+						  "prediction": lines_as_string}
+		description["Date de naissance"] = date_naissance
+
+
+		# On s'occupe ensuite de la profession
+		print(lines_as_string)
+		try:
+			apres_date_naissance = lines_as_string.split(date_naissance_ner)[-1]
+		except IndexError:
+			apres_date_naissance = lines_as_string
+		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
+
+		profession_et_situation_maritale = utils.approximate_split(apres_profession, "residant", sensibility=0.8)[0]
+
+
+		check_celibataire, celibataire, marie, nombre_enfants = utils.check_situation_maritale(profession_et_situation_maritale)
+
+		# Si on infère le célibat, il n'a peut être pas été trouvé. On va chercher en ampliant la zone à l'ensemble des lignes.
+		if celibataire is True and check_celibataire is False:
+			print("La situation maritale n'a peut être pas été identifiée. On élargit la zone de recherche.")
+			_, celibataire, marie, nombre_enfants = utils.check_situation_maritale(lines_as_string)
+		print(f"Célibataire: {celibataire}")
+		print(f"Marié: {marie}")
+		print(f"Enfants: {nombre_enfants}")
+		return description
+		de_regexp = re.compile(r"^d['ue]\s*")
+		cleaned_profession = re.sub(de_regexp, "", profession_et_situation_maritale.strip())
+
+
+		description["Profession"] = cleaned_profession
+
+
+
+		return description
+		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
+		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
+		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
+		filiation, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="fils de")
+		print(filiation)
+		print("OK")
+		exit(0)
+
+
+
+
 	def extraire_date_du_proces(self,
 							ocr_prediction: list[dict],
 							annotations: list[dict],
@@ -737,9 +894,9 @@ class Extractor:
 																 intersect_ratio=0.1)
 
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
-		cejourdui_date = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+		cejourdui_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
 														string_to_match="CEJOURD'HUI")
-		an_mil_neuf_date = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+		an_mil_neuf_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
 														string_to_match="an mil neuf cent")
 		if cejourdui_date == an_mil_neuf_date:
 			correct_line = cejourdui_date
@@ -751,29 +908,20 @@ class Extractor:
 			baseline = [item['baseline'] for item in correct_lines]
 		date_span = utils.approximate_split(line_as_string, "CEJOURD'HUI")
 
-		# TODO: Faire une fonction à partir d'ici
-		date = date_span[-1]
-		corrected_date = utils.correct_date(date)
-		regexp_splitter_an = re.compile("\sde l'?\s?an\s|\san\s")
+		date_extraite = date_span[-1]
+		print(f"Orig: {date_extraite}")
+		corrected_date = utils.correct_date(date_extraite)
+		print(f"Corrected: {corrected_date}")
 		try:
-			jour, annee = re.split(regexp_splitter_an, corrected_date)
-		except ValueError:
-			return {
-				"bbox": zone_magistrats,
-				"baseline": baseline,
-				"prediction": line_as_string,
-				"corrected_date": corrected_date,
-				"extracted": {"date": None}
-			}
-		annee = annee.split("cent")[1].strip()
-		date = {"année": annee,
-				"jour": jour}
+			extracted = date.process_date(corrected_date)
+		except TypeError:
+			extracted = "Échec"
 		return {
 				"bbox": zone_magistrats,
 				"baseline": baseline,
 				"prediction": line_as_string,
-				"corrected_date": corrected_date,
-				"extracted": {"date": date}
+				"Date corrigée": corrected_date,
+				"Date normalisée": extracted
 				}
 
 	def extraire_magistrats(self,

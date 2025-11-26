@@ -1,24 +1,48 @@
 import json
 import pickle
 import unicodedata
-from datetime import datetime
-import dateparser
 import PIL.Image as Image
 import re
-
-import party.fusion
+from thefuzz import fuzz
 from Levenshtein import distance
 from difflib import SequenceMatcher
 from shapely.geometry import Polygon
 from collections import namedtuple
-import time
-from yaspin import yaspin
-import dateutil
 import spellchecker
 
 def load(path):
 	return Image.open(path)
 
+
+def check_situation_maritale(string):
+	check_celibataire, token_celibataire = check_word_in_sentence(string,
+																		"celibataire", sensibility=0.85)
+	if check_celibataire is False:
+		marie, token_marie = check_word_in_sentence(string, "marié", sensibility=0.85)
+
+
+		if marie is True:
+			check_enfants, token_enfants = check_word_in_sentence(string, "enfant", sensibility=0.85)
+			if check_enfants is True:
+				nombre_enfants = split_before_keep_delimiter(string, token_enfants)[0].split(token_marie)[-1]
+			else:
+				nombre_enfants = None
+		else:
+			# On peut éventuellement (???) avoir une indication d'enfants sans mariage, OU rater l'information du mariage
+			check_enfants, token_enfants = check_word_in_sentence(string, "enfant", sensibility=0.85)
+			if check_enfants is True:
+				regexp = re.compile(rf"(\d+)\s*{token_enfants}")
+				nombre_enfants = re.search(regexp, string).group(1)
+			else:
+				nombre_enfants = None
+	else:
+		marie = False
+		nombre_enfants = None
+	if (marie, nombre_enfants) == (False, None):
+		celibataire = True
+	else:
+		celibataire = False
+	return check_celibataire, celibataire, marie, nombre_enfants
 
 def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
@@ -68,21 +92,8 @@ def correct_date(date:str) -> str:
 						"quatorze": 14,
 						"quinze": 15,
 						"seize": 16,
-						"dix sept": 17,
-						"dix huit": 18,
-						"dix neuf": 19,
 						"vingt": 20,
-						"vingt-et-un": 21,
-						"vingt deux": 22,
-						"vingt trois": 23,
-						"vingt quatre": 24,
-						"vingt cinq": 25,
-						"vingt six": 26,
-						"vingt sept": 27,
-						"vingt huit": 28,
-						"vingt neuf": 29,
 						"trente": 30,
-						"trente et un": 31,
 						"mil": 1000,
 						"cent": 100}
 
@@ -99,24 +110,49 @@ def correct_date(date:str) -> str:
 					   "novembre": "11",
 					   "décembre": "12",
 					   }
-	splits = re.compile(r"[\s\-]")
+	date = nfc_normalize(date)
+	date = date.lower().strip()
+	clean_regexp = re.compile(r"(\d+)\^?er")
+	date = re.sub(clean_regexp, r'\g<1>', date)
+	date = strip_punctuation(date)
+
+	# On corrige les erreurs fŕequentes
+	common_mistakes = {"aout": "août",
+					   "dix": "dix ",
+					   "vingt": "vingt ",
+					   "trente": "trente "}
+	for orig, reg in common_mistakes.items():
+		date = date.replace(orig, reg)
+	splits = re.compile(r"[\s+\-]")
 	splitted = re.split(splits, date)
 	result = []
-	print(splitted)
-	for date in splitted:
-		if date in month_dict or date in number_dict:
-			result.append(date)
+	for token in splitted:
+		if token in common_mistakes:
+			result.append(common_mistakes[token])
+		elif token in month_dict or token in number_dict or token in ['de', 'du', 'an', 'et', 'en']:
+			result.append(token)
 		else:
 			matching, corrected = check_word_in_list(list(month_dict.keys()) + list(number_dict.keys()),
-													 date,
-													 sensibility=0.7)
+													 token,
+													 sensibility=0.7 if len(token) > 4 else 0.6)
 			if matching:
 				result.append(corrected)
 			else:
-				result.append(date)
-	return " ".join([item for item in result if item != ""])
+				result.append(token)
+	normalized = " ".join([item for item in result if item != ""])
+	normalized = normalized.lower()
+	return normalized
 
-
+def correct_description_soldat(string:str):
+	liste_termes_frequents = ['rectiligne',
+							  'long',
+							  'menton',
+							  'visage',
+							  'yeux',
+							  'front',
+							  'canonnier',
+							  'artillerie',
+							  'cheveux']
 
 def correct_string(string:str) -> str:
 	correcteur = spellchecker.spellchecker.SpellChecker(language='fr')
@@ -124,7 +160,8 @@ def correct_string(string:str) -> str:
 	tokens = tokenize_sent(string)
 	for token in tokens:
 		corr = correcteur.correction(token)
-		corrected_string.append(corr)
+		if corr:
+			corrected_string.append(corr)
 	return " ".join(corrected_string)
 
 
@@ -350,7 +387,7 @@ def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes
 	"""
-	ligne_greffier = match_line_by_similarity(lignes_zone_magistrat, "pres ledit conseil")
+	ligne_greffier, _ = match_line_by_similarity(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier['baseline']
 	ligne_greffier = ligne_greffier['prediction']
 	greffier, form_greffier = check_word_in_sentence(ligne_greffier, "Greffier")
@@ -389,7 +426,7 @@ def extraire_commissaire(lignes_zone_magistrat:dict, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
-	ligne_commissaire = match_line_by_similarity(lignes_zone_magistrat, "commissaire du gouvernement")
+	ligne_commissaire, _ = match_line_by_similarity(lignes_zone_magistrat, "commissaire du gouvernement")
 	baseline = ligne_commissaire['baseline']
 	ligne_commissaire = ligne_commissaire['prediction']
 	commissaire, form_commissaire = check_word_in_sentence(ligne_commissaire, "commissaire")
@@ -425,7 +462,7 @@ def extraire_general(lignes_zone_magistrat:dict, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
-	ligne_grade = match_line_by_similarity(lignes_zone_magistrat, "nommés par le (1) général")
+	ligne_grade, _ = match_line_by_similarity(lignes_zone_magistrat, "nommés par le (1) général")
 	baseline = ligne_grade['baseline']
 	ligne_grade = ligne_grade['prediction']
 	grade, form_grade = check_word_in_sentence(ligne_grade, "général")
@@ -531,14 +568,15 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
-def approximate_split(sentence, word):
+def approximate_split(sentence, word, sensibility=0.5) -> list|None:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif
-	:param sentence:
-	:param word:
+	:param sentence: la phrase à découper
+	:param word: le mot sur lequel s'appuyer
+	:param sensibility: la sensibilité a appliquer à la recherche (à trouver par l'expérience)
 	:return:
 	"""
-	match, matching_word = check_word_in_sentence(sentence, word)
+	match, matching_word = check_word_in_sentence(sentence, word, sensibility)
 	if match:
 		return sentence.split(matching_word)
 	else:
@@ -567,7 +605,7 @@ def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (boo
 	return True, matching_words[max_dist]
 
 
-def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> (bool, str|None):
+def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> tuple[bool, str|None]:
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
 	:param sentence: la phrase cible
@@ -586,7 +624,7 @@ def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> (b
 			distances.append(dist)
 			matching_word.append(word)
 	if len(distances) == 0:
-		return False, None
+		return False, False
 	elif len(distances) > 1:
 		print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
 			  f"On prend le dernier mot identifié.")
@@ -607,15 +645,24 @@ def match_line_by_similarity(corresponding_lines:list, string_to_match:str):
 	# On commence par normaliser la chaîne à matcher
 	string_to_match = string_to_match.lower()
 	distances = []
+	string_to_match = nfc_normalize(string_to_match)
 	for idx, ligne in enumerate(corresponding_lines):
 		prediction = ligne['prediction']
 		prediction = prediction.lower()
+		prediction = nfc_normalize(prediction)
 		# On identifie la ligne pouvant contenir à l'effet de juger
-		dist = similarite_ratcliff(prediction, string_to_match)
-		distances.append(dist)
+		if string_to_match in prediction:
+			distances.append(9999)
+		elif len(prediction) < 10:
+			distances.append(0)
+		else:
+			# dist = similarite_ratcliff(prediction, string_to_match)
+			dist = fuzz.partial_ratio(prediction, string_to_match)
+			distances.append(dist)
 	correct_line_index = distances.index(max(distances))
 	name_line = corresponding_lines[correct_line_index]
-	return name_line
+	debug_zip = list(zip([item['prediction'] for item in corresponding_lines], distances))
+	return name_line, debug_zip
 
 
 

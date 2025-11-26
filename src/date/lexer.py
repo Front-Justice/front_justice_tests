@@ -19,7 +19,11 @@ class Lexer(object):
 		'RANGE',
         "AN",
         "SPACE",
-        "DE"
+        "DE",
+        "CHIFFRE_UNITE",
+        "CHIFFRE_DIZAINE",
+        "CHIFFRE_CENTAINE",
+        "CHIFFRE_MILLIER",
     )
 
     tokens = [utils.nfc_normalize(token) for token in tokens]
@@ -27,13 +31,43 @@ class Lexer(object):
     # Pour l'instant les années à 2 chiffres n'apparaissent qu'en fin de chaîne
     t_ANNEE = r"\d{4}|\d{2}$"
     t_JOUR = r"\d{1,2}"
-    t_MOIS = utils.nfc_normalize(r"janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre")
     t_AND = r"et|,"
     t_ANDOR = r"-"
-    t_DE = r"de|du|d'"
     t_RANGE = utils.nfc_normalize(r"à\s|au\s|a\s")
-    t_AN = utils.nfc_normalize(r"ann[ée]e\s|an\s")
 
+
+    def t_AN(self, t):
+        r"l\s?'?\s?ann[eé]e\s|ann[eé]e\s|an\s|l\s?'?\s?an\s?"
+        t.value = utils.nfc_normalize(t.value)
+        return t
+
+
+    def t_MOIS(self, t):
+        r'''janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre'''
+        t.value = utils.nfc_normalize(t.value)
+        return t
+
+    def t_CHIFFRE_UNITE(self, t):
+        r'''premier|un|deux|trois|quatre|cinq|six|sept|huit|neuf'''
+        return t
+
+
+    def t_DE(self, t):
+        r"de|du|d'"
+        return t
+
+    def t_CHIFFRE_DIZAINE(self, t):
+        r'''dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente'''
+        return t
+
+
+    def t_CHIFFRE_MILLIER(self, t):
+        r'''mil'''
+        return t
+
+    def t_CHIFFRE_CENTAINE(self, t):
+        r'''cent'''
+        return t
 
     def t_COURANT(self, t):
         r'courant(\sde)?|en\s'
