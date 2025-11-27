@@ -192,7 +192,6 @@ class Pipeline():
 						  "MainZone-orderNumber",
 						  "Nom du soldat"]
 		current_dict = {}
-		existing_dict = utils.load_json_to_dict(self.minutes_annotation_file)
 		loaded_image = Image.open(page["image_path"])
 		width, height = loaded_image.size
 
@@ -213,20 +212,18 @@ class Pipeline():
 
 		# On extrait le nom et prénom du soldat
 		# TODO: normaliser les noms de zone
-		if "Nom du soldat" in zones_manquantes:
-			current_dict["nom_du_soldat"] = None
-		else:
-			current_dict["nom_du_soldat"] = self.extractor.extraire_nom_soldat(
-				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1,
-				image=page["image_path"],
-				show_images=False,
-				loaded_image=loaded_image)
-		print(current_dict["nom_du_soldat"])
+		# if "Nom du soldat" in zones_manquantes:
+		# 	current_dict["nom_du_soldat"] = None
+		# else:
+		# 	current_dict["nom_du_soldat"] = self.extractor.extraire_nom_soldat(
+		# 		ocr_prediction=self.current_page_transcription,
+		# 		annotations=zones_page_1,
+		# 		image=page["image_path"],
+		# 		show_images=False,
+		# 		loaded_image=loaded_image)
+		# print(current_dict["nom_du_soldat"])
 		if "Description du Soldat" in zones_manquantes:
 			current_dict["description_soldat"] = None
-		elif current_dict["nom_du_soldat"]['extracted'] == "Plusieurs soldats":
-			current_dict["description_soldat"] = "Plusieurs soldats"
 		else:
 			current_dict["description_soldat"] = self.extractor.extraire_description_soldat(
 				ocr_prediction=self.current_page_transcription,
@@ -234,7 +231,7 @@ class Pipeline():
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-		# return zone_dict, current_dict
+		return zone_dict, current_dict
 
 		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
 			ocr_prediction=self.current_page_transcription,

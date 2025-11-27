@@ -31,7 +31,7 @@ class Extractor:
 
 	def __init__(self, party_engine: PARTY.PartyPredict,
 				 resize_factor: int = 1,
-				 debug:bool=False,
+				 debug: bool = False,
 				 use_party=True):
 		"""
 		Constructeur de la classe Extractor
@@ -97,7 +97,6 @@ class Extractor:
 		"""
 		# On récupère la boîte correspondante
 		zones_filtrees = self.filter_zones(annotations=annotations, category=target_zone)
-
 
 		if len(zones_filtrees) == 0:
 			return None, None
@@ -231,7 +230,6 @@ class Extractor:
 		else:
 			lieu = lieu_kraken
 
-
 		return {"institution": institution,
 				"siège": lieu,
 				"bbox": lieu_jugement_zone,
@@ -301,11 +299,11 @@ class Extractor:
 				target_line.append(line)
 		if len(target_line) == 0:
 			return {"Numéro": None,
-				"baseline": None,
-				"bbox": numero_jugement_zone,
-				"certitude": None,
-				"predictions": {"party": None,
-								"kraken": None}}
+					"baseline": None,
+					"bbox": numero_jugement_zone,
+					"certitude": None,
+					"predictions": {"party": None,
+									"kraken": None}}
 		assert len(target_line) == 1, "Erreur. Plusieurs lignes trouvées pour le numéro de jugement."
 
 		numero_jugement_kraken = target_line[0]['prediction']
@@ -500,11 +498,11 @@ class Extractor:
 			# TODO: reprendre cela, ça semble bizarre.
 			print("Error")
 			return {"Numéro": None,
-				"baseline": None,
-				"bbox": None,
-				"certitude": None,
-				"predictions": {"party": None,
-								"kraken": None}}
+					"baseline": None,
+					"bbox": None,
+					"certitude": None,
+					"predictions": {"party": None,
+									"kraken": None}}
 
 		# On va commencer par tester si la page est bien classifiée, et identifier des formulaires différents
 		first_line = corresponding_lines[0]["prediction"]
@@ -638,8 +636,8 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="A l'effet de juger")
-
+		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+													  string_to_match="A l'effet de juger")
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
@@ -700,13 +698,12 @@ class Extractor:
 		return {"bbox": soldat_zone,
 				"extracted": extracted}
 
-
 	def extraire_description_soldat(self,
-							ocr_prediction: list[dict],
-							annotations: list[dict],
-							image: str = None,
-							loaded_image: PIL.Image.Image = None,
-							show_images: bool = False):
+									ocr_prediction: list[dict],
+									annotations: list[dict],
+									image: str = None,
+									loaded_image: PIL.Image.Image = None,
+									show_images: bool = False):
 		"""
 		Cette fonction extrait la description du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -749,31 +746,115 @@ class Extractor:
 				]
 			  }
 		"""
-		description = {}
+
+		description_du_soldat = {}
+
+		# On extrait d'abord le nom du soldat
 		corresponding_lines, soldat_zone = self.extraction_ligne(annotations=annotations,
-																 target_zone="Description du Soldat",
+																 target_zone="Nom du soldat",
 																 show_images=show_images,
 																 loaded_image=loaded_image,
 																 ocr_prediction=ocr_prediction,
 																 intersect_ratio=0.1)
+		if corresponding_lines is None:
+			print("Plusieurs soldats trouvés, pas encore pris en charge.")
+			return {"Nom du soldat": "Plusieurs soldats",
+					"Description du soldat": "Plusieurs soldats"}
 
-		corresponding_lines = utils.vertical_order_lines(corresponding_lines)
-		effet_de_juger_line, debug = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
+		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
+		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
+		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
+													  string_to_match="A l'effet de juger")
+
+		# On a la ligne correspondante. Maintenant, on va identifier les caractères
+		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
+		# en polygones, pour ensuite vérifier les intersections entre la boîte et les intersections
+		nom_du_soldat_kraken = utils.extract_string_from_cuts(box=soldat_zone, line=name_line).strip()
+
+		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
+																	   nom_du_soldat_kraken,
+																	   pipeline=self.ner)
+		if show_images:
+			cropped = loaded_image.crop(
+				(
+					round(soldat_zone[0][0] / self.resize_factor),
+					round(soldat_zone[0][1] / self.resize_factor),
+					round(soldat_zone[1][0] / self.resize_factor),
+					round(soldat_zone[1][1] / self.resize_factor)
+				)
+			)
+			cropped.show()
+
+		# On prédit à l'aide de party la section de baseline qui correspond à la boite identifiée par Yolo
+		baseline_soldat = name_line['baseline']
+
+		# On prend le premier et le dernier point de la ligne
+		# TODO: ajouter la ligne et lq baseline.
+		baseline_soldat = [baseline_soldat[0], baseline_soldat[-1]]
+		(x1_soldat, _), (x2_soldat, _) = soldat_zone
+		(_, y1), (_, y2) = baseline_soldat
+		baseline_soldat_coupee = [
+			[round(x1_soldat / self.resize_factor), round(y1 / self.resize_factor)],
+			[round(x2_soldat / self.resize_factor), round(y2 / self.resize_factor)]
+		]
+
+		if self.use_party:
+			party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
+			party_prediction = self.party.measured_party_inference(
+				segmentation=party_segmentation,
+				image=loaded_image,
+				objet_transcrit="nom du soldat")
+			nom_soldat_party = party_prediction.prediction
+		else:
+			nom_soldat_party = nom_du_soldat_kraken
+
+		# on produit le dictionnaire
+		nom_du_soldat = {}
+		nom_du_soldat["forename"] = {"value": prenoms,
+									 "certainty": certitude_prenoms}
+		nom_du_soldat["baseline"] = baseline_soldat_coupee
+		nom_du_soldat["bbox"] = soldat_zone
+		if nom_du_soldat_kraken == nom_soldat_party:
+			nom_du_soldat["surname"] = {"value": nom_soldat_party,
+										"certainty": 1}
+		else:
+			nom_du_soldat["surname"] = {"value": nom_soldat_party if nom_soldat_party != "+" else nom_du_soldat_kraken,
+										"certainty": 0.5,
+										"predictions": {"kraken": nom_du_soldat_kraken,
+														"party": nom_soldat_party}
+										}
+
+		description_du_soldat["Nom du soldat"] = nom_du_soldat
+
+		# On passe à l'extraction de toutes les autres infos
+		lignes_description_du_soldat, soldat_zone = self.extraction_ligne(annotations=annotations,
+																		  target_zone="Description du Soldat",
+																		  show_images=show_images,
+																		  loaded_image=loaded_image,
+
+																		  ocr_prediction=ocr_prediction,
+																		  intersect_ratio=0.1)
+
+		lignes_description_du_soldat = utils.vertical_order_lines(lignes_description_du_soldat)
+		effet_de_juger_line, debug = utils.match_line_by_similarity(corresponding_lines=lignes_description_du_soldat,
 																	string_to_match="A l'effet de juger le")
-		first_line_index = corresponding_lines.index(effet_de_juger_line)
-		filtered_lines = corresponding_lines[first_line_index:]
+		first_line_index = lignes_description_du_soldat.index(effet_de_juger_line)
+		filtered_lines = lignes_description_du_soldat[first_line_index:]
 
 		# On commence par la date de naissance
 		# TODO: en faire une fonction
-		# naissance = utils.match_line_by_similarity(corresponding_lines=filtered_lines, string_to_match="né le")
+		# naissance = utils.match_line_by_similarity(lignes_description_du_soldat=filtered_lines, string_to_match="né le")
 		# date_naissance = utils.approximate_split(naissance['prediction'], "né le")[1]
-		lines_as_string = utils.nfc_normalize(" ".join([item['prediction'] for item in filtered_lines]))
+		lignes_description_as_string = utils.nfc_normalize(" ".join([item['prediction'] for item in filtered_lines]))
+		print(lignes_description_as_string)
 		try:
-			date_naissance_ner = [item['word'] for item in self.ner(lines_as_string) if item['entity_group'] == 'DATE'][0]
+			date_naissance_ner = \
+				[item['word'] for item in self.ner(lignes_description_as_string) if item['entity_group'] == 'DATE'][0]
 			print(date_naissance_ner)
 		except IndexError:
 			print(f"Not found: {debug}")
-			print([item['prediction'] for item in corresponding_lines])
+			print([item['prediction'] for item in lignes_description_du_soldat])
 			print([item['prediction'] for item in filtered_lines])
 			exit(0)
 		regexp = re.compile("[^\d]*(\d*.*\d+)[^\d]*")
@@ -787,63 +868,133 @@ class Extractor:
 			date_naissance = {"Date normalisée": "Échec",
 							  "Date naissance extraite": date_naissance_extraite,
 							  "Date corrigée": date_naissance_corrigee,
-							  "prediction": lines_as_string}
-			description["Date de naissance"] = date_naissance
-			return description
+							  "prediction": lignes_description_as_string}
+			description_du_soldat["Date de naissance"] = date_naissance
+			return description_du_soldat
 		date_naissance = {"Date normalisée": date_normalisee,
 						  "Date naissance extraite": date_naissance_extraite,
 						  "Date corrigée": date_naissance_corrigee,
-						  "prediction": lines_as_string}
-		description["Date de naissance"] = date_naissance
+						  "prediction": lignes_description_as_string}
+		description_du_soldat["Date de naissance"] = date_naissance
 
-
-		# On s'occupe ensuite de la profession
-		print(lines_as_string)
+		# On s'occupe ensuite de la situation maritale
 		try:
-			apres_date_naissance = lines_as_string.split(date_naissance_ner)[-1]
+			apres_date_naissance = lignes_description_as_string.split(date_naissance_ner)[-1]
 		except IndexError:
-			apres_date_naissance = lines_as_string
+			apres_date_naissance = lignes_description_as_string
 		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
-
-		profession_et_situation_maritale = utils.approximate_split(apres_profession, "residant", sensibility=0.8)[0]
-
-
-		check_celibataire, celibataire, marie, nombre_enfants = utils.check_situation_maritale(profession_et_situation_maritale)
+		profession_et_situation_maritale = \
+			utils.approximate_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
+		check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+			profession_et_situation_maritale)
 
 		# Si on infère le célibat, il n'a peut être pas été trouvé. On va chercher en ampliant la zone à l'ensemble des lignes.
 		if celibataire is True and check_celibataire is False:
 			print("La situation maritale n'a peut être pas été identifiée. On élargit la zone de recherche.")
-			_, celibataire, marie, nombre_enfants = utils.check_situation_maritale(lines_as_string)
-		print(f"Célibataire: {celibataire}")
-		print(f"Marié: {marie}")
-		print(f"Enfants: {nombre_enfants}")
-		return description
+			_, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+				lignes_description_as_string.split(date_naissance_extraite)[-1])
+		if nombre_enfants:
+			enfants = True
+			try:
+				nombre_enfants = int(nombre_enfants)
+			except ValueError:
+				pass
+		else:
+			enfants = False
+		# Si on trouve des enfants mais pas la chaîne correspondant à "marié"
+		if nombre_enfants and marie is False:
+			marie = "Probablement"
+
+		# TODO: Il manque l'information sur le veuvage.
+
+		situation_maritale = {"marié": marie,
+							  "enfants": enfants,
+							  "Nombre d'enfants": nombre_enfants,
+							  "célibataire": celibataire}
+		description_du_soldat["situation maritale"] = situation_maritale
+
 		de_regexp = re.compile(r"^d['ue]\s*")
 		cleaned_profession = re.sub(de_regexp, "", profession_et_situation_maritale.strip())
+		print(token_celibataire, token_marie)
+		if marie is True and isinstance(token_marie, str):
+			cleaned_profession = cleaned_profession.split(token_marie)[0]
+		elif celibataire is True and isinstance(token_celibataire, str):
+			cleaned_profession = utils.strip_punctuation(cleaned_profession.split(token_celibataire)[0].strip())
+		corrected_profession = utils.correct_string(cleaned_profession)
 
+		description_du_soldat["Profession"] = {
+			"extracted": cleaned_profession,
+			"corrected": corrected_profession,
+		}
 
-		description["Profession"] = cleaned_profession
+		# Le rang du soldat se trouve juste avant le nom
+		apres_effet_de_juger = utils.split_after_keep_delimiter(name_line['prediction'], "juger")[-1]
+		rang = apres_effet_de_juger.split(nom_du_soldat_kraken)[0].replace("le", "").strip()
+		description_du_soldat['rang'] = {
+			"prediction_kraken": rang,
+			"extraction": rang,
+			"baseline": name_line['baseline']
+		}
 
+		# Le lieu de naissance est après la date de naissance
+		informations_naissance = {}
+		apres_date_naissance = utils.split_after_keep_delimiter(lignes_description_as_string, date_naissance_extraite.split()[-1])[1]
+		split_lieu_naissance = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.90)
+		if celibataire is True and isinstance(token_celibataire, str):
+			lieu_naissance = split_lieu_naissance[0].replace(token_celibataire, "")
+		else:
+			lieu_naissance = split_lieu_naissance[0]
+		lieu_naissance_corrige = utils.strip_punctuation(lieu_naissance)
+		informations_naissance["extrait"] = lieu_naissance_corrige
+		informations_naissance = utils.extraction_geographique(lieu_naissance_corrige, informations_naissance, self.ner)
+		# split_departement = utils.approximate_split(lieu_naissance_corrige, "département")
+		# if split_departement:
+		# 	informations_naissance["departement"] = utils.full_clean_string(split_departement[-1])
+		# 	split_arrondissement_1 = utils.approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
+		# 	split_arrondissement_2 = utils.approximate_split(split_departement[0], "arrondissement", sensibility=0.7)
+		# else:
+		# 	informations_naissance["departement"] = None
+		# 	split_arrondissement_1 = utils.approximate_split(lieu_naissance_corrige, "arrd^t", sensibility=0.5)
+		# 	split_arrondissement_2 = utils.approximate_split(lieu_naissance_corrige, "arrondissement", sensibility=0.7)
+		# if split_arrondissement_1:
+		# 	split_arrondissement = split_arrondissement_1
+		# 	arrondissement = utils.full_clean_string(split_arrondissement_1[-1])
+		# elif split_arrondissement_2:
+		# 	split_arrondissement = split_arrondissement_2
+		# 	arrondissement = utils.full_clean_string(split_arrondissement_2[-1])
+		# else:
+		# 	arrondissement = None
+		# informations_naissance["arrondissement"] = arrondissement
+		#
+		# if arrondissement:
+		# 	ville = split_arrondissement[0]
+		# else:
+		# 	ville = split_departement[0]
+		#
+		# informations_naissance["ville"] = utils.full_clean_string(ville)
 
+		description_du_soldat["Lieu de naissance"] = informations_naissance
 
-		return description
-		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
-		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
-		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		filiation, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines, string_to_match="fils de")
-		print(filiation)
-		print("OK")
-		exit(0)
+		informations_residence = {}
+		split_residence = utils.approximate_split(split_lieu_naissance[-1], "service", sensibility=.75)
+		try:
+			split_taille = utils.approximate_split(split_residence[-1], "Taille", sensibility=0.85)
+			lieu_residence = split_taille[0]
+		except TypeError:
+			split_taille = utils.split_before_keep_delimiter(split_residence[-1], "[tT]aille")
+			lieu_residence = split_taille[0]
+		informations_residence["extrait"] = lieu_residence
+		informations_residence = utils.extraction_geographique(lieu_residence, informations_residence, self.ner)
+		description_du_soldat["Lieu de résidence"] = informations_residence
 
-
-
+		return description_du_soldat
 
 	def extraire_date_du_proces(self,
-							ocr_prediction: list[dict],
-							annotations: list[dict],
-							image: str = None,
-							loaded_image: PIL.Image.Image = None,
-							show_images: bool = False):
+								ocr_prediction: list[dict],
+								annotations: list[dict],
+								image: str = None,
+								loaded_image: PIL.Image.Image = None,
+								show_images: bool = False):
 		"""
 		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -887,17 +1038,17 @@ class Extractor:
 			  }
 		"""
 		corresponding_lines, zone_magistrats = self.extraction_ligne(annotations=annotations,
-																 target_zone="Magistrats",
-																 show_images=show_images,
-																 loaded_image=loaded_image,
-																 ocr_prediction=ocr_prediction,
-																 intersect_ratio=0.1)
+																	 target_zone="Magistrats",
+																	 show_images=show_images,
+																	 loaded_image=loaded_image,
+																	 ocr_prediction=ocr_prediction,
+																	 intersect_ratio=0.1)
 
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
 		cejourdui_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-														string_to_match="CEJOURD'HUI")
+														   string_to_match="CEJOURD'HUI")
 		an_mil_neuf_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-														string_to_match="an mil neuf cent")
+															 string_to_match="an mil neuf cent")
 		if cejourdui_date == an_mil_neuf_date:
 			correct_line = cejourdui_date
 			line_as_string = cejourdui_date['prediction']
@@ -917,12 +1068,12 @@ class Extractor:
 		except TypeError:
 			extracted = "Échec"
 		return {
-				"bbox": zone_magistrats,
-				"baseline": baseline,
-				"prediction": line_as_string,
-				"Date corrigée": corrected_date,
-				"Date normalisée": extracted
-				}
+			"bbox": zone_magistrats,
+			"baseline": baseline,
+			"prediction": line_as_string,
+			"Date corrigée": corrected_date,
+			"Date normalisée": extracted
+		}
 
 	def extraire_magistrats(self,
 							ocr_prediction,
@@ -1075,8 +1226,9 @@ class Extractor:
 
 		# On va itérer jury par jury
 		for jure in jures:
-			extracted_entities = utils.extraire_nom_et_fonction(prediction=" ".join(line['prediction'] for line in jure),
-																pipeline=self.ner)
+			extracted_entities = utils.extraire_nom_et_fonction(
+				prediction=" ".join(line['prediction'] for line in jure),
+				pipeline=self.ner)
 			jury_dict = {"extracted": extracted_entities,
 						 "baseline": [line['baseline'] for line in jure],
 						 "predictions": [line['prediction'] for line in jure]}
@@ -1087,9 +1239,9 @@ class Extractor:
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
 		coords_zone_englobante_magistrats = zone_englobante_magistrats[0]['coordinates']
 		zone_magistrat_as_rectangle = self.rectangle(coords_zone_englobante_magistrats[0][0],
-												   coords_zone_englobante_magistrats[0][1],
-												   coords_zone_englobante_magistrats[1][0],
-												   coords_zone_englobante_magistrats[1][1])
+													 coords_zone_englobante_magistrats[0][1],
+													 coords_zone_englobante_magistrats[1][0],
+													 coords_zone_englobante_magistrats[1][1])
 		lignes_zone_magistrat = []
 		for predicted_line in ocr_prediction:
 			prediction = predicted_line["prediction"]
@@ -1099,8 +1251,6 @@ class Extractor:
 			is_in_box = utils.check_if_line_in_box(box_coord=zone_magistrat_as_rectangle, baseline=converted_baseline)
 			if is_in_box is True:
 				lignes_zone_magistrat.append(predicted_line)
-
-
 
 		# On extrait le nom du greffier:
 		greffier = utils.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)

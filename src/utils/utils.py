@@ -10,29 +10,89 @@ from shapely.geometry import Polygon
 from collections import namedtuple
 import spellchecker
 
+number_dict = {"un": 1,
+				"deux": 2,
+				"trois": 3,
+				"quatre": 4,
+				"cinq": 5,
+				"six": 6,
+				"sept": 7,
+				"huit": 8,
+				"neuf": 9,
+				"dix": 10,
+				"onze": 11,
+				"douze": 12,
+				"treize": 13,
+				"quatorze": 14,
+				"quinze": 15,
+				"seize": 16,
+				"dix sept":17,
+				"dix huit": 18,
+				"dix neuf": 19,
+				"vingt": 20,
+				"vingt-et-un": 21,
+				"vingt deux": 22,
+				"vingt trois": 23,
+				"vingt quatre": 24,
+				"vingt cinq": 25,
+				"vingt six": 26,
+				"vingt sept": 27,
+				"vingt huit": 28,
+				"vingt neuf": 29,
+				"trente": 30,
+				"trente et un": 31,
+				"mil": 1000,
+				"cent": 100,
+			   "enfants": "enfants"}
+
 def load(path):
 	return Image.open(path)
 
 
-def check_situation_maritale(string):
+def extraire_situation_maritale(string) -> tuple[bool, bool, str, bool, str, int|str]:
+	"""
+	Cette fonction permet d'extraire la situation maritale
+	:param string:
+	:return: Un ensemble de données:
+		- la vérification du célibat dans la chaîne de caractère donnée,
+		- l'inférence sur le célibat par rapport aux autre données
+		- le token du célibat trouvé
+		- l'extraction de l'information maritale
+		- le token marital correspondant,
+		- le nombre d'enfants trouvé.
+	"""
+	token_marie, token_celibataire, token_enfants = None, None, None
 	check_celibataire, token_celibataire = check_word_in_sentence(string,
-																		"celibataire", sensibility=0.85)
+																		"célibataire", sensibility=0.85)
 	if check_celibataire is False:
 		marie, token_marie = check_word_in_sentence(string, "marié", sensibility=0.85)
-
-
 		if marie is True:
 			check_enfants, token_enfants = check_word_in_sentence(string, "enfant", sensibility=0.85)
 			if check_enfants is True:
 				nombre_enfants = split_before_keep_delimiter(string, token_enfants)[0].split(token_marie)[-1]
+				nombre_enfants = strip_punctuation(nombre_enfants)
+				try:
+					nombre_enfants = number_dict[correct_based_on_list(nombre_enfants, list(number_dict.keys()))]
+				except KeyError:
+					nombre_enfants = nombre_enfants
 			else:
 				nombre_enfants = None
 		else:
 			# On peut éventuellement (???) avoir une indication d'enfants sans mariage, OU rater l'information du mariage
-			check_enfants, token_enfants = check_word_in_sentence(string, "enfant", sensibility=0.85)
+			check_enfants, token_enfants = check_word_in_sentence(string, "enfants", sensibility=0.85)
 			if check_enfants is True:
-				regexp = re.compile(rf"(\d+)\s*{token_enfants}")
-				nombre_enfants = re.search(regexp, string).group(1)
+				print(token_enfants)
+				tokens_enfants_clean = token_enfants.replace('(', '').replace(')', '')
+				nombre_enfants = strip_punctuation(tokens_enfants_clean)
+				try:
+					nombre_enfants = number_dict[correct_based_on_list(nombre_enfants, list(number_dict.keys()))]
+				except KeyError:
+					nombre_enfants = tokens_enfants_clean
+				regexp = re.compile(rf"(sans|\d+)\s*{nombre_enfants}")
+				try:
+					nombre_enfants = re.search(regexp, string).group(1)
+				except AttributeError:
+					nombre_enfants = "Unknown"
 			else:
 				nombre_enfants = None
 	else:
@@ -42,7 +102,7 @@ def check_situation_maritale(string):
 		celibataire = True
 	else:
 		celibataire = False
-	return check_celibataire, celibataire, marie, nombre_enfants
+	return check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants
 
 def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
@@ -141,6 +201,27 @@ def correct_date(date:str) -> str:
 				result.append(token)
 	normalized = " ".join([item for item in result if item != ""])
 	normalized = normalized.lower()
+	return normalized
+
+def correct_based_on_list(sentence, list):
+	"""
+	Cette fonction corrige une phrase en se fondant sur une liste de mots définie en amont.
+	:param sentence: la phrase à corriger
+	:param list: la liste de mots importants
+	:return: la phrase corrigée
+	"""
+	splits = re.compile(r"[\s+\-]")
+	splitted = re.split(splits, sentence)
+	result = []
+	for token in splitted:
+		matching, corrected = check_word_in_list(list, token, sensibility=0.7 if len(token) > 4 else 0.6)
+		if matching:
+			result.append(corrected)
+		else:
+			result.append(token)
+	normalized = " ".join([item for item in result if item != ""])
+	normalized = normalized.lower()
+	print(f"{sentence} -> {normalized}")
 	return normalized
 
 def correct_description_soldat(string:str):
@@ -363,6 +444,90 @@ def match_lines_in_zones(ocr_prediction: list[dict], zone_as_rectangle: namedtup
 			corresponding_lines.append(line)
 	return corresponding_lines
 
+def clean_spaces(string) -> str:
+	spaces_regexp = re.compile("\s+")
+	return re.sub(spaces_regexp, " ", string)
+
+def full_clean_string(string) -> str:
+	"""
+	Cette fonction a vocation à nettoyer completement une chaîne de caractères de la ponctuation et des espaces,
+	elle supprime aussi
+	:param string: la chaîne à nettoyer
+	:return: la chaîne nettoyée
+	"""
+	string = remove_all_punctuation(string)
+	string = strip_stopwords(string)
+	string = clean_spaces(string)
+	return string
+
+def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeline):
+	"""
+	Cette fonction extrait et formatte des informations géographiques.
+	:param lieu: la chaîne à interroger
+	:param informations: le dictionnaire à nourir
+	:param ner_pipeline: le moteur de NER
+	:return:
+	"""
+	split_departement = approximate_split(lieu, "département")
+	if split_departement:
+		dictionnaire_informations["departement"] = full_clean_string(split_departement[-1])
+		split_arrondissement_1 = approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = approximate_split(split_departement[0], "arrondissement", sensibility=0.85)
+	else:
+		dictionnaire_informations["departement"] = None
+		split_arrondissement_1 = approximate_split(lieu, "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = approximate_split(lieu, "arrondissement", sensibility=0.7)
+	if split_arrondissement_1:
+		split_arrondissement = split_arrondissement_1
+		arrondissement = full_clean_string(split_arrondissement_1[-1])
+	elif split_arrondissement_2:
+		split_arrondissement = split_arrondissement_2
+		arrondissement = full_clean_string(split_arrondissement_2[-1])
+	else:
+		arrondissement = None
+	dictionnaire_informations["arrondissement"] = arrondissement
+
+	try:
+		if arrondissement:
+			ville = split_arrondissement[0]
+		else:
+			ville = split_departement[0]
+	except TypeError:
+		# On considère que le premier lieu est un nom de ville.
+		try:
+			ville = [item['word'] for item in ner_pipeline(lieu) if item['entity_group'] == "LOC"][0]
+		except IndexError:
+			ville = None
+	if ville is not None:
+		ville = full_clean_string(ville)
+	print(ner_pipeline(lieu))
+	ner_extractions = ner_pipeline(lieu)
+	lieux = [item['word'] for item in ner_extractions if item['entity_group'] == "LOC"]
+	dictionnaire_informations["NER"] = lieux
+	dictionnaire_informations["ville"] = ville
+	return dictionnaire_informations
+
+def strip_stopwords(string):
+	stopwords = re.compile("^du |^de la |^de |^[àa] |y |de l'")
+	clean = re.sub(stopwords, "", string)
+	return clean
+
+def remove_all_punctuation(string:str, debug=False) -> str:
+	"""
+	Cette fonction supprime la ponctuation en début et fin de chaîne
+	:param string: la chaîne à nettoyer
+	:return: la chaîne nettoyée
+	"""
+	orig_string = string
+	expression = "[\(\),;.!?\-:]"
+	punct_regexp = re.compile(expression)
+	string = string.strip()
+	string = re.sub(punct_regexp, " ", string)
+	string = string.strip()
+	if debug:
+		print(f"|{orig_string}| -> |{string}|")
+	return string
+
 def strip_punctuation(string:str, debug=False) -> str:
 	"""
 	Cette fonction supprime la ponctuation en début et fin de chaîne
@@ -375,6 +540,7 @@ def strip_punctuation(string:str, debug=False) -> str:
 	punct_regexp = re.compile(expression)
 	string = string.strip()
 	string = re.sub(punct_regexp, "", string)
+	string = string.strip()
 	if debug:
 		print(f"|{orig_string}| -> |{string}|")
 	return string
@@ -570,7 +736,7 @@ def similarite_ratcliff(string_a, string_b):
 
 def approximate_split(sentence, word, sensibility=0.5) -> list|None:
 	"""
-	Cette fonction découpe une phrase selon un mot qui peut être approximatif
+	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
 	:param word: le mot sur lequel s'appuyer
 	:param sensibility: la sensibilité a appliquer à la recherche (à trouver par l'expérience)
@@ -640,7 +806,7 @@ def match_line_by_similarity(corresponding_lines:list, string_to_match:str):
 	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
 	:param string_to_match: la chaîne à trouver
-	:return: la ligne qui contient la chaîne de caractères
+	:return: la ligne qui contient la chaîne de caractères et le zip de la ligne et la similarité avec la requête
 	"""
 	# On commence par normaliser la chaîne à matcher
 	string_to_match = string_to_match.lower()
