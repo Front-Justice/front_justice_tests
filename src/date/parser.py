@@ -182,11 +182,12 @@ class Parser(lexer.Lexer):
                      | courant_de_groupe
                      | JOUR mois ANNEE
                      | mois_annee
+                     | mois_andor_mois_annee
                      | annee
                      | range_mois ANNEE
                      | range_jour ANNEE
                      | annee_et_annee
-                     | andor_jour_mois
+                     | andor_jour_mois_jour_mois
                      | andor_date_complete
                      | jour_mois_annee
                      | deux_dates_completes
@@ -255,15 +256,26 @@ class Parser(lexer.Lexer):
         'jour_mois_annee : JOUR mois ANNEE'
         p[0] = {"jour": p[1], **p[2], "annee": p[3]}
 
-    def p_andor_jour_mois(self, p):
+    def p_andor_jour_mois_jour_mois(self, p):
         '''
         andor_jour_mois : jour_mois ANDOR jour_mois
-                        | jour_mois ANDOR jour_mois ANNEE
+                                    | jour_mois jour_mois
         '''
         if len(p) == 4:
-            p[0] = {"andor": [p[1], p[3]]}
-        elif len(p) == 5:
-            p[0] = {"andor": [p[1], p[3]], "annee": int(p[4])}
+            p[0] = {"andor": [p[1], p[3]],}
+        else:
+            p[0] = {"andor": [p[1], p[2]],}
+
+
+    def p_andor_jour_mois(self, p):
+        '''
+        andor_jour_mois_jour_mois : andor_jour_mois
+                        | andor_jour_mois ANNEE
+        '''
+        if len(p) == 2:
+            p[0] = p[1]
+        elif len(p) == 3:
+            p[0] = {**p[1], "annee": int(p[2])}
 
     def p_succession_mois(self, p):
         '''
@@ -272,6 +284,26 @@ class Parser(lexer.Lexer):
         p[0] = {
             "and": [p[1], p[3]]
         }
+
+    def p_mois_andor_mois(self, p):
+        '''
+        mois_andor_mois : mois ANDOR mois
+                        | mois mois
+        '''
+        if len(p) == 3:
+            p[0] = {
+                "andor": [p[1], p[2]]
+            }
+        else:
+            p[0] = {
+                "andor": [p[1], p[3]]
+            }
+
+    def p_mois_andor_mois_annee(self, p):
+        '''
+        mois_andor_mois_annee : mois_andor_mois ANNEE
+        '''
+        p[0] = {**p[1], "annee": p[2]}
 
     def p_error(self, p):
         if p:

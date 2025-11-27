@@ -41,6 +41,7 @@ class Extractor:
 		"""
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
+		self.date_proces = ""
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner = pipeline('ner',
@@ -333,12 +334,12 @@ class Extractor:
 				"predictions": {"party": numero_jugement_party,
 								"kraken": numero_jugement_kraken}}
 
-	def extraire_date_crime(self,
-							ocr_prediction: list[dict],
-							annotations: list[dict],
-							image: str = None,
-							loaded_image: PIL.Image.Image = None,
-							show_images: bool = True):
+	def extraire_date_crime_ou_delit(self,
+									 ocr_prediction: list[dict],
+									 annotations: list[dict],
+									 image: str = None,
+									 loaded_image: PIL.Image.Image = None,
+									 show_images: bool = True):
 		"""
 		Cette fonction extrait la date du crime à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -420,6 +421,7 @@ class Extractor:
 
 		# On utilise le parseur pour produire la date normalisée
 		try:
+			# TODO: la correction supprime les tirets et la ponctuation, marqueur de période ou répétition, voir comment corriger ça
 			corrected_date = utils.correct_date(target_date)
 		except TypeError:
 			return {"Date normalisée": None,
@@ -443,6 +445,111 @@ class Extractor:
 				"certitude": certitude,
 				"predictions": {"party": date_crime_party,
 								"kraken": date_crime_kraken}}
+
+	def extraire_inculpation_et_antecedents(self,
+											ocr_prediction: list[dict],
+											annotations: list[dict],
+											image: str = None,
+											loaded_image: PIL.Image.Image = None,
+											show_images: bool = True):
+		"""
+		Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+		  "Numéro": "501",
+		  "baseline": [
+			[2611, 555],
+			[3203, 555]
+		  ],
+		  "bbox": [
+			[2553, 178],
+			[3249, 634]
+		  ],
+		  "certitude": 0.8,
+		  "predictions": {
+			"party": "N^o 501 D'ORDRE.",
+			"kraken": "N^o 501 D'ORDRE."
+		  }
+		},
+		"""
+		inculpation = {"antécédents": {},
+					   "inculpation": {}}
+		corresponding_lines, numero_ordre_zone = self.extraction_ligne(annotations=annotations,
+																	   target_zone="Inculpation_antecedents",
+																	   show_images=show_images,
+																	   loaded_image=loaded_image,
+																	   ocr_prediction=ocr_prediction,
+																	   intersect_ratio=0.7)
+		# On commence par l'inculpation
+		corresponding_lines = utils.vertical_order_lines(corresponding_lines)
+		lignes_inculpe, _, correct_index_inculpe = utils.check_substring_in_line(
+			corresponding_lines=corresponding_lines,
+			string_to_match=["Inculpé de:", "Prévenu de:", "Accusé de:"], return_index=True)
+		ligne_condamnations, _, correct_index_condamnations = utils.check_substring_in_line(
+			corresponding_lines=corresponding_lines, string_to_match="Condamnations", return_index=True)
+		lignes_inculpation = corresponding_lines[correct_index_inculpe:correct_index_condamnations]
+		lignes_inculpation_str = " ".join([item['prediction'] for item in lignes_inculpation])
+		lignes_inculpation_str = utils.nfc_normalize(lignes_inculpation_str)
+		inculpation["inculpation"]["predicted"] = lignes_inculpation_str
+		check_inculpe, mot_inculpe = utils.check_word_in_sentence(sentence=lignes_inculpation_str,
+												   target_word=["Inculpé", "Prévenu", "Accusé"], sensibility=0.8)
+		if check_inculpe:
+			lignes_inculpation_str = lignes_inculpation_str.replace(mot_inculpe, "")
+		inculpation["inculpation"]["extracted"] = lignes_inculpation_str
+
+		# On fait de même pour la condamnation, en changeant un peu le split (2 mots)
+		lignes_condamnation = corresponding_lines[correct_index_condamnations:]
+		lignes_condamnations_str = " ".join([item['prediction'] for item in lignes_condamnation])
+		lignes_condamnations_str = utils.nfc_normalize(lignes_condamnations_str)
+		check_condamnations, mot_condamnations = utils.check_word_in_sentence(sentence=lignes_condamnations_str,
+												   target_word=["Condamnations", "Antérieures"], sensibility=0.8)
+		inculpation["antécédents"]["predicted"] = lignes_condamnations_str
+
+		if check_condamnations:
+			lignes_condamnations_str = lignes_condamnations_str.split(mot_condamnations)[-1]
+		if len(lignes_condamnations_str) < 15:
+			check_neant, mot_neant = utils.check_word_in_sentence(sentence=lignes_condamnations_str,
+													   target_word="Néant", sensibility=0.75)
+		else:
+			check_neant = False
+		if check_neant is True:
+			inculpation["antécédents"]["extracted"] = None
+
+		# On va essayer d'isoler chaque condamnation en considérant qu'elle est toujours bornée par une date.
+		else:
+			print(lignes_condamnations_str)
+			print(self.ner(lignes_condamnations_str))
+			check_date_regexp = re.compile(r"\d{4}")
+
+			all_dates = [item for item in self.ner(lignes_condamnations_str) if item['entity_group'] == "DATE"]
+			bornes_dates = []
+			for date in all_dates:
+				is_date = len(re.findall(check_date_regexp, date['word'])) > 0
+				if is_date:
+					bornes_dates.append(date['start'])
+			# https://stackoverflow.com/a/10851479
+			condamnations_individuelles = [lignes_condamnations_str[i:j] for i,j in zip(bornes_dates, bornes_dates[1:]+[None])]
+			inculpation["antécédents"]["extracted"] = condamnations_individuelles
+
+		return inculpation
 
 	def extraire_numero_ordre(self,
 							  ocr_prediction: list[dict],
@@ -636,8 +743,8 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-													  string_to_match="A l'effet de juger")
+		name_line, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+													 string_to_match="A l'effet de juger")
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
@@ -764,8 +871,8 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-													  string_to_match="A l'effet de juger")
+		name_line, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+													 string_to_match="A l'effet de juger")
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
 		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
@@ -837,8 +944,8 @@ class Extractor:
 																		  intersect_ratio=0.1)
 
 		lignes_description_du_soldat = utils.vertical_order_lines(lignes_description_du_soldat)
-		effet_de_juger_line, debug = utils.match_line_by_similarity(corresponding_lines=lignes_description_du_soldat,
-																	string_to_match="A l'effet de juger le")
+		effet_de_juger_line, debug = utils.check_substring_in_line(corresponding_lines=lignes_description_du_soldat,
+																   string_to_match="A l'effet de juger le")
 		first_line_index = lignes_description_du_soldat.index(effet_de_juger_line)
 		filtered_lines = lignes_description_du_soldat[first_line_index:]
 
@@ -871,11 +978,16 @@ class Extractor:
 							  "prediction": lignes_description_as_string}
 			description_du_soldat["Date de naissance"] = date_naissance
 			return description_du_soldat
+		try:
+			age = utils.calcule_age(date_normalisee['when'], date_proces=self.date_proces['when'])
+		except TypeError:
+			age = "Inconnu"
 		date_naissance = {"Date normalisée": date_normalisee,
 						  "Date naissance extraite": date_naissance_extraite,
 						  "Date corrigée": date_naissance_corrigee,
 						  "prediction": lignes_description_as_string}
 		description_du_soldat["Date de naissance"] = date_naissance
+		description_du_soldat["Âge"] = age
 
 		# On s'occupe ensuite de la situation maritale
 		try:
@@ -885,13 +997,13 @@ class Extractor:
 		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
 		profession_et_situation_maritale = \
 			utils.approximate_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
-		check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+		check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
 			profession_et_situation_maritale)
 
 		# Si on infère le célibat, il n'a peut être pas été trouvé. On va chercher en ampliant la zone à l'ensemble des lignes.
 		if celibataire is True and check_celibataire is False:
 			print("La situation maritale n'a peut être pas été identifiée. On élargit la zone de recherche.")
-			_, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+			check_veuf, token_veuf, _, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
 				lignes_description_as_string.split(date_naissance_extraite)[-1])
 		if nombre_enfants:
 			enfants = True
@@ -905,9 +1017,8 @@ class Extractor:
 		if nombre_enfants and marie is False:
 			marie = "Probablement"
 
-		# TODO: Il manque l'information sur le veuvage.
-
 		situation_maritale = {"marié": marie,
+							  "veuf": check_veuf,
 							  "enfants": enfants,
 							  "Nombre d'enfants": nombre_enfants,
 							  "célibataire": celibataire}
@@ -920,7 +1031,7 @@ class Extractor:
 			cleaned_profession = cleaned_profession.split(token_marie)[0]
 		elif celibataire is True and isinstance(token_celibataire, str):
 			cleaned_profession = utils.strip_punctuation(cleaned_profession.split(token_celibataire)[0].strip())
-		corrected_profession = utils.correct_string(cleaned_profession)
+		corrected_profession = utils.full_clean_string(cleaned_profession)
 
 		description_du_soldat["Profession"] = {
 			"extracted": cleaned_profession,
@@ -938,7 +1049,8 @@ class Extractor:
 
 		# Le lieu de naissance est après la date de naissance
 		informations_naissance = {}
-		apres_date_naissance = utils.split_after_keep_delimiter(lignes_description_as_string, date_naissance_extraite.split()[-1])[1]
+		apres_date_naissance = \
+		utils.split_after_keep_delimiter(lignes_description_as_string, date_naissance_extraite.split()[-1])[1]
 		split_lieu_naissance = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.90)
 		if celibataire is True and isinstance(token_celibataire, str):
 			lieu_naissance = split_lieu_naissance[0].replace(token_celibataire, "")
@@ -1045,10 +1157,10 @@ class Extractor:
 																	 intersect_ratio=0.1)
 
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
-		cejourdui_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-														   string_to_match="CEJOURD'HUI")
-		an_mil_neuf_date, _ = utils.match_line_by_similarity(corresponding_lines=corresponding_lines,
-															 string_to_match="an mil neuf cent")
+		cejourdui_date, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+														  string_to_match="CEJOURD'HUI")
+		an_mil_neuf_date, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+															string_to_match="an mil neuf cent")
 		if cejourdui_date == an_mil_neuf_date:
 			correct_line = cejourdui_date
 			line_as_string = cejourdui_date['prediction']
@@ -1067,6 +1179,7 @@ class Extractor:
 			extracted = date.process_date(corrected_date)
 		except TypeError:
 			extracted = "Échec"
+		self.date_proces = extracted
 		return {
 			"bbox": zone_magistrats,
 			"baseline": baseline,
@@ -1226,13 +1339,22 @@ class Extractor:
 
 		# On va itérer jury par jury
 		for jure in jures:
-			extracted_entities = utils.extraire_nom_et_fonction(
+			jury_extrait = utils.extraire_nom_et_fonction(
 				prediction=" ".join(line['prediction'] for line in jure),
 				pipeline=self.ner)
-			jury_dict = {"extracted": extracted_entities,
+			if jury_extrait['persName'] == "UNK" and utils.similarite_ratcliff("Président",
+																			   " ".join(line['prediction'] for line in jure)) > .7:
+				print(jury_extrait)
+				print(" ".join(line['prediction'] for line in jure))
+				print("ÉCARTÉ")
+				continue
+			jury_dict = {"extracted": jury_extrait,
 						 "baseline": [line['baseline'] for line in jure],
 						 "predictions": [line['prediction'] for line in jure]}
 			processed_jures.append(jury_dict)
+		if len(processed_jures) != 4:
+			print("Warning: il manque un membre du jury")
+			processed_jures.append("Juré manquant")
 		processed_president = utils.extraire_nom_et_fonction(" ".join(line['prediction'] for line in president),
 															 self.ner)
 

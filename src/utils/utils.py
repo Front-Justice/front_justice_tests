@@ -49,6 +49,20 @@ def load(path):
 	return Image.open(path)
 
 
+def calcule_age(date_naissance:str, date_proces:str) -> int|None:
+	"""
+	Cette fonction calcule l'âge du soldat étant donné sa date de naissance et la date du procès.
+	Note: l'exception se fait en amont.
+	:param date_naissance: la date de naissance, format DD/JJ/MMMM
+	:param date_proces: la date du procès, format DD/JJ/MMMM
+	:return: l'age ou "Inconnu" si il manque une des deux dates.
+	"""
+	print(date_naissance, date_proces)
+	annee_proces = int(date_proces.split("/")[-1])
+	annee_naissance = int(date_naissance.split("/")[-1])
+
+	return annee_proces - annee_naissance
+
 def extraire_situation_maritale(string) -> tuple[bool, bool, str, bool, str, int|str]:
 	"""
 	Cette fonction permet d'extraire la situation maritale
@@ -61,7 +75,10 @@ def extraire_situation_maritale(string) -> tuple[bool, bool, str, bool, str, int
 		- le token marital correspondant,
 		- le nombre d'enfants trouvé.
 	"""
-	token_marie, token_celibataire, token_enfants = None, None, None
+	token_marie, token_celibataire, token_enfants, token_veuf = None, None, None, None
+
+	check_veuf, token_veuf = check_word_in_sentence(string, "veuf", sensibility=0.90)
+
 	check_celibataire, token_celibataire = check_word_in_sentence(string,
 																		"célibataire", sensibility=0.85)
 	if check_celibataire is False:
@@ -79,7 +96,7 @@ def extraire_situation_maritale(string) -> tuple[bool, bool, str, bool, str, int
 				nombre_enfants = None
 		else:
 			# On peut éventuellement (???) avoir une indication d'enfants sans mariage, OU rater l'information du mariage
-			check_enfants, token_enfants = check_word_in_sentence(string, "enfants", sensibility=0.85)
+			check_enfants, token_enfants = check_word_in_sentence(string, "enfant", sensibility=0.85)
 			if check_enfants is True:
 				print(token_enfants)
 				tokens_enfants_clean = token_enfants.replace('(', '').replace(')', '')
@@ -102,7 +119,9 @@ def extraire_situation_maritale(string) -> tuple[bool, bool, str, bool, str, int
 		celibataire = True
 	else:
 		celibataire = False
-	return check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants
+	if check_veuf is True:
+		marie = True
+	return check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants
 
 def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
@@ -172,7 +191,7 @@ def correct_date(date:str) -> str:
 					   }
 	date = nfc_normalize(date)
 	date = date.lower().strip()
-	clean_regexp = re.compile(r"(\d+)\^?er")
+	clean_regexp = re.compile(r"(\d+)\^?er?")
 	date = re.sub(clean_regexp, r'\g<1>', date)
 	date = strip_punctuation(date)
 
@@ -553,7 +572,7 @@ def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes
 	"""
-	ligne_greffier, _ = match_line_by_similarity(lignes_zone_magistrat, "pres ledit conseil")
+	ligne_greffier, _ = check_substring_in_line(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier['baseline']
 	ligne_greffier = ligne_greffier['prediction']
 	greffier, form_greffier = check_word_in_sentence(ligne_greffier, "Greffier")
@@ -592,7 +611,7 @@ def extraire_commissaire(lignes_zone_magistrat:dict, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
-	ligne_commissaire, _ = match_line_by_similarity(lignes_zone_magistrat, "commissaire du gouvernement")
+	ligne_commissaire, _ = check_substring_in_line(lignes_zone_magistrat, "commissaire du gouvernement")
 	baseline = ligne_commissaire['baseline']
 	ligne_commissaire = ligne_commissaire['prediction']
 	commissaire, form_commissaire = check_word_in_sentence(ligne_commissaire, "commissaire")
@@ -628,9 +647,10 @@ def extraire_general(lignes_zone_magistrat:dict, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
-	ligne_grade, _ = match_line_by_similarity(lignes_zone_magistrat, "nommés par le (1) général")
+	ligne_grade, _ = check_substring_in_line(lignes_zone_magistrat, "nommés par le (1) général")
 	baseline = ligne_grade['baseline']
 	ligne_grade = ligne_grade['prediction']
+	ligne_grade = nfc_normalize(ligne_grade)
 	grade, form_grade = check_word_in_sentence(ligne_grade, "général")
 	if grade is True:
 		grade_extrait = f"{form_grade} {ligne_grade.split(form_grade)[1].strip()}"
@@ -638,7 +658,7 @@ def extraire_general(lignes_zone_magistrat:dict, ner_pipeline):
 		print("Ligne mal reconnue")
 		return {"grade": None}
 
-	nom_et_fonction_du_grade = {"fonction": grade_extrait}
+	nom_et_fonction_du_grade = {"rang": grade_extrait}
 	nom_et_fonction_du_grade["baseline"] = baseline
 	nom_et_fonction_du_grade["prediction_kraken"] = ligne_grade
 	return nom_et_fonction_du_grade
@@ -730,11 +750,24 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 			out_string += char
 	return out_string
 
+def test_number_of_zones(annotations:list[dict], label:str, number:int) -> bool:
+	"""
+	Cette fonction permet de vérifier si les annotations YOLO contiennent le nombre de zones attendues
+	:param annotations: La liste des annotations (dictionnaire {label, coordinates})
+	:param label: le label à vérifier
+	:param number: le nombre de zones attendues
+	:return:
+	"""
+	filtered_list = [item for item in annotations if item['label'] == label]
+	if len(filtered_list) == number:
+		return True
+	else:
+		return False
 
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
-def approximate_split(sentence, word, sensibility=0.5) -> list|None:
+def approximate_split(sentence:str, word:str, sensibility:float=0.5) -> list|None:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
@@ -742,6 +775,8 @@ def approximate_split(sentence, word, sensibility=0.5) -> list|None:
 	:param sensibility: la sensibilité a appliquer à la recherche (à trouver par l'expérience)
 	:return:
 	"""
+	sentence = nfc_normalize(sentence)
+	word = nfc_normalize(word)
 	match, matching_word = check_word_in_sentence(sentence, word, sensibility)
 	if match:
 		return sentence.split(matching_word)
@@ -771,24 +806,31 @@ def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (boo
 	return True, matching_words[max_dist]
 
 
-def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> tuple[bool, str|None]:
+def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5) -> tuple[bool, str|None]:
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
 	:param sentence: la phrase cible
 	:param target_word: le mot à chercher
 	:return: vrai ou faux et le mot identifié (ou None)
 	"""
-	target_word = target_word.lower()
+	sentence = nfc_normalize(sentence)
 	split_regexp = re.compile(r'[.!?,.:;\-\s]')
 	sentence = re.split(split_regexp, sentence)
 	distances = []
 	matching_word = []
+	if isinstance(target_word, str):
+		target_word = [target_word]
+	else:
+		pass
 	for word in sentence:
 		word_lower = word.lower()
-		dist = similarite_ratcliff(word_lower, target_word)
-		if dist > sensibility:
-			distances.append(dist)
-			matching_word.append(word)
+		for item in target_word:
+			item = item.lower().strip()
+			item = nfc_normalize(item)
+			dist = similarite_ratcliff(word_lower, item)
+			if dist > sensibility:
+				distances.append(dist)
+				matching_word.append(word)
 	if len(distances) == 0:
 		return False, False
 	elif len(distances) > 1:
@@ -801,34 +843,44 @@ def check_word_in_sentence(sentence:str, target_word:str, sensibility=0.5) -> tu
 
 
 
-def match_line_by_similarity(corresponding_lines:list, string_to_match:str):
+def check_substring_in_line(corresponding_lines:list, string_to_match:str|list, return_index:bool=False):
 	"""
 	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
-	:param string_to_match: la chaîne à trouver
+	:param string_to_match: la chaîne à trouver ou une liste de chaines alternatives à identifier
 	:return: la ligne qui contient la chaîne de caractères et le zip de la ligne et la similarité avec la requête
 	"""
 	# On commence par normaliser la chaîne à matcher
-	string_to_match = string_to_match.lower()
 	distances = []
-	string_to_match = nfc_normalize(string_to_match)
 	for idx, ligne in enumerate(corresponding_lines):
 		prediction = ligne['prediction']
 		prediction = prediction.lower()
 		prediction = nfc_normalize(prediction)
 		# On identifie la ligne pouvant contenir à l'effet de juger
-		if string_to_match in prediction:
-			distances.append(9999)
-		elif len(prediction) < 10:
-			distances.append(0)
+		if isinstance(string_to_match, list):
+			pass
 		else:
-			# dist = similarite_ratcliff(prediction, string_to_match)
-			dist = fuzz.partial_ratio(prediction, string_to_match)
-			distances.append(dist)
+			string_to_match = [string_to_match]
+		interm_distances = []
+		for item in string_to_match:
+			item = item.lower()
+			item = nfc_normalize(item)
+			if item in prediction:
+				interm_distances.append(9999)
+			elif len(prediction) < 10:
+				interm_distances.append(0)
+			else:
+				# dist = similarite_ratcliff(prediction, string_to_match)
+				dist = fuzz.partial_ratio(prediction, item)
+				interm_distances.append(dist)
+		distances.append(max(interm_distances))
 	correct_line_index = distances.index(max(distances))
 	name_line = corresponding_lines[correct_line_index]
 	debug_zip = list(zip([item['prediction'] for item in corresponding_lines], distances))
-	return name_line, debug_zip
+	if return_index is True:
+		return name_line, debug_zip, correct_line_index
+	else:
+		return name_line, debug_zip
 
 
 

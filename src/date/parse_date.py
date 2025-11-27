@@ -194,6 +194,7 @@ def process_date(date, debug=False):
 	"""
 	ast = build_grammar(debug=debug, text=date)
 	parsed = parse_ast(ast)
+	print(parsed)
 	result = second_pass(parsed)
 	return result
 
@@ -238,7 +239,8 @@ def test():
 	"vingt neuf novembre l'an mil neuf cent dix sept",
 	"vingt septembre an mil neuf cent dix sept",
 	"sept avril de l'an mil neuf cent dix sept",
-	"trente et un octobre de l'an mil neuf cent dixsept"]
+	"trente et un octobre de l'an mil neuf cent dixsept",
+	"juin juillet 1917"]
 	dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")

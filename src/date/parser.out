@@ -42,72 +42,81 @@ Rule 31    date_complete -> groupe_annee
 Rule 32    date_complete -> courant_de_groupe
 Rule 33    date_complete -> JOUR mois ANNEE
 Rule 34    date_complete -> mois_annee
-Rule 35    date_complete -> annee
-Rule 36    date_complete -> range_mois ANNEE
-Rule 37    date_complete -> range_jour ANNEE
-Rule 38    date_complete -> annee_et_annee
-Rule 39    date_complete -> andor_jour_mois
-Rule 40    date_complete -> andor_date_complete
-Rule 41    date_complete -> jour_mois_annee
-Rule 42    date_complete -> deux_dates_completes
-Rule 43    date_complete -> range_jour_mois ANNEE
-Rule 44    date_complete -> date_toutes_lettres
-Rule 45    start -> date_complete
-Rule 46    range_mois -> mois RANGE mois
-Rule 47    range_jour_mois -> jour_mois RANGE jour_mois
-Rule 48    range_jour -> JOUR RANGE JOUR
-Rule 49    range_jour -> JOUR RANGE JOUR mois
-Rule 50    jour_mois -> JOUR mois
-Rule 51    andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee
-Rule 52    jour_mois_annee -> JOUR mois ANNEE
-Rule 53    andor_jour_mois -> jour_mois ANDOR jour_mois
-Rule 54    andor_jour_mois -> jour_mois ANDOR jour_mois ANNEE
-Rule 55    succession_mois -> mois AND mois
+Rule 35    date_complete -> mois_andor_mois_annee
+Rule 36    date_complete -> annee
+Rule 37    date_complete -> range_mois ANNEE
+Rule 38    date_complete -> range_jour ANNEE
+Rule 39    date_complete -> annee_et_annee
+Rule 40    date_complete -> andor_jour_mois_jour_mois
+Rule 41    date_complete -> andor_date_complete
+Rule 42    date_complete -> jour_mois_annee
+Rule 43    date_complete -> deux_dates_completes
+Rule 44    date_complete -> range_jour_mois ANNEE
+Rule 45    date_complete -> date_toutes_lettres
+Rule 46    start -> date_complete
+Rule 47    range_mois -> mois RANGE mois
+Rule 48    range_jour_mois -> jour_mois RANGE jour_mois
+Rule 49    range_jour -> JOUR RANGE JOUR
+Rule 50    range_jour -> JOUR RANGE JOUR mois
+Rule 51    jour_mois -> JOUR mois
+Rule 52    andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee
+Rule 53    jour_mois_annee -> JOUR mois ANNEE
+Rule 54    andor_jour_mois -> jour_mois ANDOR jour_mois
+Rule 55    andor_jour_mois -> jour_mois jour_mois
+Rule 56    andor_jour_mois_jour_mois -> andor_jour_mois
+Rule 57    andor_jour_mois_jour_mois -> andor_jour_mois ANNEE
+Rule 58    succession_mois -> mois AND mois
+Rule 59    mois_andor_mois -> mois ANDOR mois
+Rule 60    mois_andor_mois -> mois mois
+Rule 61    mois_andor_mois_annee -> mois_andor_mois ANNEE
 
 Terminals, with rules where they appear
 
 A                    : 
 AN                   : 6 20 21 25
-AND                  : 2 3 18 27 55
-ANDOR                : 51 53 54
-ANNEE                : 1 5 24 25 26 29 30 33 36 37 43 52 54
+AND                  : 2 3 18 27 58
+ANDOR                : 52 54 59
+ANNEE                : 1 5 24 25 26 29 30 33 37 38 44 53 57 61
 CHIFFRE_CENTAINE     : 14 15
 CHIFFRE_DIZAINE      : 16 17 18
 CHIFFRE_MILLIER      : 19
 CHIFFRE_UNITE        : 13
 COURANT              : 4 5 6 7
 DE                   : 20
-JOUR                 : 33 48 48 49 49 50 52
+JOUR                 : 33 49 49 50 50 51 53
 MOIS                 : 11
-RANGE                : 46 47 48 49
+RANGE                : 47 48 49 50
 SPACE                : 
 error                : 
 
 Nonterminals, with rules where they appear
 
 an_toutes_lettres    : 28
-andor_date_complete  : 40
-andor_jour_mois      : 39
-annee                : 3 3 6 35
-annee_et_annee       : 4 38
+andor_date_complete  : 41
+andor_jour_mois      : 56 57
+andor_jour_mois_jour_mois : 40
+annee                : 3 3 6 36
+annee_et_annee       : 4 39
 centaine             : 22 23
 courant_de_groupe    : 32
-date_complete        : 45
-date_toutes_lettres  : 44
-deux_dates_completes : 42
+date_complete        : 46
+date_toutes_lettres  : 45
+deux_dates_completes : 43
 dizaine              : 9 10 22 23
 groupe_annee         : 31
-jour_mois            : 2 2 30 47 47 53 53 54 54
-jour_mois_annee      : 27 27 41 51 51
+jour_mois            : 2 2 30 48 48 54 54 55 55
+jour_mois_annee      : 27 27 42 52 52
 jour_toutes_lettres  : 12
 jour_toutes_lettres_mois : 28
 millier              : 22 23
-mois                 : 1 12 33 46 46 49 50 52 55 55
+mois                 : 1 12 33 47 47 50 51 53 58 58 59 59 60 60
+mois_andor_mois      : 61
+mois_andor_mois_annee : 35
 mois_annee           : 7 34
 plage                : 29
-range_jour           : 37
-range_jour_mois      : 43
-range_mois           : 36
+range_jour           : 38
+range_jour_mois      : 44
+range_mois           : 37
 start                : 0
 succession_mois      : 24
 token_an_toutes_lettres : 22 23
@@ -118,46 +127,52 @@ Parsing method: LALR
 state 0
 
     (0) S' -> . start
-    (45) start -> . date_complete
+    (46) start -> . date_complete
     (29) date_complete -> . plage ANNEE
     (30) date_complete -> . jour_mois ANNEE
     (31) date_complete -> . groupe_annee
     (32) date_complete -> . courant_de_groupe
     (33) date_complete -> . JOUR mois ANNEE
     (34) date_complete -> . mois_annee
-    (35) date_complete -> . annee
-    (36) date_complete -> . range_mois ANNEE
-    (37) date_complete -> . range_jour ANNEE
-    (38) date_complete -> . annee_et_annee
-    (39) date_complete -> . andor_jour_mois
-    (40) date_complete -> . andor_date_complete
-    (41) date_complete -> . jour_mois_annee
-    (42) date_complete -> . deux_dates_completes
-    (43) date_complete -> . range_jour_mois ANNEE
-    (44) date_complete -> . date_toutes_lettres
+    (35) date_complete -> . mois_andor_mois_annee
+    (36) date_complete -> . annee
+    (37) date_complete -> . range_mois ANNEE
+    (38) date_complete -> . range_jour ANNEE
+    (39) date_complete -> . annee_et_annee
+    (40) date_complete -> . andor_jour_mois_jour_mois
+    (41) date_complete -> . andor_date_complete
+    (42) date_complete -> . jour_mois_annee
+    (43) date_complete -> . deux_dates_completes
+    (44) date_complete -> . range_jour_mois ANNEE
+    (45) date_complete -> . date_toutes_lettres
     (2) plage -> . jour_mois AND jour_mois
-    (50) jour_mois -> . JOUR mois
+    (51) jour_mois -> . JOUR mois
     (24) groupe_annee -> . succession_mois ANNEE
     (4) courant_de_groupe -> . COURANT annee_et_annee
     (5) courant_de_groupe -> . COURANT ANNEE
     (6) courant_de_groupe -> . COURANT AN annee
     (7) courant_de_groupe -> . COURANT mois_annee
     (1) mois_annee -> . mois ANNEE
+    (61) mois_andor_mois_annee -> . mois_andor_mois ANNEE
     (25) annee -> . AN ANNEE
     (26) annee -> . ANNEE
-    (46) range_mois -> . mois RANGE mois
-    (48) range_jour -> . JOUR RANGE JOUR
-    (49) range_jour -> . JOUR RANGE JOUR mois
+    (47) range_mois -> . mois RANGE mois
+    (49) range_jour -> . JOUR RANGE JOUR
+    (50) range_jour -> . JOUR RANGE JOUR mois
     (3) annee_et_annee -> . annee AND annee
-    (53) andor_jour_mois -> . jour_mois ANDOR jour_mois
-    (54) andor_jour_mois -> . jour_mois ANDOR jour_mois ANNEE
-    (51) andor_date_complete -> . jour_mois_annee ANDOR jour_mois_annee
-    (52) jour_mois_annee -> . JOUR mois ANNEE
+    (56) andor_jour_mois_jour_mois -> . andor_jour_mois
+    (57) andor_jour_mois_jour_mois -> . andor_jour_mois ANNEE
+    (52) andor_date_complete -> . jour_mois_annee ANDOR jour_mois_annee
+    (53) jour_mois_annee -> . JOUR mois ANNEE
     (27) deux_dates_completes -> . jour_mois_annee AND jour_mois_annee
-    (47) range_jour_mois -> . jour_mois RANGE jour_mois
+    (48) range_jour_mois -> . jour_mois RANGE jour_mois
     (28) date_toutes_lettres -> . jour_toutes_lettres_mois an_toutes_lettres
-    (55) succession_mois -> . mois AND mois
+    (58) succession_mois -> . mois AND mois
     (11) mois -> . MOIS
+    (59) mois_andor_mois -> . mois ANDOR mois
+    (60) mois_andor_mois -> . mois mois
+    (54) andor_jour_mois -> . jour_mois ANDOR jour_mois
+    (55) andor_jour_mois -> . jour_mois jour_mois
     (12) jour_toutes_lettres_mois -> . jour_toutes_lettres mois
     (8) jour_toutes_lettres -> . unite
     (9) jour_toutes_lettres -> . dizaine unite
@@ -168,12 +183,12 @@ state 0
     (18) dizaine -> . CHIFFRE_DIZAINE AND unite
 
     JOUR            shift and go to state 8
-    COURANT         shift and go to state 22
-    AN              shift and go to state 23
+    COURANT         shift and go to state 23
+    AN              shift and go to state 24
     ANNEE           shift and go to state 4
-    MOIS            shift and go to state 25
-    CHIFFRE_UNITE   shift and go to state 29
-    CHIFFRE_DIZAINE shift and go to state 30
+    MOIS            shift and go to state 28
+    CHIFFRE_UNITE   shift and go to state 32
+    CHIFFRE_DIZAINE shift and go to state 33
 
     start                          shift and go to state 1
     date_complete                  shift and go to state 2
@@ -183,21 +198,24 @@ state 0
     courant_de_groupe              shift and go to state 7
     mois                           shift and go to state 9
     mois_annee                     shift and go to state 10
-    annee                          shift and go to state 11
-    range_mois                     shift and go to state 12
-    range_jour                     shift and go to state 13
-    annee_et_annee                 shift and go to state 14
-    andor_jour_mois                shift and go to state 15
-    andor_date_complete            shift and go to state 16
-    jour_mois_annee                shift and go to state 17
-    deux_dates_completes           shift and go to state 18
-    range_jour_mois                shift and go to state 19
-    date_toutes_lettres            shift and go to state 20
-    succession_mois                shift and go to state 21
-    jour_toutes_lettres_mois       shift and go to state 24
-    jour_toutes_lettres            shift and go to state 26
-    unite                          shift and go to state 27
-    dizaine                        shift and go to state 28
+    mois_andor_mois_annee          shift and go to state 11
+    annee                          shift and go to state 12
+    range_mois                     shift and go to state 13
+    range_jour                     shift and go to state 14
+    annee_et_annee                 shift and go to state 15
+    andor_jour_mois_jour_mois      shift and go to state 16
+    andor_date_complete            shift and go to state 17
+    jour_mois_annee                shift and go to state 18
+    deux_dates_completes           shift and go to state 19
+    range_jour_mois                shift and go to state 20
+    date_toutes_lettres            shift and go to state 21
+    succession_mois                shift and go to state 22
+    mois_andor_mois                shift and go to state 25
+    andor_jour_mois                shift and go to state 26
+    jour_toutes_lettres_mois       shift and go to state 27
+    jour_toutes_lettres            shift and go to state 29
+    unite                          shift and go to state 30
+    dizaine                        shift and go to state 31
 
 state 1
 
@@ -207,16 +225,16 @@ state 1
 
 state 2
 
-    (45) start -> date_complete .
+    (46) start -> date_complete .
 
-    $end            reduce using rule 45 (start -> date_complete .)
+    $end            reduce using rule 46 (start -> date_complete .)
 
 
 state 3
 
     (29) date_complete -> plage . ANNEE
 
-    ANNEE           shift and go to state 31
+    ANNEE           shift and go to state 34
 
 
 state 4
@@ -231,15 +249,18 @@ state 5
 
     (30) date_complete -> jour_mois . ANNEE
     (2) plage -> jour_mois . AND jour_mois
-    (53) andor_jour_mois -> jour_mois . ANDOR jour_mois
-    (54) andor_jour_mois -> jour_mois . ANDOR jour_mois ANNEE
-    (47) range_jour_mois -> jour_mois . RANGE jour_mois
+    (48) range_jour_mois -> jour_mois . RANGE jour_mois
+    (54) andor_jour_mois -> jour_mois . ANDOR jour_mois
+    (55) andor_jour_mois -> jour_mois . jour_mois
+    (51) jour_mois -> . JOUR mois
 
-    ANNEE           shift and go to state 32
-    AND             shift and go to state 33
-    ANDOR           shift and go to state 34
-    RANGE           shift and go to state 35
+    ANNEE           shift and go to state 36
+    AND             shift and go to state 37
+    RANGE           shift and go to state 38
+    ANDOR           shift and go to state 39
+    JOUR            shift and go to state 40
 
+    jour_mois                      shift and go to state 35
 
 state 6
 
@@ -258,27 +279,33 @@ state 7
 state 8
 
     (33) date_complete -> JOUR . mois ANNEE
-    (50) jour_mois -> JOUR . mois
-    (48) range_jour -> JOUR . RANGE JOUR
-    (49) range_jour -> JOUR . RANGE JOUR mois
-    (52) jour_mois_annee -> JOUR . mois ANNEE
+    (51) jour_mois -> JOUR . mois
+    (49) range_jour -> JOUR . RANGE JOUR
+    (50) range_jour -> JOUR . RANGE JOUR mois
+    (53) jour_mois_annee -> JOUR . mois ANNEE
     (11) mois -> . MOIS
 
-    RANGE           shift and go to state 37
-    MOIS            shift and go to state 25
+    RANGE           shift and go to state 42
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 36
+    mois                           shift and go to state 41
 
 state 9
 
     (1) mois_annee -> mois . ANNEE
-    (46) range_mois -> mois . RANGE mois
-    (55) succession_mois -> mois . AND mois
+    (47) range_mois -> mois . RANGE mois
+    (58) succession_mois -> mois . AND mois
+    (59) mois_andor_mois -> mois . ANDOR mois
+    (60) mois_andor_mois -> mois . mois
+    (11) mois -> . MOIS
 
-    ANNEE           shift and go to state 38
-    RANGE           shift and go to state 39
-    AND             shift and go to state 40
+    ANNEE           shift and go to state 44
+    RANGE           shift and go to state 45
+    AND             shift and go to state 46
+    ANDOR           shift and go to state 47
+    MOIS            shift and go to state 28
 
+    mois                           shift and go to state 43
 
 state 10
 
@@ -289,88 +316,95 @@ state 10
 
 state 11
 
-    (35) date_complete -> annee .
-    (3) annee_et_annee -> annee . AND annee
+    (35) date_complete -> mois_andor_mois_annee .
 
-    $end            reduce using rule 35 (date_complete -> annee .)
-    AND             shift and go to state 41
+    $end            reduce using rule 35 (date_complete -> mois_andor_mois_annee .)
 
 
 state 12
 
-    (36) date_complete -> range_mois . ANNEE
+    (36) date_complete -> annee .
+    (3) annee_et_annee -> annee . AND annee
 
-    ANNEE           shift and go to state 42
+    $end            reduce using rule 36 (date_complete -> annee .)
+    AND             shift and go to state 48
 
 
 state 13
 
-    (37) date_complete -> range_jour . ANNEE
+    (37) date_complete -> range_mois . ANNEE
 
-    ANNEE           shift and go to state 43
+    ANNEE           shift and go to state 49
 
 
 state 14
 
-    (38) date_complete -> annee_et_annee .
+    (38) date_complete -> range_jour . ANNEE
 
-    $end            reduce using rule 38 (date_complete -> annee_et_annee .)
+    ANNEE           shift and go to state 50
 
 
 state 15
 
-    (39) date_complete -> andor_jour_mois .
+    (39) date_complete -> annee_et_annee .
 
-    $end            reduce using rule 39 (date_complete -> andor_jour_mois .)
+    $end            reduce using rule 39 (date_complete -> annee_et_annee .)
 
 
 state 16
 
-    (40) date_complete -> andor_date_complete .
+    (40) date_complete -> andor_jour_mois_jour_mois .
 
-    $end            reduce using rule 40 (date_complete -> andor_date_complete .)
+    $end            reduce using rule 40 (date_complete -> andor_jour_mois_jour_mois .)
 
 
 state 17
 
-    (41) date_complete -> jour_mois_annee .
-    (51) andor_date_complete -> jour_mois_annee . ANDOR jour_mois_annee
-    (27) deux_dates_completes -> jour_mois_annee . AND jour_mois_annee
+    (41) date_complete -> andor_date_complete .
 
-    $end            reduce using rule 41 (date_complete -> jour_mois_annee .)
-    ANDOR           shift and go to state 44
-    AND             shift and go to state 45
+    $end            reduce using rule 41 (date_complete -> andor_date_complete .)
 
 
 state 18
 
-    (42) date_complete -> deux_dates_completes .
+    (42) date_complete -> jour_mois_annee .
+    (52) andor_date_complete -> jour_mois_annee . ANDOR jour_mois_annee
+    (27) deux_dates_completes -> jour_mois_annee . AND jour_mois_annee
 
-    $end            reduce using rule 42 (date_complete -> deux_dates_completes .)
+    $end            reduce using rule 42 (date_complete -> jour_mois_annee .)
+    ANDOR           shift and go to state 51
+    AND             shift and go to state 52
 
 
 state 19
 
-    (43) date_complete -> range_jour_mois . ANNEE
+    (43) date_complete -> deux_dates_completes .
 
-    ANNEE           shift and go to state 46
+    $end            reduce using rule 43 (date_complete -> deux_dates_completes .)
 
 
 state 20
 
-    (44) date_complete -> date_toutes_lettres .
+    (44) date_complete -> range_jour_mois . ANNEE
 
-    $end            reduce using rule 44 (date_complete -> date_toutes_lettres .)
+    ANNEE           shift and go to state 53
 
 
 state 21
 
-    (24) groupe_annee -> succession_mois . ANNEE
+    (45) date_complete -> date_toutes_lettres .
 
-    ANNEE           shift and go to state 47
+    $end            reduce using rule 45 (date_complete -> date_toutes_lettres .)
 
 
 state 22
+
+    (24) groupe_annee -> succession_mois . ANNEE
+
+    ANNEE           shift and go to state 54
+
+
+state 23
 
     (4) courant_de_groupe -> COURANT . annee_et_annee
     (5) courant_de_groupe -> COURANT . ANNEE
@@ -382,23 +416,39 @@ state 22
     (26) annee -> . ANNEE
     (11) mois -> . MOIS
 
-    ANNEE           shift and go to state 49
-    AN              shift and go to state 50
-    MOIS            shift and go to state 25
+    ANNEE           shift and go to state 56
+    AN              shift and go to state 57
+    MOIS            shift and go to state 28
 
-    annee_et_annee                 shift and go to state 48
-    annee                          shift and go to state 51
-    mois_annee                     shift and go to state 52
-    mois                           shift and go to state 53
+    annee_et_annee                 shift and go to state 55
+    annee                          shift and go to state 58
+    mois_annee                     shift and go to state 59
+    mois                           shift and go to state 60
 
-state 23
+state 24
 
     (25) annee -> AN . ANNEE
 
-    ANNEE           shift and go to state 54
+    ANNEE           shift and go to state 61
 
 
-state 24
+state 25
+
+    (61) mois_andor_mois_annee -> mois_andor_mois . ANNEE
+
+    ANNEE           shift and go to state 62
+
+
+state 26
+
+    (56) andor_jour_mois_jour_mois -> andor_jour_mois .
+    (57) andor_jour_mois_jour_mois -> andor_jour_mois . ANNEE
+
+    $end            reduce using rule 56 (andor_jour_mois_jour_mois -> andor_jour_mois .)
+    ANNEE           shift and go to state 63
+
+
+state 27
 
     (28) date_toutes_lettres -> jour_toutes_lettres_mois . an_toutes_lettres
     (22) an_toutes_lettres -> . token_an_toutes_lettres millier centaine dizaine unite
@@ -406,13 +456,13 @@ state 24
     (20) token_an_toutes_lettres -> . DE AN
     (21) token_an_toutes_lettres -> . AN
 
-    DE              shift and go to state 57
-    AN              shift and go to state 58
+    DE              shift and go to state 66
+    AN              shift and go to state 67
 
-    an_toutes_lettres              shift and go to state 55
-    token_an_toutes_lettres        shift and go to state 56
+    an_toutes_lettres              shift and go to state 64
+    token_an_toutes_lettres        shift and go to state 65
 
-state 25
+state 28
 
     (11) mois -> MOIS .
 
@@ -420,39 +470,41 @@ state 25
     RANGE           reduce using rule 11 (mois -> MOIS .)
     AND             reduce using rule 11 (mois -> MOIS .)
     ANDOR           reduce using rule 11 (mois -> MOIS .)
+    MOIS            reduce using rule 11 (mois -> MOIS .)
+    JOUR            reduce using rule 11 (mois -> MOIS .)
     DE              reduce using rule 11 (mois -> MOIS .)
     AN              reduce using rule 11 (mois -> MOIS .)
     $end            reduce using rule 11 (mois -> MOIS .)
 
 
-state 26
+state 29
 
     (12) jour_toutes_lettres_mois -> jour_toutes_lettres . mois
     (11) mois -> . MOIS
 
-    MOIS            shift and go to state 25
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 59
+    mois                           shift and go to state 68
 
-state 27
+state 30
 
     (8) jour_toutes_lettres -> unite .
 
     MOIS            reduce using rule 8 (jour_toutes_lettres -> unite .)
 
 
-state 28
+state 31
 
     (9) jour_toutes_lettres -> dizaine . unite
     (10) jour_toutes_lettres -> dizaine .
     (13) unite -> . CHIFFRE_UNITE
 
     MOIS            reduce using rule 10 (jour_toutes_lettres -> dizaine .)
-    CHIFFRE_UNITE   shift and go to state 29
+    CHIFFRE_UNITE   shift and go to state 32
 
-    unite                          shift and go to state 60
+    unite                          shift and go to state 69
 
-state 29
+state 32
 
     (13) unite -> CHIFFRE_UNITE .
 
@@ -462,7 +514,7 @@ state 29
     CHIFFRE_CENTAINE reduce using rule 13 (unite -> CHIFFRE_UNITE .)
 
 
-state 30
+state 33
 
     (16) dizaine -> CHIFFRE_DIZAINE . unite
     (17) dizaine -> CHIFFRE_DIZAINE .
@@ -472,168 +524,201 @@ state 30
   ! shift/reduce conflict for CHIFFRE_UNITE resolved as shift
     MOIS            reduce using rule 17 (dizaine -> CHIFFRE_DIZAINE .)
     $end            reduce using rule 17 (dizaine -> CHIFFRE_DIZAINE .)
-    AND             shift and go to state 62
-    CHIFFRE_UNITE   shift and go to state 29
+    AND             shift and go to state 71
+    CHIFFRE_UNITE   shift and go to state 32
 
   ! CHIFFRE_UNITE   [ reduce using rule 17 (dizaine -> CHIFFRE_DIZAINE .) ]
 
-    unite                          shift and go to state 61
+    unite                          shift and go to state 70
 
-state 31
+state 34
 
     (29) date_complete -> plage ANNEE .
 
     $end            reduce using rule 29 (date_complete -> plage ANNEE .)
 
 
-state 32
+state 35
+
+    (55) andor_jour_mois -> jour_mois jour_mois .
+
+    ANNEE           reduce using rule 55 (andor_jour_mois -> jour_mois jour_mois .)
+    $end            reduce using rule 55 (andor_jour_mois -> jour_mois jour_mois .)
+
+
+state 36
 
     (30) date_complete -> jour_mois ANNEE .
 
     $end            reduce using rule 30 (date_complete -> jour_mois ANNEE .)
 
 
-state 33
-
-    (2) plage -> jour_mois AND . jour_mois
-    (50) jour_mois -> . JOUR mois
-
-    JOUR            shift and go to state 64
-
-    jour_mois                      shift and go to state 63
-
-state 34
-
-    (53) andor_jour_mois -> jour_mois ANDOR . jour_mois
-    (54) andor_jour_mois -> jour_mois ANDOR . jour_mois ANNEE
-    (50) jour_mois -> . JOUR mois
-
-    JOUR            shift and go to state 64
-
-    jour_mois                      shift and go to state 65
-
-state 35
-
-    (47) range_jour_mois -> jour_mois RANGE . jour_mois
-    (50) jour_mois -> . JOUR mois
-
-    JOUR            shift and go to state 64
-
-    jour_mois                      shift and go to state 66
-
-state 36
-
-    (33) date_complete -> JOUR mois . ANNEE
-    (50) jour_mois -> JOUR mois .
-    (52) jour_mois_annee -> JOUR mois . ANNEE
-
-  ! shift/reduce conflict for ANNEE resolved as shift
-    ANNEE           shift and go to state 67
-    AND             reduce using rule 50 (jour_mois -> JOUR mois .)
-    ANDOR           reduce using rule 50 (jour_mois -> JOUR mois .)
-    RANGE           reduce using rule 50 (jour_mois -> JOUR mois .)
-
-  ! ANNEE           [ reduce using rule 50 (jour_mois -> JOUR mois .) ]
-
-
 state 37
 
-    (48) range_jour -> JOUR RANGE . JOUR
-    (49) range_jour -> JOUR RANGE . JOUR mois
+    (2) plage -> jour_mois AND . jour_mois
+    (51) jour_mois -> . JOUR mois
 
-    JOUR            shift and go to state 68
+    JOUR            shift and go to state 40
 
+    jour_mois                      shift and go to state 72
 
 state 38
+
+    (48) range_jour_mois -> jour_mois RANGE . jour_mois
+    (51) jour_mois -> . JOUR mois
+
+    JOUR            shift and go to state 40
+
+    jour_mois                      shift and go to state 73
+
+state 39
+
+    (54) andor_jour_mois -> jour_mois ANDOR . jour_mois
+    (51) jour_mois -> . JOUR mois
+
+    JOUR            shift and go to state 40
+
+    jour_mois                      shift and go to state 74
+
+state 40
+
+    (51) jour_mois -> JOUR . mois
+    (11) mois -> . MOIS
+
+    MOIS            shift and go to state 28
+
+    mois                           shift and go to state 75
+
+state 41
+
+    (33) date_complete -> JOUR mois . ANNEE
+    (51) jour_mois -> JOUR mois .
+    (53) jour_mois_annee -> JOUR mois . ANNEE
+
+  ! shift/reduce conflict for ANNEE resolved as shift
+    ANNEE           shift and go to state 76
+    AND             reduce using rule 51 (jour_mois -> JOUR mois .)
+    RANGE           reduce using rule 51 (jour_mois -> JOUR mois .)
+    ANDOR           reduce using rule 51 (jour_mois -> JOUR mois .)
+    JOUR            reduce using rule 51 (jour_mois -> JOUR mois .)
+
+  ! ANNEE           [ reduce using rule 51 (jour_mois -> JOUR mois .) ]
+
+
+state 42
+
+    (49) range_jour -> JOUR RANGE . JOUR
+    (50) range_jour -> JOUR RANGE . JOUR mois
+
+    JOUR            shift and go to state 77
+
+
+state 43
+
+    (60) mois_andor_mois -> mois mois .
+
+    ANNEE           reduce using rule 60 (mois_andor_mois -> mois mois .)
+
+
+state 44
 
     (1) mois_annee -> mois ANNEE .
 
     $end            reduce using rule 1 (mois_annee -> mois ANNEE .)
 
 
-state 39
+state 45
 
-    (46) range_mois -> mois RANGE . mois
+    (47) range_mois -> mois RANGE . mois
     (11) mois -> . MOIS
 
-    MOIS            shift and go to state 25
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 69
+    mois                           shift and go to state 78
 
-state 40
+state 46
 
-    (55) succession_mois -> mois AND . mois
+    (58) succession_mois -> mois AND . mois
     (11) mois -> . MOIS
 
-    MOIS            shift and go to state 25
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 70
+    mois                           shift and go to state 79
 
-state 41
+state 47
+
+    (59) mois_andor_mois -> mois ANDOR . mois
+    (11) mois -> . MOIS
+
+    MOIS            shift and go to state 28
+
+    mois                           shift and go to state 80
+
+state 48
 
     (3) annee_et_annee -> annee AND . annee
     (25) annee -> . AN ANNEE
     (26) annee -> . ANNEE
 
-    AN              shift and go to state 23
+    AN              shift and go to state 24
     ANNEE           shift and go to state 4
 
-    annee                          shift and go to state 71
+    annee                          shift and go to state 81
 
-state 42
+state 49
 
-    (36) date_complete -> range_mois ANNEE .
+    (37) date_complete -> range_mois ANNEE .
 
-    $end            reduce using rule 36 (date_complete -> range_mois ANNEE .)
-
-
-state 43
-
-    (37) date_complete -> range_jour ANNEE .
-
-    $end            reduce using rule 37 (date_complete -> range_jour ANNEE .)
+    $end            reduce using rule 37 (date_complete -> range_mois ANNEE .)
 
 
-state 44
+state 50
 
-    (51) andor_date_complete -> jour_mois_annee ANDOR . jour_mois_annee
-    (52) jour_mois_annee -> . JOUR mois ANNEE
+    (38) date_complete -> range_jour ANNEE .
 
-    JOUR            shift and go to state 73
+    $end            reduce using rule 38 (date_complete -> range_jour ANNEE .)
 
-    jour_mois_annee                shift and go to state 72
 
-state 45
+state 51
+
+    (52) andor_date_complete -> jour_mois_annee ANDOR . jour_mois_annee
+    (53) jour_mois_annee -> . JOUR mois ANNEE
+
+    JOUR            shift and go to state 83
+
+    jour_mois_annee                shift and go to state 82
+
+state 52
 
     (27) deux_dates_completes -> jour_mois_annee AND . jour_mois_annee
-    (52) jour_mois_annee -> . JOUR mois ANNEE
+    (53) jour_mois_annee -> . JOUR mois ANNEE
 
-    JOUR            shift and go to state 73
+    JOUR            shift and go to state 83
 
-    jour_mois_annee                shift and go to state 74
+    jour_mois_annee                shift and go to state 84
 
-state 46
+state 53
 
-    (43) date_complete -> range_jour_mois ANNEE .
+    (44) date_complete -> range_jour_mois ANNEE .
 
-    $end            reduce using rule 43 (date_complete -> range_jour_mois ANNEE .)
+    $end            reduce using rule 44 (date_complete -> range_jour_mois ANNEE .)
 
 
-state 47
+state 54
 
     (24) groupe_annee -> succession_mois ANNEE .
 
     $end            reduce using rule 24 (groupe_annee -> succession_mois ANNEE .)
 
 
-state 48
+state 55
 
     (4) courant_de_groupe -> COURANT annee_et_annee .
 
     $end            reduce using rule 4 (courant_de_groupe -> COURANT annee_et_annee .)
 
 
-state 49
+state 56
 
     (5) courant_de_groupe -> COURANT ANNEE .
     (26) annee -> ANNEE .
@@ -642,40 +727,40 @@ state 49
     AND             reduce using rule 26 (annee -> ANNEE .)
 
 
-state 50
+state 57
 
     (6) courant_de_groupe -> COURANT AN . annee
     (25) annee -> AN . ANNEE
     (25) annee -> . AN ANNEE
     (26) annee -> . ANNEE
 
-    ANNEE           shift and go to state 76
-    AN              shift and go to state 23
+    ANNEE           shift and go to state 86
+    AN              shift and go to state 24
 
-    annee                          shift and go to state 75
+    annee                          shift and go to state 85
 
-state 51
+state 58
 
     (3) annee_et_annee -> annee . AND annee
 
-    AND             shift and go to state 41
+    AND             shift and go to state 48
 
 
-state 52
+state 59
 
     (7) courant_de_groupe -> COURANT mois_annee .
 
     $end            reduce using rule 7 (courant_de_groupe -> COURANT mois_annee .)
 
 
-state 53
+state 60
 
     (1) mois_annee -> mois . ANNEE
 
-    ANNEE           shift and go to state 38
+    ANNEE           shift and go to state 44
 
 
-state 54
+state 61
 
     (25) annee -> AN ANNEE .
 
@@ -683,38 +768,52 @@ state 54
     $end            reduce using rule 25 (annee -> AN ANNEE .)
 
 
-state 55
+state 62
+
+    (61) mois_andor_mois_annee -> mois_andor_mois ANNEE .
+
+    $end            reduce using rule 61 (mois_andor_mois_annee -> mois_andor_mois ANNEE .)
+
+
+state 63
+
+    (57) andor_jour_mois_jour_mois -> andor_jour_mois ANNEE .
+
+    $end            reduce using rule 57 (andor_jour_mois_jour_mois -> andor_jour_mois ANNEE .)
+
+
+state 64
 
     (28) date_toutes_lettres -> jour_toutes_lettres_mois an_toutes_lettres .
 
     $end            reduce using rule 28 (date_toutes_lettres -> jour_toutes_lettres_mois an_toutes_lettres .)
 
 
-state 56
+state 65
 
     (22) an_toutes_lettres -> token_an_toutes_lettres . millier centaine dizaine unite
     (23) an_toutes_lettres -> token_an_toutes_lettres . millier centaine dizaine
     (19) millier -> . CHIFFRE_MILLIER
 
-    CHIFFRE_MILLIER shift and go to state 78
+    CHIFFRE_MILLIER shift and go to state 88
 
-    millier                        shift and go to state 77
+    millier                        shift and go to state 87
 
-state 57
+state 66
 
     (20) token_an_toutes_lettres -> DE . AN
 
-    AN              shift and go to state 79
+    AN              shift and go to state 89
 
 
-state 58
+state 67
 
     (21) token_an_toutes_lettres -> AN .
 
     CHIFFRE_MILLIER reduce using rule 21 (token_an_toutes_lettres -> AN .)
 
 
-state 59
+state 68
 
     (12) jour_toutes_lettres_mois -> jour_toutes_lettres mois .
 
@@ -722,14 +821,14 @@ state 59
     AN              reduce using rule 12 (jour_toutes_lettres_mois -> jour_toutes_lettres mois .)
 
 
-state 60
+state 69
 
     (9) jour_toutes_lettres -> dizaine unite .
 
     MOIS            reduce using rule 9 (jour_toutes_lettres -> dizaine unite .)
 
 
-state 61
+state 70
 
     (16) dizaine -> CHIFFRE_DIZAINE unite .
 
@@ -738,123 +837,128 @@ state 61
     $end            reduce using rule 16 (dizaine -> CHIFFRE_DIZAINE unite .)
 
 
-state 62
+state 71
 
     (18) dizaine -> CHIFFRE_DIZAINE AND . unite
     (13) unite -> . CHIFFRE_UNITE
 
-    CHIFFRE_UNITE   shift and go to state 29
+    CHIFFRE_UNITE   shift and go to state 32
 
-    unite                          shift and go to state 80
+    unite                          shift and go to state 90
 
-state 63
+state 72
 
     (2) plage -> jour_mois AND jour_mois .
 
     ANNEE           reduce using rule 2 (plage -> jour_mois AND jour_mois .)
 
 
-state 64
+state 73
 
-    (50) jour_mois -> JOUR . mois
-    (11) mois -> . MOIS
+    (48) range_jour_mois -> jour_mois RANGE jour_mois .
 
-    MOIS            shift and go to state 25
-
-    mois                           shift and go to state 81
-
-state 65
-
-    (53) andor_jour_mois -> jour_mois ANDOR jour_mois .
-    (54) andor_jour_mois -> jour_mois ANDOR jour_mois . ANNEE
-
-    $end            reduce using rule 53 (andor_jour_mois -> jour_mois ANDOR jour_mois .)
-    ANNEE           shift and go to state 82
+    ANNEE           reduce using rule 48 (range_jour_mois -> jour_mois RANGE jour_mois .)
 
 
-state 66
+state 74
 
-    (47) range_jour_mois -> jour_mois RANGE jour_mois .
+    (54) andor_jour_mois -> jour_mois ANDOR jour_mois .
 
-    ANNEE           reduce using rule 47 (range_jour_mois -> jour_mois RANGE jour_mois .)
+    ANNEE           reduce using rule 54 (andor_jour_mois -> jour_mois ANDOR jour_mois .)
+    $end            reduce using rule 54 (andor_jour_mois -> jour_mois ANDOR jour_mois .)
 
 
-state 67
+state 75
+
+    (51) jour_mois -> JOUR mois .
+
+    ANNEE           reduce using rule 51 (jour_mois -> JOUR mois .)
+    $end            reduce using rule 51 (jour_mois -> JOUR mois .)
+
+
+state 76
 
     (33) date_complete -> JOUR mois ANNEE .
-    (52) jour_mois_annee -> JOUR mois ANNEE .
+    (53) jour_mois_annee -> JOUR mois ANNEE .
 
   ! reduce/reduce conflict for $end resolved using rule 33 (date_complete -> JOUR mois ANNEE .)
     $end            reduce using rule 33 (date_complete -> JOUR mois ANNEE .)
-    ANDOR           reduce using rule 52 (jour_mois_annee -> JOUR mois ANNEE .)
-    AND             reduce using rule 52 (jour_mois_annee -> JOUR mois ANNEE .)
+    ANDOR           reduce using rule 53 (jour_mois_annee -> JOUR mois ANNEE .)
+    AND             reduce using rule 53 (jour_mois_annee -> JOUR mois ANNEE .)
 
-  ! $end            [ reduce using rule 52 (jour_mois_annee -> JOUR mois ANNEE .) ]
+  ! $end            [ reduce using rule 53 (jour_mois_annee -> JOUR mois ANNEE .) ]
 
 
-state 68
+state 77
 
-    (48) range_jour -> JOUR RANGE JOUR .
-    (49) range_jour -> JOUR RANGE JOUR . mois
+    (49) range_jour -> JOUR RANGE JOUR .
+    (50) range_jour -> JOUR RANGE JOUR . mois
     (11) mois -> . MOIS
 
-    ANNEE           reduce using rule 48 (range_jour -> JOUR RANGE JOUR .)
-    MOIS            shift and go to state 25
+    ANNEE           reduce using rule 49 (range_jour -> JOUR RANGE JOUR .)
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 83
+    mois                           shift and go to state 91
 
-state 69
+state 78
 
-    (46) range_mois -> mois RANGE mois .
+    (47) range_mois -> mois RANGE mois .
 
-    ANNEE           reduce using rule 46 (range_mois -> mois RANGE mois .)
-
-
-state 70
-
-    (55) succession_mois -> mois AND mois .
-
-    ANNEE           reduce using rule 55 (succession_mois -> mois AND mois .)
+    ANNEE           reduce using rule 47 (range_mois -> mois RANGE mois .)
 
 
-state 71
+state 79
+
+    (58) succession_mois -> mois AND mois .
+
+    ANNEE           reduce using rule 58 (succession_mois -> mois AND mois .)
+
+
+state 80
+
+    (59) mois_andor_mois -> mois ANDOR mois .
+
+    ANNEE           reduce using rule 59 (mois_andor_mois -> mois ANDOR mois .)
+
+
+state 81
 
     (3) annee_et_annee -> annee AND annee .
 
     $end            reduce using rule 3 (annee_et_annee -> annee AND annee .)
 
 
-state 72
+state 82
 
-    (51) andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee .
+    (52) andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee .
 
-    $end            reduce using rule 51 (andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee .)
+    $end            reduce using rule 52 (andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee .)
 
 
-state 73
+state 83
 
-    (52) jour_mois_annee -> JOUR . mois ANNEE
+    (53) jour_mois_annee -> JOUR . mois ANNEE
     (11) mois -> . MOIS
 
-    MOIS            shift and go to state 25
+    MOIS            shift and go to state 28
 
-    mois                           shift and go to state 84
+    mois                           shift and go to state 92
 
-state 74
+state 84
 
     (27) deux_dates_completes -> jour_mois_annee AND jour_mois_annee .
 
     $end            reduce using rule 27 (deux_dates_completes -> jour_mois_annee AND jour_mois_annee .)
 
 
-state 75
+state 85
 
     (6) courant_de_groupe -> COURANT AN annee .
 
     $end            reduce using rule 6 (courant_de_groupe -> COURANT AN annee .)
 
 
-state 76
+state 86
 
     (25) annee -> AN ANNEE .
     (26) annee -> ANNEE .
@@ -863,7 +967,7 @@ state 76
     $end            reduce using rule 26 (annee -> ANNEE .)
 
 
-state 77
+state 87
 
     (22) an_toutes_lettres -> token_an_toutes_lettres millier . centaine dizaine unite
     (23) an_toutes_lettres -> token_an_toutes_lettres millier . centaine dizaine
@@ -871,13 +975,13 @@ state 77
     (15) centaine -> . unite CHIFFRE_CENTAINE
     (13) unite -> . CHIFFRE_UNITE
 
-    CHIFFRE_CENTAINE shift and go to state 87
-    CHIFFRE_UNITE   shift and go to state 29
+    CHIFFRE_CENTAINE shift and go to state 95
+    CHIFFRE_UNITE   shift and go to state 32
 
-    centaine                       shift and go to state 85
-    unite                          shift and go to state 86
+    centaine                       shift and go to state 93
+    unite                          shift and go to state 94
 
-state 78
+state 88
 
     (19) millier -> CHIFFRE_MILLIER .
 
@@ -885,14 +989,14 @@ state 78
     CHIFFRE_UNITE   reduce using rule 19 (millier -> CHIFFRE_MILLIER .)
 
 
-state 79
+state 89
 
     (20) token_an_toutes_lettres -> DE AN .
 
     CHIFFRE_MILLIER reduce using rule 20 (token_an_toutes_lettres -> DE AN .)
 
 
-state 80
+state 90
 
     (18) dizaine -> CHIFFRE_DIZAINE AND unite .
 
@@ -901,36 +1005,21 @@ state 80
     $end            reduce using rule 18 (dizaine -> CHIFFRE_DIZAINE AND unite .)
 
 
-state 81
+state 91
 
-    (50) jour_mois -> JOUR mois .
+    (50) range_jour -> JOUR RANGE JOUR mois .
 
-    ANNEE           reduce using rule 50 (jour_mois -> JOUR mois .)
-    $end            reduce using rule 50 (jour_mois -> JOUR mois .)
-
-
-state 82
-
-    (54) andor_jour_mois -> jour_mois ANDOR jour_mois ANNEE .
-
-    $end            reduce using rule 54 (andor_jour_mois -> jour_mois ANDOR jour_mois ANNEE .)
+    ANNEE           reduce using rule 50 (range_jour -> JOUR RANGE JOUR mois .)
 
 
-state 83
+state 92
 
-    (49) range_jour -> JOUR RANGE JOUR mois .
+    (53) jour_mois_annee -> JOUR mois . ANNEE
 
-    ANNEE           reduce using rule 49 (range_jour -> JOUR RANGE JOUR mois .)
-
-
-state 84
-
-    (52) jour_mois_annee -> JOUR mois . ANNEE
-
-    ANNEE           shift and go to state 88
+    ANNEE           shift and go to state 96
 
 
-state 85
+state 93
 
     (22) an_toutes_lettres -> token_an_toutes_lettres millier centaine . dizaine unite
     (23) an_toutes_lettres -> token_an_toutes_lettres millier centaine . dizaine
@@ -938,50 +1027,50 @@ state 85
     (17) dizaine -> . CHIFFRE_DIZAINE
     (18) dizaine -> . CHIFFRE_DIZAINE AND unite
 
-    CHIFFRE_DIZAINE shift and go to state 30
+    CHIFFRE_DIZAINE shift and go to state 33
 
-    dizaine                        shift and go to state 89
+    dizaine                        shift and go to state 97
 
-state 86
+state 94
 
     (15) centaine -> unite . CHIFFRE_CENTAINE
 
-    CHIFFRE_CENTAINE shift and go to state 90
+    CHIFFRE_CENTAINE shift and go to state 98
 
 
-state 87
+state 95
 
     (14) centaine -> CHIFFRE_CENTAINE .
 
     CHIFFRE_DIZAINE reduce using rule 14 (centaine -> CHIFFRE_CENTAINE .)
 
 
-state 88
+state 96
 
-    (52) jour_mois_annee -> JOUR mois ANNEE .
+    (53) jour_mois_annee -> JOUR mois ANNEE .
 
-    $end            reduce using rule 52 (jour_mois_annee -> JOUR mois ANNEE .)
+    $end            reduce using rule 53 (jour_mois_annee -> JOUR mois ANNEE .)
 
 
-state 89
+state 97
 
     (22) an_toutes_lettres -> token_an_toutes_lettres millier centaine dizaine . unite
     (23) an_toutes_lettres -> token_an_toutes_lettres millier centaine dizaine .
     (13) unite -> . CHIFFRE_UNITE
 
     $end            reduce using rule 23 (an_toutes_lettres -> token_an_toutes_lettres millier centaine dizaine .)
-    CHIFFRE_UNITE   shift and go to state 29
+    CHIFFRE_UNITE   shift and go to state 32
 
-    unite                          shift and go to state 91
+    unite                          shift and go to state 99
 
-state 90
+state 98
 
     (15) centaine -> unite CHIFFRE_CENTAINE .
 
     CHIFFRE_DIZAINE reduce using rule 15 (centaine -> unite CHIFFRE_CENTAINE .)
 
 
-state 91
+state 99
 
     (22) an_toutes_lettres -> token_an_toutes_lettres millier centaine dizaine unite .
 
@@ -990,7 +1079,7 @@ state 91
 WARNING: 
 WARNING: Conflicts:
 WARNING: 
-WARNING: shift/reduce conflict for CHIFFRE_UNITE in state 30 resolved as shift
-WARNING: shift/reduce conflict for ANNEE in state 36 resolved as shift
-WARNING: reduce/reduce conflict in state 67 resolved using rule (date_complete -> JOUR mois ANNEE)
-WARNING: rejected rule (jour_mois_annee -> JOUR mois ANNEE) in state 67
+WARNING: shift/reduce conflict for CHIFFRE_UNITE in state 33 resolved as shift
+WARNING: shift/reduce conflict for ANNEE in state 41 resolved as shift
+WARNING: reduce/reduce conflict in state 76 resolved using rule (date_complete -> JOUR mois ANNEE)
+WARNING: rejected rule (jour_mois_annee -> JOUR mois ANNEE) in state 76

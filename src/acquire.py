@@ -206,22 +206,18 @@ class Pipeline():
 																			  show_image=False)
 
 		zone_dict = {}
-		zone_dict["zones"] = zones_page_1
+		zone_dict["zones_identifiées"] = zones_page_1
 		zone_dict["zones_manquantes"] = zones_manquantes
 
 
+		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
 		# On extrait le nom et prénom du soldat
-		# TODO: normaliser les noms de zone
-		# if "Nom du soldat" in zones_manquantes:
-		# 	current_dict["nom_du_soldat"] = None
-		# else:
-		# 	current_dict["nom_du_soldat"] = self.extractor.extraire_nom_soldat(
-		# 		ocr_prediction=self.current_page_transcription,
-		# 		annotations=zones_page_1,
-		# 		image=page["image_path"],
-		# 		show_images=False,
-		# 		loaded_image=loaded_image)
-		# print(current_dict["nom_du_soldat"])
 		if "Description du Soldat" in zones_manquantes:
 			current_dict["description_soldat"] = None
 		else:
@@ -231,14 +227,20 @@ class Pipeline():
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-		return zone_dict, current_dict
+		# return zone_dict, current_dict
 
-		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['Nom du soldat'] == "Plusieurs soldats":
+			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
+		else:
+			current_dict["Inculpation"] = self.extractor.extraire_inculpation_et_antecedents(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
+
+		# return zone_dict, current_dict
+
 
 		# On extrait le numéro d'ordre en premier, cas il y a une vérification de la classification.
 		if "MainZone-orderNumber" in zones_manquantes:
@@ -262,6 +264,9 @@ class Pipeline():
 																 confidence=0.5,
 																 model=self.yolo_models["magistrats"],
 																 show_image=False)
+			test_lignes = utils.test_number_of_zones(magistrats, label="ligne", number=6)
+			if test_lignes is False:
+				print("Warning: une des lignes du jury n'a pas été identifiée.")
 			current_dict["magistrats"] = self.extractor.extraire_magistrats(
 				ocr_prediction=self.current_page_transcription,
 				zones_magistrats=magistrats,
@@ -277,7 +282,7 @@ class Pipeline():
 		if "MainZone-crimeDate" in zones_manquantes:
 			current_dict["date_du_crime_ou_delit"] = None
 		else:
-			current_dict["date_du_crime_ou_delit"] = self.extractor.extraire_date_crime(
+			current_dict["date_du_crime_ou_delit"] = self.extractor.extraire_date_crime_ou_delit(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
