@@ -46,7 +46,7 @@ class PartyPredict:
 		else:
 			return lines[0]
 
-	def measured_party_inference(self, segmentation, image, objet_transcrit):
+	def timed_party_inference(self, segmentation, image, objet_transcrit):
 		"""
 		Prédit avec party, en utilisant le spinner yaspin, et en calculant le temps d'inférence.
 		:param segmentation:

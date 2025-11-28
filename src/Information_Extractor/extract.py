@@ -17,8 +17,7 @@ import PIL
 from collections import namedtuple
 import src.Vision.PARTY as PARTY
 import src.date.parse_date as date
-import dateparser
-import dateutil
+import src.Information_Extractor.extraction_functions as extractions
 
 
 class Extractor:
@@ -185,9 +184,9 @@ class Extractor:
 		# On transcrit avec party
 		if self.use_party:
 			party_segmentation = self.party.create_baseline(corresponding_baselines, image)
-			party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
-																   image=loaded_image,
-																   objet_transcrit="lieu du jugement")
+			party_prediction = self.party.timed_party_inference(segmentation=party_segmentation,
+																image=loaded_image,
+																objet_transcrit="lieu du jugement")
 			party_prediction = " ".join([item.prediction for item in party_prediction]).strip()
 		else:
 			party_prediction = kraken_prediction
@@ -311,9 +310,9 @@ class Extractor:
 		# On transcrit avec party
 		if self.use_party:
 			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-			party_prediction = self.party.measured_party_inference(segmentation=party_segmentation,
-																   image=loaded_image,
-																   objet_transcrit="numéro de jugement")
+			party_prediction = self.party.timed_party_inference(segmentation=party_segmentation,
+																image=loaded_image,
+																objet_transcrit="numéro de jugement")
 			numero_jugement_party = party_prediction.prediction
 		else:
 			numero_jugement_party = numero_jugement_kraken
@@ -402,7 +401,7 @@ class Extractor:
 		# On transcrit avec party
 		if self.use_party:
 			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-			party_prediction = self.party.measured_party_inference(
+			party_prediction = self.party.timed_party_inference(
 				segmentation=party_segmentation,
 				image=loaded_image,
 				objet_transcrit="date du crime")
@@ -648,7 +647,7 @@ class Extractor:
 		# On transcrit avec party
 		if self.use_party:
 			party_segmentation = self.party.create_baseline([target_line[0]['baseline']], image)
-			party_prediction = self.party.measured_party_inference(
+			party_prediction = self.party.timed_party_inference(
 				segmentation=party_segmentation,
 				image=loaded_image,
 				objet_transcrit="numéro d'ordre")
@@ -780,7 +779,7 @@ class Extractor:
 
 		if self.use_party:
 			party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
-			party_prediction = self.party.measured_party_inference(
+			party_prediction = self.party.timed_party_inference(
 				segmentation=party_segmentation,
 				image=loaded_image,
 				objet_transcrit="nom du soldat")
@@ -908,7 +907,7 @@ class Extractor:
 
 		if self.use_party:
 			party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
-			party_prediction = self.party.measured_party_inference(
+			party_prediction = self.party.timed_party_inference(
 				segmentation=party_segmentation,
 				image=loaded_image,
 				objet_transcrit="nom du soldat")
@@ -997,13 +996,13 @@ class Extractor:
 		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
 		profession_et_situation_maritale = \
 			utils.approximate_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
-		check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+		check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = extractions.extraire_situation_maritale(
 			profession_et_situation_maritale)
 
 		# Si on infère le célibat, il n'a peut être pas été trouvé. On va chercher en ampliant la zone à l'ensemble des lignes.
 		if celibataire is True and check_celibataire is False:
 			print("La situation maritale n'a peut être pas été identifiée. On élargit la zone de recherche.")
-			check_veuf, token_veuf, _, celibataire, token_celibataire, marie, token_marie, nombre_enfants = utils.extraire_situation_maritale(
+			check_veuf, token_veuf, _, celibataire, token_celibataire, marie, token_marie, nombre_enfants = extractions.extraire_situation_maritale(
 				lignes_description_as_string.split(date_naissance_extraite)[-1])
 		if nombre_enfants:
 			enfants = True
@@ -1339,7 +1338,7 @@ class Extractor:
 
 		# On va itérer jury par jury
 		for jure in jures:
-			jury_extrait = utils.extraire_nom_et_fonction(
+			jury_extrait = extractions.extraire_nom_et_fonction(
 				prediction=" ".join(line['prediction'] for line in jure),
 				pipeline=self.ner)
 			if jury_extrait['persName'] == "UNK" and utils.similarite_ratcliff("Président",
@@ -1355,7 +1354,7 @@ class Extractor:
 		if len(processed_jures) != 4:
 			print("Warning: il manque un membre du jury")
 			processed_jures.append("Juré manquant")
-		processed_president = utils.extraire_nom_et_fonction(" ".join(line['prediction'] for line in president),
+		processed_president = extractions.extraire_nom_et_fonction(" ".join(line['prediction'] for line in president),
 															 self.ner)
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
@@ -1375,12 +1374,12 @@ class Extractor:
 				lignes_zone_magistrat.append(predicted_line)
 
 		# On extrait le nom du greffier:
-		greffier = utils.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
-		commissaire = utils.extraire_commissaire(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
-		general = utils.extraire_general(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		greffier = extractions.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		commissaire = extractions.extraire_commissaire(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		general = extractions.extraire_general(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
-			general = utils.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.ner)
+			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.ner)
 		return {"Président": {"extracted": processed_president,
 							  "baseline": [line['baseline'] for line in president],
 							  "predictions": [line['prediction'] for line in president]},
