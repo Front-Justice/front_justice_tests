@@ -3,9 +3,7 @@
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
 
 ###############
-
-import time
-from yaspin import yaspin
+import regex
 import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import glob
@@ -681,129 +679,6 @@ class Extractor:
 				"predictions": {"party": numero_ordre_party,
 								"kraken": target_line['prediction']}}
 
-	def extraire_nom_soldat(self,
-							ocr_prediction: list[dict],
-							annotations: list[dict],
-							image: str = None,
-							loaded_image: PIL.Image.Image = None,
-							show_images: bool = False):
-		"""
-		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
-		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
-		:param zones_nom: une liste de dictionnaires de la forme:
-		[
-			{
-				'label': 'Nom du soldat',
-				'coordinates': [[212, 2400], [2735, 2551]]
-			}
-		]
-		:param image: [Debug] le chemin vers l'image à afficher
-		:param show_images: [Debug] afficher l'image
-		:return: Un dictionnaire de la forme:
-			{
-				"extracted": {
-				  "surname": "Delin",
-				  "forename": "",
-				  "certainty": 0.5
-				},
-				"bbox": [
-				[[225, 2137 ], [2631, 2194]],
-				[[2723,2114], [3005, 2114]]
-				],
-				"prediction": [
-				  "",
-				]
-			  }
-		"""
-		corresponding_lines, soldat_zone = self.extraction_ligne(annotations=annotations,
-																 target_zone="Nom du soldat",
-																 show_images=show_images,
-																 loaded_image=loaded_image,
-																 ocr_prediction=ocr_prediction,
-																 intersect_ratio=0.1)
-		if corresponding_lines is None:
-			print("Plusieurs soldats trouvés, pas encore pris en charge.")
-			return {"extracted": "Plusieurs soldats"}
-
-		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
-		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
-		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
-													 string_to_match="A l'effet de juger")
-
-		# On a la ligne correspondante. Maintenant, on va identifier les caractères
-		# qui sont compris dans la boîte à l'aide des cuts de kraken. On a besoin de tout convertir
-		# en polygones, pour ensuite vérifier les intersections entre la boîte et les intersections
-		nom_du_soldat_kraken = utils.extract_string_from_cuts(box=soldat_zone, line=name_line).strip()
-
-		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line['prediction'],
-																	   nom_du_soldat_kraken,
-																	   pipeline=self.ner)
-		if show_images:
-			cropped = loaded_image.crop(
-				(
-					round(soldat_zone[0][0] / self.resize_factor),
-					round(soldat_zone[0][1] / self.resize_factor),
-					round(soldat_zone[1][0] / self.resize_factor),
-					round(soldat_zone[1][1] / self.resize_factor)
-				)
-			)
-			cropped.show()
-
-		# On prédit à l'aide de party la section de baseline qui correspond à la boite identifiée par Yolo
-		baseline_soldat = name_line['baseline']
-
-		# On prend le premier et le dernier point de la ligne
-		# TODO: on peut améliorer cela en prenant les points qui encadrent les abcisses de la boîte
-		baseline_soldat = [baseline_soldat[0], baseline_soldat[-1]]
-		(x1_soldat, _), (x2_soldat, _) = soldat_zone
-		(_, y1), (_, y2) = baseline_soldat
-		baseline_soldat_coupee = [
-			[round(x1_soldat / self.resize_factor), round(y1 / self.resize_factor)],
-			[round(x2_soldat / self.resize_factor), round(y2 / self.resize_factor)]
-		]
-
-		if self.use_party:
-			party_segmentation = self.party.create_baseline([baseline_soldat_coupee], image)
-			party_prediction = self.party.timed_party_inference(
-				segmentation=party_segmentation,
-				image=loaded_image,
-				objet_transcrit="nom du soldat")
-			nom_soldat_party = party_prediction.prediction
-		else:
-			nom_soldat_party = nom_du_soldat_kraken
-
-		# on produit le dictionnaire
-		extracted = {}
-		extracted["forename"] = {"value": prenoms,
-								 "certainty": certitude_prenoms}
-		if nom_du_soldat_kraken == nom_soldat_party:
-			extracted["surname"] = {"value": nom_soldat_party,
-									"certainty": 1}
-		else:
-			extracted["surname"] = {"value": nom_soldat_party if nom_soldat_party != "+" else nom_du_soldat_kraken,
-									"certainty": 0.5,
-									"predictions": {"kraken": nom_du_soldat_kraken,
-													"party": nom_soldat_party}
-									}
-
-		return {"bbox": soldat_zone,
-				"extracted": extracted}
-
 	def extraire_description_soldat(self,
 									ocr_prediction: list[dict],
 									annotations: list[dict],
@@ -1057,32 +932,8 @@ class Extractor:
 			lieu_naissance = split_lieu_naissance[0]
 		lieu_naissance_corrige = utils.strip_punctuation(lieu_naissance)
 		informations_naissance["extrait"] = lieu_naissance_corrige
-		informations_naissance = utils.extraction_geographique(lieu_naissance_corrige, informations_naissance, self.ner)
-		# split_departement = utils.approximate_split(lieu_naissance_corrige, "département")
-		# if split_departement:
-		# 	informations_naissance["departement"] = utils.full_clean_string(split_departement[-1])
-		# 	split_arrondissement_1 = utils.approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
-		# 	split_arrondissement_2 = utils.approximate_split(split_departement[0], "arrondissement", sensibility=0.7)
-		# else:
-		# 	informations_naissance["departement"] = None
-		# 	split_arrondissement_1 = utils.approximate_split(lieu_naissance_corrige, "arrd^t", sensibility=0.5)
-		# 	split_arrondissement_2 = utils.approximate_split(lieu_naissance_corrige, "arrondissement", sensibility=0.7)
-		# if split_arrondissement_1:
-		# 	split_arrondissement = split_arrondissement_1
-		# 	arrondissement = utils.full_clean_string(split_arrondissement_1[-1])
-		# elif split_arrondissement_2:
-		# 	split_arrondissement = split_arrondissement_2
-		# 	arrondissement = utils.full_clean_string(split_arrondissement_2[-1])
-		# else:
-		# 	arrondissement = None
-		# informations_naissance["arrondissement"] = arrondissement
-		#
-		# if arrondissement:
-		# 	ville = split_arrondissement[0]
-		# else:
-		# 	ville = split_departement[0]
-		#
-		# informations_naissance["ville"] = utils.full_clean_string(ville)
+		informations_naissance = extractions.extraction_geographique(lieu_naissance_corrige, informations_naissance, self.ner)
+
 
 		description_du_soldat["Lieu de naissance"] = informations_naissance
 
@@ -1095,9 +946,52 @@ class Extractor:
 			split_taille = utils.split_before_keep_delimiter(split_residence[-1], "[tT]aille")
 			lieu_residence = split_taille[0]
 		informations_residence["extrait"] = lieu_residence
-		informations_residence = utils.extraction_geographique(lieu_residence, informations_residence, self.ner)
+		informations_residence = extractions.extraction_geographique(lieu_residence, informations_residence, self.ner)
 		description_du_soldat["Lieu de résidence"] = informations_residence
 
+
+		# On s'occupe maintenant de la description physique du soldat
+		_, _, index_ligne_taille = utils.check_substring_in_line(corresponding_lines=lignes_description_du_soldat, string_to_match="taille d'", return_index=True)
+		lignes_description_physique = lignes_description_du_soldat[index_ligne_taille:]
+		texte_description_physique = [item['prediction'] for item in lignes_description_physique]
+
+		# On extrait le numéro de matricule, s'il est présent
+		dict_matricule = {}
+		numero_matricule = "n^o m^le 00000"
+		ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique, numero_matricule, return_index=True)
+		print("\n\n\n\n")
+		print(ligne_matricule['prediction'])
+		# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
+		# Le numéro de matricule n'y est jamais indiqué.
+		if index_matricule == 0:
+			numero_matricule = None
+		else:
+			print("Ligne trouvée.")
+			# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
+			regexp_matricule = r"n?^?o?\s?m^?l?e? (\d+\.?\s{,3}\d+)|n?^?o?\s?m^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
+			fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
+			try:
+				numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(), regex.BESTMATCH).group(1)
+				numero = re.compile(r"(\d+\.?\s{,3}\d+)")
+				numero_extrait = re.search(numero, numero_matricule).group(1)
+			except AttributeError:
+				numero_extrait = None
+			if numero_matricule:
+				baseline_matricule = utils.get_baseline_from_string(ligne_matricule,
+																	numero_matricule,
+																	loaded_image=loaded_image,
+																	show_image=True)
+				dict_matricule["Numéro de matricule"] = numero_extrait
+				dict_matricule["prédiction"] = ligne_matricule['prediction']
+				dict_matricule["baseline"] = baseline_matricule
+			else:
+				dict_matricule = {
+					"Numéro de matricule": None,
+					"prédiction": ligne_matricule['prediction']
+				}
+		description_du_soldat["Matricule"] = dict_matricule
+
+		print("\n\n\n\n")
 		return description_du_soldat
 
 	def extraire_date_du_proces(self,

@@ -1,6 +1,55 @@
 import src.utils.utils as utils
 import re
 
+
+def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeline):
+	"""
+	Cette fonction extrait et formatte des informations géographiques.
+	:param lieu: la chaîne à interroger
+	:param informations: le dictionnaire à nourir
+	:param ner_pipeline: le moteur de NER
+	:return:
+	"""
+	split_departement = utils.approximate_split(lieu, "département")
+	if split_departement:
+		dictionnaire_informations["departement"] = utils.full_clean_string(split_departement[-1])
+		split_arrondissement_1 = utils.approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = utils.approximate_split(split_departement[0], "arrondissement", sensibility=0.85)
+	else:
+		dictionnaire_informations["departement"] = None
+		split_arrondissement_1 = utils.approximate_split(lieu, "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = utils.approximate_split(lieu, "arrondissement", sensibility=0.7)
+	if split_arrondissement_1:
+		split_arrondissement = split_arrondissement_1
+		arrondissement = utils.full_clean_string(split_arrondissement_1[-1])
+	elif split_arrondissement_2:
+		split_arrondissement = split_arrondissement_2
+		arrondissement = utils.full_clean_string(split_arrondissement_2[-1])
+	else:
+		arrondissement = None
+	dictionnaire_informations["arrondissement"] = arrondissement
+
+	try:
+		if arrondissement:
+			ville = split_arrondissement[0]
+		else:
+			ville = split_departement[0]
+	except TypeError:
+		# On considère que le premier lieu est un nom de ville.
+		try:
+			ville = [item['word'] for item in ner_pipeline(lieu) if item['entity_group'] == "LOC"][0]
+		except IndexError:
+			ville = None
+	if ville is not None:
+		ville = utils.full_clean_string(ville)
+	print(ner_pipeline(lieu))
+	ner_extractions = ner_pipeline(lieu)
+	lieux = [item['word'] for item in ner_extractions if item['entity_group'] == "LOC"]
+	dictionnaire_informations["NER"] = lieux
+	dictionnaire_informations["ville"] = ville
+	return dictionnaire_informations
+
+
 def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	"""
 	Cette fonction extrait les informations concernant le greffier à partir de la ligne complète:

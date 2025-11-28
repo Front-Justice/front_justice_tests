@@ -2,6 +2,7 @@ import json
 import pickle
 import unicodedata
 import PIL.Image as Image
+import PIL
 import re
 from thefuzz import fuzz
 from Levenshtein import distance
@@ -241,7 +242,12 @@ def split_before_keep_delimiter(target_string: str, delimiter: str) -> list:
 	return out_split
 
 
-def produce_line_function(baseline):
+def produce_line_function(baseline) -> tuple[int, int]:
+	"""
+	Cette fonction analyse et récupère les paramètres de la fonction affine y = ax+b par laquelle passe une droite.
+	:param baseline: la ligne, sous la forme x_1, x_2, y_1, y_2.
+	:return: a, b.
+	"""
 	x_1, y_1, x_2, y_2 = baseline
 	a = (y_2 - y_1) / (x_2 - x_1)
 	b = y_1 - a * x_1
@@ -419,53 +425,6 @@ def full_clean_string(string) -> str:
 	string = clean_spaces(string)
 	return string
 
-def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeline):
-	"""
-	Cette fonction extrait et formatte des informations géographiques.
-	:param lieu: la chaîne à interroger
-	:param informations: le dictionnaire à nourir
-	:param ner_pipeline: le moteur de NER
-	:return:
-	"""
-	split_departement = approximate_split(lieu, "département")
-	if split_departement:
-		dictionnaire_informations["departement"] = full_clean_string(split_departement[-1])
-		split_arrondissement_1 = approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
-		split_arrondissement_2 = approximate_split(split_departement[0], "arrondissement", sensibility=0.85)
-	else:
-		dictionnaire_informations["departement"] = None
-		split_arrondissement_1 = approximate_split(lieu, "arrd^t", sensibility=0.5)
-		split_arrondissement_2 = approximate_split(lieu, "arrondissement", sensibility=0.7)
-	if split_arrondissement_1:
-		split_arrondissement = split_arrondissement_1
-		arrondissement = full_clean_string(split_arrondissement_1[-1])
-	elif split_arrondissement_2:
-		split_arrondissement = split_arrondissement_2
-		arrondissement = full_clean_string(split_arrondissement_2[-1])
-	else:
-		arrondissement = None
-	dictionnaire_informations["arrondissement"] = arrondissement
-
-	try:
-		if arrondissement:
-			ville = split_arrondissement[0]
-		else:
-			ville = split_departement[0]
-	except TypeError:
-		# On considère que le premier lieu est un nom de ville.
-		try:
-			ville = [item['word'] for item in ner_pipeline(lieu) if item['entity_group'] == "LOC"][0]
-		except IndexError:
-			ville = None
-	if ville is not None:
-		ville = full_clean_string(ville)
-	print(ner_pipeline(lieu))
-	ner_extractions = ner_pipeline(lieu)
-	lieux = [item['word'] for item in ner_extractions if item['entity_group'] == "LOC"]
-	dictionnaire_informations["NER"] = lieux
-	dictionnaire_informations["ville"] = ville
-	return dictionnaire_informations
-
 def strip_stopwords(string):
 	stopwords = re.compile("^du |^de la |^de |^[àa] |y |de l'")
 	clean = re.sub(stopwords, "", string)
@@ -642,7 +601,8 @@ def check_substring_in_line(corresponding_lines:list, string_to_match:str|list, 
 	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
 	:param string_to_match: la chaîne à trouver ou une liste de chaines alternatives à identifier
-	:return: la ligne qui contient la chaîne de caractères et le zip de la ligne et la similarité avec la requête
+	:return: la ligne qui contient la chaîne de caractères et le zip de 1) la ligne et 2) la similarité avec la requête.
+	Peut également retourner l'indice de l'item identifié dans la liste.
 	"""
 	# On commence par normaliser la chaîne à matcher
 	distances = []
@@ -767,3 +727,44 @@ def get_name_from_path(path):
 def format_coordinates(coords):
 	rounded = [round(item) for item in coords]
 	return [[rounded[0], rounded[1]], [rounded[2], rounded[3]]]
+
+
+def get_baseline_from_string(line:dict,
+							 target_string:str,
+							 loaded_image:Image.Image,
+							 show_image:bool=False) -> tuple[tuple[int, int], tuple[int, int]] | None:
+	"""
+	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée
+	:param line: La ligne, dictionnaire {prediction, baseline, cuts}
+	:return: La ligne de base qui contient le texte : [[x_1, y_1], [x_2, y_2]]
+	"""
+	assert all([item in line for item in ['cuts', 'prediction', 'baseline']]), "La structure de la ligne est incorrecte."
+	cuts = line["cuts"]
+	baseline = line["baseline"]
+	prediction = line["prediction"]
+	prediction = prediction.lower()
+	target_string = target_string.lower()
+	if target_string not in prediction.lower():
+		print(f"La ligne ne contient pas {target_string}")
+		return None
+	first_char_idx, last_char_idx = (prediction.find(target_string),
+									 prediction.find(target_string) + len(target_string) - 1)
+
+	first_cut = cuts[first_char_idx]
+	last_cut = cuts[last_char_idx]
+	# On extrait l'abscisse minimale et maximale et on ajoute un peu de marge à droite et à gauche
+	x_1 = min(item[0] for item in first_cut) - 40
+	x_2 = max(item[0] for item in last_cut) + 40
+	baseline = [baseline[0], baseline[-1]]
+	formatted_baseline = baseline[0][0], baseline[0][1], baseline[1][0], baseline[1][1]
+	a, b = produce_line_function(formatted_baseline)
+
+	# On calcule y1 et y2
+	y_1 = round(a*x_1 + b)
+	y_2 = round(a*x_2 + b)
+	target_baseline = [[x_1, y_1], [x_2, y_2]]
+
+	if show_image:
+		cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
+		cropped.show()
+	return target_baseline

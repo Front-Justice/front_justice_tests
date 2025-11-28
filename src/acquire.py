@@ -227,7 +227,7 @@ class Pipeline():
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-		# return zone_dict, current_dict
+		return zone_dict, current_dict
 
 		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['Nom du soldat'] == "Plusieurs soldats":
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
