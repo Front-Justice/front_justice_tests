@@ -227,7 +227,8 @@ class Extractor:
 			lieu = lieu_party
 		else:
 			lieu = lieu_kraken
-
+		institution = utils.strip_punctuation(institution)
+		lieu = utils.strip_punctuation(lieu)
 		return {"institution": institution,
 				"siège": lieu,
 				"bbox": lieu_jugement_zone,
@@ -264,7 +265,7 @@ class Extractor:
 		:param show_images: [Debug] afficher l'image?
 		:return: Un dictionnaire de la forme:
 			{
-		  "Numéro": "501",
+		  "extracted": "501",
 		  "baseline": [
 			[2611, 555],
 			[3203, 555]
@@ -324,7 +325,7 @@ class Extractor:
 			certitude = 0.5
 			target_number = numero_jugement_party
 
-		return {"Numéro": target_number,
+		return {"extracted": target_number,
 				"baseline": target_line['baseline'],
 				"bbox": numero_jugement_zone,
 				"certitude": certitude,
@@ -421,7 +422,7 @@ class Extractor:
 			# TODO: la correction supprime les tirets et la ponctuation, marqueur de période ou répétition, voir comment corriger ça
 			corrected_date = utils.correct_date(target_date)
 		except TypeError:
-			return {"Date normalisée": None,
+			return {"date_normalisee": None,
 					"Date corrigée": None,
 					"Date retenue": date_crime_party,
 					"baseline": target_line['baseline'],
@@ -434,7 +435,7 @@ class Extractor:
 		except TypeError:
 			normalized_date = None
 
-		return {"Date normalisée": normalized_date,
+		return {"date_normalisee": normalized_date,
 				"Date corrigée": corrected_date,
 				"Date retenue": date_crime_party,
 				"baseline": target_line['baseline'],
@@ -510,6 +511,10 @@ class Extractor:
 												   target_word=["Inculpé", "Prévenu", "Accusé"], sensibility=0.8)
 		if check_inculpe:
 			lignes_inculpation_str = lignes_inculpation_str.replace(mot_inculpe, "")
+
+		lignes_inculpation_str = utils.strip_punctuation(lignes_inculpation_str)
+		clean_regexp = re.compile("^\s?d[e']?:?\s?")
+		lignes_inculpation_str = re.sub(clean_regexp, "", lignes_inculpation_str)
 		inculpation["inculpation"]["extracted"] = lignes_inculpation_str
 
 		# On fait de même pour la condamnation, en changeant un peu le split (2 mots)
@@ -517,7 +522,7 @@ class Extractor:
 		lignes_condamnations_str = " ".join([item['prediction'] for item in lignes_condamnation])
 		lignes_condamnations_str = utils.nfc_normalize(lignes_condamnations_str)
 		check_condamnations, mot_condamnations = utils.check_word_in_sentence(sentence=lignes_condamnations_str,
-												   target_word=["Condamnations", "Antérieures"], sensibility=0.8)
+												   target_word=["Condamnations", "antérieures"], sensibility=0.8)
 		inculpation["antécédents"]["predicted"] = lignes_condamnations_str
 
 		if check_condamnations:
@@ -528,7 +533,7 @@ class Extractor:
 		else:
 			check_neant = False
 		if check_neant is True:
-			inculpation["antécédents"]["extracted"] = None
+			inculpation["antécédents"]["extracted"] = "Néant"
 
 		# On va essayer d'isoler chaque condamnation en considérant qu'elle est toujours bornée par une date.
 		else:
@@ -576,7 +581,7 @@ class Extractor:
 		:param show_images: [Debug] afficher l'image?
 		:return: Un dictionnaire de la forme:
 			{
-          "Numéro": "501",
+          "extracted": "501",
           "baseline": [
             [2611, 555],
             [3203, 555]
@@ -601,7 +606,7 @@ class Extractor:
 		if (corresponding_lines, numero_ordre_zone) == (None, None):
 			# TODO: reprendre cela, ça semble bizarre.
 			print("Error")
-			return {"Numéro": None,
+			return {"extracted": None,
 					"baseline": None,
 					"bbox": None,
 					"certitude": None,
@@ -672,7 +677,7 @@ class Extractor:
 			certitude = 0.5
 			target_number = target_number_party
 
-		return {"Numéro": target_number,
+		return {"extracted": target_number,
 				"baseline": target_line['baseline'],
 				"bbox": numero_ordre_zone,
 				"certitude": certitude,
@@ -705,7 +710,7 @@ class Extractor:
 		:param zones_nom: une liste de dictionnaires de la forme:
 		[
 			{
-				'label': 'Nom du soldat',
+				'label': 'nom_du_soldat',
 				'coordinates': [[212, 2400], [2735, 2551]]
 			}
 		]
@@ -739,7 +744,7 @@ class Extractor:
 																 intersect_ratio=0.1)
 		if corresponding_lines is None:
 			print("Plusieurs soldats trouvés, pas encore pris en charge.")
-			return {"Nom du soldat": "Plusieurs soldats",
+			return {"nom_du_soldat": "Plusieurs soldats",
 					"Description du soldat": "Plusieurs soldats"}
 
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
@@ -769,6 +774,7 @@ class Extractor:
 
 		# On prédit à l'aide de party la section de baseline qui correspond à la boite identifiée par Yolo
 		baseline_soldat = name_line['baseline']
+		prediction_soldat = name_line['prediction']
 
 		# On prend le premier et le dernier point de la ligne
 		# TODO: ajouter la ligne et lq baseline.
@@ -792,21 +798,23 @@ class Extractor:
 
 		# on produit le dictionnaire
 		nom_du_soldat = {}
-		nom_du_soldat["forename"] = {"value": prenoms,
+		nom_du_soldat["extracted"] = {}
+		nom_du_soldat["extracted"]["forename"] = {"persName": prenoms,
 									 "certainty": certitude_prenoms}
 		nom_du_soldat["baseline"] = baseline_soldat_coupee
 		nom_du_soldat["bbox"] = soldat_zone
+		nom_du_soldat["prediction"] = prediction_soldat
 		if nom_du_soldat_kraken == nom_soldat_party:
-			nom_du_soldat["surname"] = {"value": nom_soldat_party,
+			nom_du_soldat["extracted"]["surname"] = {"persName": nom_soldat_party,
 										"certainty": 1}
 		else:
-			nom_du_soldat["surname"] = {"value": nom_soldat_party if nom_soldat_party != "+" else nom_du_soldat_kraken,
+			nom_du_soldat["extracted"]["surname"] = {"persName": nom_soldat_party if nom_soldat_party != "+" else nom_du_soldat_kraken,
 										"certainty": 0.5,
 										"predictions": {"kraken": nom_du_soldat_kraken,
 														"party": nom_soldat_party}
 										}
 
-		description_du_soldat["Nom du soldat"] = nom_du_soldat
+		description_du_soldat["nom_du_soldat"] = nom_du_soldat
 
 		# On passe à l'extraction de toutes les autres infos
 		lignes_description_du_soldat, soldat_zone = self.extraction_ligne(annotations=annotations,
@@ -846,21 +854,21 @@ class Extractor:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
 			print(f"Error with date {date_naissance_ner}")
-			date_naissance = {"Date normalisée": "Échec",
+			date_naissance = {"date_normalisee": "Échec",
 							  "Date naissance extraite": date_naissance_extraite,
 							  "Date corrigée": date_naissance_corrigee,
 							  "prediction": lignes_description_as_string}
-			description_du_soldat["Date de naissance"] = date_naissance
-			return description_du_soldat
+			description_du_soldat["date_de_naissance"] = date_naissance
+			date_normalisee = None
 		try:
 			age = utils.calcule_age(date_normalisee['when'], date_proces=self.date_proces['when'])
 		except TypeError:
 			age = "Inconnu"
-		date_naissance = {"Date normalisée": date_normalisee,
+		date_naissance = {"date_normalisee": date_normalisee,
 						  "Date naissance extraite": date_naissance_extraite,
 						  "Date corrigée": date_naissance_corrigee,
 						  "prediction": lignes_description_as_string}
-		description_du_soldat["Date de naissance"] = date_naissance
+		description_du_soldat["date_de_naissance"] = date_naissance
 		description_du_soldat["Âge"] = age
 
 		# On s'occupe ensuite de la situation maritale
@@ -894,9 +902,9 @@ class Extractor:
 		situation_maritale = {"marié": marie,
 							  "veuf": check_veuf,
 							  "enfants": enfants,
-							  "Nombre d'enfants": nombre_enfants,
+							  "nombre_enfants": nombre_enfants,
 							  "célibataire": celibataire}
-		description_du_soldat["situation maritale"] = situation_maritale
+		description_du_soldat["situation_maritale"] = situation_maritale
 
 		de_regexp = re.compile(r"^d['ue]\s*")
 		cleaned_profession = re.sub(de_regexp, "", profession_et_situation_maritale.strip())
@@ -906,18 +914,19 @@ class Extractor:
 		elif celibataire is True and isinstance(token_celibataire, str):
 			cleaned_profession = utils.strip_punctuation(cleaned_profession.split(token_celibataire)[0].strip())
 		corrected_profession = utils.full_clean_string(cleaned_profession)
-
-		description_du_soldat["Profession"] = {
-			"extracted": cleaned_profession,
-			"corrected": corrected_profession,
+		matching_line_profession:dict = utils.check_substring_in_line(filtered_lines, cleaned_profession)[0]
+		description_du_soldat["profession"] = {
+			"matching": cleaned_profession,
+			"extracted": corrected_profession,
+			"baseline": utils.get_baseline_from_string(matching_line_profession, cleaned_profession)
 		}
 
 		# Le rang du soldat se trouve juste avant le nom
 		apres_effet_de_juger = utils.split_after_keep_delimiter(name_line['prediction'], "juger")[-1]
 		rang = apres_effet_de_juger.split(nom_du_soldat_kraken)[0].replace("le", "").strip()
 		description_du_soldat['rang'] = {
-			"prediction_kraken": rang,
-			"extraction": rang,
+			"prediction": rang,
+			"extracted": rang,
 			"baseline": name_line['baseline']
 		}
 
@@ -931,11 +940,10 @@ class Extractor:
 		else:
 			lieu_naissance = split_lieu_naissance[0]
 		lieu_naissance_corrige = utils.strip_punctuation(lieu_naissance)
-		informations_naissance["extrait"] = lieu_naissance_corrige
 		informations_naissance = extractions.extraction_geographique(lieu_naissance_corrige, informations_naissance, self.ner)
 
-
-		description_du_soldat["Lieu de naissance"] = informations_naissance
+		informations_naissance["prediction"] = lieu_naissance
+		description_du_soldat["lieu_naissance"] = informations_naissance
 
 		informations_residence = {}
 		split_residence = utils.approximate_split(split_lieu_naissance[-1], "service", sensibility=.75)
@@ -945,9 +953,9 @@ class Extractor:
 		except TypeError:
 			split_taille = utils.split_before_keep_delimiter(split_residence[-1], "[tT]aille")
 			lieu_residence = split_taille[0]
-		informations_residence["extrait"] = lieu_residence
 		informations_residence = extractions.extraction_geographique(lieu_residence, informations_residence, self.ner)
-		description_du_soldat["Lieu de résidence"] = informations_residence
+		informations_residence["prediction"] = lieu_residence
+		description_du_soldat["lieu_residence"] = informations_residence
 
 
 		# On s'occupe maintenant de la description physique du soldat
@@ -956,20 +964,43 @@ class Extractor:
 		texte_description_physique = [item['prediction'] for item in lignes_description_physique]
 
 		# On extrait le numéro de matricule, s'il est présent.
-		description_du_soldat["Matricule"] = extractions.extraire_matricule(
+		description_du_soldat["matricule"] = extractions.extraire_matricule(
 			lignes_description_physique
 		)
 
-		description_du_soldat["Physique"] = {}
+		description_du_soldat["physique"] = {}
 		# On passe à la taille
-		description_du_soldat["Physique"]["Taille"] = extractions.extraire_taille(
+		description_du_soldat["physique"]["taille"] = extractions.extraire_taille(
 			lignes_description_physique
 		)
 
 		# On passe aux cheveux
-		description_du_soldat["Physique"]["Cheveux"] = extractions.extraire_cheveux(
+		description_du_soldat["physique"]["cheveux"] = extractions.extraire_cheveux(
 							lignes_description_physique
 		)
+
+		# Au front
+		description_du_soldat["physique"]["front"] = extractions.extraire_front(
+							lignes_description_physique
+		)
+
+		# Aux yeux
+		description_du_soldat["physique"]["yeux"] = extractions.extraire_yeux(
+							lignes_description_physique
+		)
+
+		# Au nez
+		description_du_soldat["physique"]["nez"] = extractions.extraire_nez(
+							lignes_description_physique
+		)
+
+		# Au visage
+		description_du_soldat["physique"]["visage"] = extractions.extraire_visage(
+							lignes_description_physique
+		)
+
+		# TODO: ajouter les renseignements physiques complémentaires et les marques particulières
+
 
 		return description_du_soldat
 
@@ -999,7 +1030,7 @@ class Extractor:
 		:param zones_nom: une liste de dictionnaires de la forme:
 		[
 			{
-				'label': 'Nom du soldat',
+				'label': 'nom_du_soldat',
 				'coordinates': [[212, 2400], [2735, 2551]]
 			}
 		]
@@ -1057,7 +1088,7 @@ class Extractor:
 			"baseline": baseline,
 			"prediction": line_as_string,
 			"Date corrigée": corrected_date,
-			"Date normalisée": extracted
+			"date_normalisee": extracted
 		}
 
 	def extraire_magistrats(self,
@@ -1097,7 +1128,7 @@ class Extractor:
 		:param show_images: [Debug] afficher l'image
 		:return: Un dictionnaire de la forme:
 			{
-			  "Président": {
+			  "president": {
 				"extracted": {
 				  "persName": "Delin Lieut^t Cotonel",
 				  "role": " de Gendarmerie Prevot de l'armée Président,",
@@ -1112,7 +1143,7 @@ class Extractor:
 				  "Président,"
 				]
 			  },
-			  "Jurés": [
+			  "jures": [
 				{
 				  "extracted": {
 					"persName": "Barbancey",
@@ -1214,8 +1245,9 @@ class Extractor:
 			jury_extrait = extractions.extraire_nom_et_fonction(
 				prediction=" ".join(line['prediction'] for line in jure),
 				pipeline=self.ner)
-			if jury_extrait['persName'] == "UNK" and utils.similarite_ratcliff("Président",
-																			   " ".join(line['prediction'] for line in jure)) > .7:
+			if jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
+																			   " ".join(line['prediction'] for line in jure)) > .7\
+					or utils.similarite_ratcliff("Juges", " ".join(line['prediction'] for line in jure)) > .7):
 				print(jury_extrait)
 				print(" ".join(line['prediction'] for line in jure))
 				print("ÉCARTÉ")
@@ -1224,7 +1256,7 @@ class Extractor:
 						 "baseline": [line['baseline'] for line in jure],
 						 "predictions": [line['prediction'] for line in jure]}
 			processed_jures.append(jury_dict)
-		if len(processed_jures) != 4:
+		if len(processed_jures) < 4:
 			print("Warning: il manque un membre du jury")
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line['prediction'] for line in president),
@@ -1253,13 +1285,13 @@ class Extractor:
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
 			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.ner)
-		return {"Président": {"extracted": processed_president,
+		return {"president": {"extracted": processed_president,
 							  "baseline": [line['baseline'] for line in president],
 							  "predictions": [line['prediction'] for line in president]},
-				"Jurés": processed_jures,
+				"jures": processed_jures,
 				"greffier": greffier,
 				"commissaire": commissaire,
-				"Général": general}
+				"general": general}
 
 	def finetune_categories(self):
 		"""

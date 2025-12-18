@@ -45,7 +45,7 @@ class Pipeline():
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_170p_lignes_best.mlmodel"
-		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/500p_best.mlmodel"
+		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/model_550p_best.mlmodel"
 		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
@@ -227,26 +227,27 @@ class Pipeline():
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-		return zone_dict, current_dict
 
-		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['Nom du soldat'] == "Plusieurs soldats":
+		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['nom_du_soldat'] == "Plusieurs soldats":
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
 		else:
-			current_dict["Inculpation"] = self.extractor.extraire_inculpation_et_antecedents(
+			accusation_antecedants =  self.extractor.extraire_inculpation_et_antecedents(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
+			current_dict["chef_accusation"] = accusation_antecedants["inculpation"]
+			current_dict["antécédents"] = accusation_antecedants["antécédents"]
 
 		# return zone_dict, current_dict
 
 
 		# On extrait le numéro d'ordre en premier, cas il y a une vérification de la classification.
 		if "MainZone-orderNumber" in zones_manquantes:
-			current_dict["numer_ordre"] = None
+			current_dict["numero_ordre"] = None
 		else:
-			current_dict["numer_ordre"] = self.extractor.extraire_numero_ordre(
+			current_dict["numero_ordre"] = self.extractor.extraire_numero_ordre(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
@@ -292,9 +293,9 @@ class Pipeline():
 		# On extrait le lieu du jugement
 		# TODO: normaliser les noms de zone
 		if "MainZone-judgementPlace" in zones_manquantes:
-			current_dict["lieu_du_jugement"] = None
+			current_dict["lieu_jugement"] = None
 		else:
-			current_dict["lieu_du_jugement"] = self.extractor.extraire_lieu_jugement(
+			current_dict["lieu_jugement"] = self.extractor.extraire_lieu_jugement(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
@@ -311,9 +312,9 @@ class Pipeline():
 		# On extrait le numéro de jugement
 		# TODO: normaliser les noms de zone
 		if "MainZone-judgementNumber" in zones_manquantes:
-			current_dict["Numéro de jugement"] = None
+			current_dict["numero_jugement"] = None
 		else:
-			current_dict["Numéro de jugement"] = self.extractor.extraire_numero_jugement(
+			current_dict["numero_jugement"] = self.extractor.extraire_numero_jugement(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
@@ -352,7 +353,8 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-
+		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		# utils.convert_to_csv(minutes, "results/database.csv")
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if target:
@@ -363,6 +365,7 @@ class Pipeline():
 					page["extractions"] = annotations
 					page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
+		utils.convert_to_csv(self.minutes, "results/database.csv")
 		exit(0)
 
 
@@ -402,7 +405,7 @@ if __name__ == '__main__':
 	images_dir = arguments.images
 	target = arguments.target
 	resegment = arguments.resegment
-	retranscribe = arguments.retranscribe
+	retranscribe = True if arguments.retranscribe == "True" else False
 	use_party = True if arguments.use_party == "True" else False
 	debug = True if arguments.debug == "True" else False
 	main(images_dir, target, debug, use_party, resegment, retranscribe)

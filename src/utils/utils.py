@@ -1,5 +1,8 @@
+import csv
 import json
 import pickle
+import random
+import string
 import unicodedata
 import PIL.Image as Image
 import PIL
@@ -446,12 +449,14 @@ def remove_all_punctuation(string:str, debug=False) -> str:
 		print(f"|{orig_string}| -> |{string}|")
 	return string
 
-def strip_punctuation(string:str, debug=False) -> str:
+def strip_punctuation(string:str|None, debug=False) -> str|None:
 	"""
 	Cette fonction supprime la ponctuation en début et fin de chaîne
 	:param string: la chaîne à nettoyer
 	:return: la chaîne nettoyée
 	"""
+	if string is None:
+		return None
 	orig_string = string
 	punctuation = "[\(\),;.!?\-:]"
 	expression = "^"+ punctuation + "\s{0,}|\s{0,}"+ punctuation + "$"
@@ -464,8 +469,241 @@ def strip_punctuation(string:str, debug=False) -> str:
 	return string
 
 
+def convert_to_csv(extractions:dict, outpath:str):
+	extracted_data = [["Numero_image",
+					   "Id",
+					  "Date du procès",
+					   "Lieu du procès",
+					   "Numéro du jugement",
+					   "Numéro d'ordre",
+					   "Président du jury",
+					   "Juré 1",
+					   "Juré 2",
+					   "Juré 3",
+					   "Juré 4",
+					   "Greffier",
+					   "Commissaire",
+					   "Général nommant",
+					   "Date du crime ou du délit",
+					  "Nom",
+					  "Prénoms",
+					  "Date de naissance",
+					  "Âge",
+					   "Taille",
+					   "Cheveux",
+					   "Front",
+					   "Yeux",
+					   "Nez",
+					   "Visage",
+					   "Ville de naissance",
+					   "Arrondissement de naissance",
+					   "Département de naissance",
+					   "Ville de résidence",
+					   "Arrondissement de résidence",
+					   "Département de résidence",
+					   "Situation maritale",
+					   "Enfants",
+					   "Profession",
+					   "Rang du soldat",
+					   "Numéro de matricule",
+					   "Chef d'accusation",
+					   "Antécédents"]]
+	for idx_minute, minute in extractions.items():
+		for idx_page, page in enumerate(minute):
+			try:
+				page['extractions']
+			except KeyError:
+				continue
+			interm = []
+			# Image
+			print(page['image_path'])
+			interm.append(page['image_path'])
+
+			# ID
+			interm.append(random_string())
+			# Date du procès
+			try:
+				date_proces = page['extractions']['date_proces']['date_normalisee']['when']
+			except TypeError:
+				date_proces = "?"
+			interm.append(date_proces)
+
+			# Lieu du procès
+			try:
+				lieu_proces = page['extractions']['lieu_jugement']['institution']
+			except TypeError:
+				lieu_proces = "?"
+			interm.append(lieu_proces)
+
+			# Numéro de jugement
+			try:
+				numero_jugement = page['extractions']['numero_jugement']['extracted']
+			except TypeError:
+				numero_jugement = "?"
+			except KeyError:
+				numero_jugement = "?"
+			interm.append(numero_jugement)
+
+			# Numéro d'ordre
+			try:
+				numero_ordre = page['extractions']['numero_ordre']['extracted']
+			except TypeError:
+				numero_ordre = "?"
+			interm.append(numero_ordre)
+
+			# Président du jury (rôle non extrait)
+			president = page['extractions']['magistrats']['president']['extracted']['persName']
+			interm.append(president)
+
+			# Jurés (on n'extrait pas les rôles)
+
+			jures = page['extractions']['magistrats']['jures']
+			for jure in jures[:4]:
+				try:
+					extracted_jure = jure['extracted']['persName']
+				except TypeError:
+					extracted_jure = "?"
+				interm.append(extracted_jure)
+
+			# Greffier (on n'extrait pas les rôles)
+			greffier = page['extractions']['magistrats']['greffier']['extracted']['persName']
+			interm.append(greffier)
+
+			# Commissaire du gouvernement (on n'extrait pas les rôles)
+			commissaire = page['extractions']['magistrats']['commissaire']['extracted']['persName']
+			interm.append(commissaire)
+
+			# Général
+			general = page['extractions']['magistrats']['general']['extracted']
+			interm.append(general)
+
+			# Date du crime
+			try:
+				date_crime = page['extractions']['date_du_crime_ou_delit']['date_normalisee']
+			except KeyError:
+				date_crime = "?"
+			except TypeError:
+				date_crime = "?"
+			interm.append(json.dumps(date_crime))
+
+			# Nom et prénom du soldat
+			try:
+				prenoms_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['forename']['persName']
+				nom_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['surname']['persName']
+			except TypeError:
+				nom_soldat = "Plusieurs soldats"
+				prenoms_soldat = "Plusieurs soldats"
+				interm.append(nom_soldat)
+				interm.append(prenoms_soldat)
+				extracted_data.append(interm)
+				continue
+			interm.append(nom_soldat)
+			interm.append(prenoms_soldat)
+
+			# Date de naissance et âge du soldat
+			try:
+				date_naissance = page['extractions']['description_soldat']['date_de_naissance']['date_normalisee']['when']
+			except TypeError:
+				date_naissance = "?"
+			try:
+				age = page['extractions']['description_soldat']["Âge"]
+			except KeyError:
+				age = "?"
+			interm.append(date_naissance)
+			interm.append(age)
+
+			try:
+				taille = page['extractions']['description_soldat']["physique"]["taille"]["extracted"]
+			except KeyError:
+				taille = "?"
+			try:
+				cheveux = page['extractions']['description_soldat']["physique"]["cheveux"]["extracted"]
+			except KeyError:
+				cheveux = "?"
+			try:
+				front = page['extractions']['description_soldat']["physique"]["front"]["extracted"]
+			except KeyError:
+				front = "?"
+			try:
+				yeux = page['extractions']['description_soldat']["physique"]["yeux"]["extracted"]
+			except KeyError:
+				yeux = "?"
+			try:
+				nez = page['extractions']['description_soldat']["physique"]["nez"]["extracted"]
+			except KeyError:
+				nez = "?"
+			try:
+				visage = page['extractions']['description_soldat']["physique"]["visage"]["extracted"]
+			except KeyError:
+				visage = "?"
+			interm.append(taille)
+			interm.append(cheveux)
+			interm.append(front)
+			interm.append(yeux)
+			interm.append(nez)
+			interm.append(visage)
+
+			# Lieu de naissance
+			ville_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['ville']
+			arrondissement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['arrondissement']
+			departement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['departement']
+			interm.append(ville_naissance)
+			interm.append(arrondissement_naissance)
+			interm.append(departement_naissance)
+
+			# Lieu de résidence
+			ville_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['ville']
+			arrondissement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['arrondissement']
+			departement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['departement']
+			interm.append(ville_residence)
+			interm.append(arrondissement_residence)
+			interm.append(departement_residence)
+
+			# Femme et enfants
+			situation_maritale = page['extractions']['description_soldat']['situation_maritale']
+			if situation_maritale['célibataire'] == True:
+				situation_maritale = "célibataire"
+			elif situation_maritale["marié"] == True:
+				situation_maritale = "marié"
+			elif situation_maritale["veuf"] == True:
+				situation_maritale = "veuf"
+			interm.append(situation_maritale)
+
+			enfants = page['extractions']['description_soldat']['situation_maritale']['nombre_enfants']
+			interm.append(enfants)
+
+			# Profession
+			profession = page['extractions']['description_soldat']['profession']['extracted']
+			interm.append(profession)
+
+			# Rang du soldat
+			rang = page['extractions']['description_soldat']['rang']['extracted']
+			interm.append(rang)
+
+			# Numéro de matricule
+			try:
+				matricule = page['extractions']['description_soldat']['matricule']['extracted']
+			except:
+				matricule = None
+			interm.append(matricule)
+
+			# Chef d'accusation
+			chef_accusation = page['extractions']['chef_accusation']['extracted']
+			interm.append(chef_accusation)
+
+			# Antécédent (juste le nombre)
+			antecedents = page['extractions']['antécédents']['extracted']
+			if antecedents != "Néant":
+				antecedents = len(antecedents)
+			interm.append(antecedents)
+			extracted_data.append(interm)
+	with open(outpath, 'w', newline='') as f:
+		writer = csv.writer(f, delimiter="$")
+		writer.writerows(extracted_data)
 
 
+def random_string():
+	return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
 def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 	"""
@@ -520,7 +758,7 @@ def test_number_of_zones(annotations:list[dict], label:str, number:int) -> bool:
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
-def approximate_split(sentence:str, word:str, sensibility:float=0.5) -> list|None:
+def approximate_split(sentence:str, word:str, sensibility:float=0.5, return_word:bool=False) -> list|tuple[list, str]|None|tuple[None, None]:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
@@ -532,9 +770,15 @@ def approximate_split(sentence:str, word:str, sensibility:float=0.5) -> list|Non
 	word = nfc_normalize(word)
 	match, matching_word = check_word_in_sentence(sentence, word, sensibility)
 	if match:
-		return sentence.split(matching_word)
+		if return_word:
+			return sentence.split(matching_word), matching_word
+		else:
+			return sentence.split(matching_word)
 	else:
-		return None
+		if return_word:
+			return None, None
+		else:
+			return None
 
 
 def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (bool, str|None):
@@ -731,14 +975,14 @@ def format_coordinates(coords):
 
 def get_baseline_from_string(line:dict,
 							 target_string:str,
-							 loaded_image:Image.Image,
+							 loaded_image:Image.Image=None,
 							 show_image:bool=False) -> tuple[tuple[int, int], tuple[int, int]] | None:
 	"""
 	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée
 	:param line: La ligne, dictionnaire {prediction, baseline, cuts}
 	:return: La ligne de base qui contient le texte : [[x_1, y_1], [x_2, y_2]]
 	"""
-	assert all([item in line for item in ['cuts', 'prediction', 'baseline']]), "La structure de la ligne est incorrecte."
+	assert all([item in line for item in ['cuts', 'prediction', 'baseline']]), f"La structure de la ligne est incorrecte: {line}"
 	cuts = line["cuts"]
 	baseline = line["baseline"]
 	prediction = line["prediction"]
