@@ -1,6 +1,7 @@
 import src.utils.utils as utils
 import re
-
+from text_to_num import text2num
+import regex
 
 def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeline):
 	"""
@@ -49,6 +50,123 @@ def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeli
 	dictionnaire_informations["ville"] = ville
 	return dictionnaire_informations
 
+def extraire_taille(lignes_description_physique):
+	"""
+		Cette fonction extrait l'information sur les cheveux de l'inculpé.
+		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
+		:return: Un dictionnaire de la forme
+		{
+			"extracted": 1690,
+			"matching": "un mètre 690 millimètres"
+			"baseline": [[1416,3746],
+						[2582,3735]],
+			"prediction": "Taille d'un mètre 690 millimètres, cheveux Chatains, front ordinaire"
+		}
+		La baseline correspond à l'information extraite uniquement.
+		"""
+
+	chaine_taille = "Taille d'un mètre milimètres"
+	ligne_taille, debug, index_taille = utils.check_substring_in_line(lignes_description_physique, chaine_taille,
+																	  return_index=True)
+	# On récupère la chaîne avant millimètres
+	taille, matching_millimetre = utils.approximate_split(ligne_taille['prediction'], "millimètres", sensibility=0.8,
+														  return_word=True)
+	# Puis la chaîne après mètre
+	taille, matching_metre = utils.approximate_split(taille[0], "mètre", return_word=True)
+	taille = taille[1]
+	ligne_taille['prediction'] = utils.nfc_normalize(ligne_taille['prediction'])
+	starting_index = ligne_taille['prediction'].find(f"un {matching_metre}")
+	ending_index = ligne_taille['prediction'].find(f"{matching_millimetre}") + len(matching_millimetre)
+	matching_string = ligne_taille['prediction'][starting_index:ending_index]
+	specific_baseline = utils.get_baseline_from_string(ligne_taille, matching_string)
+	if taille == "" or set(taille) == {" "}:
+		taille = None
+	else:
+		try:
+			taille = 1000 + int(taille)
+		except ValueError:
+			try:
+				taille = 1000 + text2num(taille, "fr")
+			except ValueError:
+				taille = "Error"
+	return {"extracted": taille,
+			"matching": matching_string,
+		   "baseline": specific_baseline,
+		   "prediction": ligne_taille["prediction"]}
+
+def extraire_matricule(lignes_description_physique):
+	dict_matricule = {}
+	numero_matricule = "n^o m^le 00000"
+	ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique,
+																			numero_matricule, return_index=True)
+	print(ligne_matricule['prediction'])
+	# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
+	# Le numéro de matricule n'y est jamais indiqué.
+	if index_matricule == 0:
+		numero_matricule = None
+	else:
+		print("Ligne trouvée.")
+		# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
+		regexp_matricule = r"n?^?o?\s?m^?l?e? (\d+\.?\s{,3}\d+)|n?^?o?\s?m^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
+		fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
+		try:
+			numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(),
+											regex.BESTMATCH).group(1)
+			numero = re.compile(r"(\d+\.?\s{,3}\d+)")
+			numero_extrait = re.search(numero, numero_matricule).group(1)
+		except AttributeError:
+			numero_extrait = None
+		if numero_matricule:
+			baseline_matricule = utils.get_baseline_from_string(ligne_matricule,
+																numero_matricule)
+			dict_matricule["Numéro de matricule"] = numero_extrait
+			dict_matricule["prédiction"] = ligne_matricule['prediction']
+			dict_matricule["baseline"] = baseline_matricule
+		else:
+			dict_matricule = {
+				"Numéro de matricule": None,
+				"prédiction": ligne_matricule['prediction']
+			}
+		return dict_matricule
+
+def extraire_cheveux(lignes_description_physique):
+	"""
+	Cette fonction extrait l'information sur les cheveux de l'inculpé.
+	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
+	:return: Un dictionnaire de la forme
+	{
+		"extracted": "Chatain-focie",
+		"matching": "cheveux Chatain-focie"
+		"baseline": [[1416,3746],
+					[2582,3735]],
+		"prediction": "Taille d'un mètre 670 millimètres, cheveux Chatain-focie, front moyen"
+	}
+	La baseline correspond à l'information extraite uniquement.
+	"""
+	chaine_cheveux = "cheveux"
+	ligne_cheveux, debug, index_cheveux = utils.check_substring_in_line(lignes_description_physique, chaine_cheveux,
+																		return_index=True)
+
+	cheveux, matching_cheveux = utils.approximate_split(ligne_cheveux['prediction'], "cheveux",
+														sensibility=0.8, return_word=True)
+	front, matching_front = utils.approximate_split(ligne_cheveux['prediction'], "front",
+													sensibility=0.8, return_word=True)
+
+	starting_index = ligne_cheveux['prediction'].find(matching_cheveux)
+
+	# Dans certains cas l'information est sur une ligne isolée et le front apparaît sur une autre ligne
+	try:
+		ending_index = ligne_cheveux['prediction'].find(f"{matching_front}") + len(matching_front)
+	except TypeError:
+		matching_front = ""
+		ending_index = len(ligne_cheveux['prediction'])
+	matching_string = ligne_cheveux['prediction'][starting_index:ending_index]
+	specific_baseline = utils.get_baseline_from_string(ligne_cheveux, matching_string)
+	extracted_cheveux = utils.strip_punctuation(matching_string.replace(matching_cheveux, "").replace(matching_front, ""))
+	return {"extracted": extracted_cheveux,
+			"matching":  matching_string.replace(matching_front, ""),
+			"baseline": specific_baseline,
+			"prediction": ligne_cheveux["prediction"]}
 
 def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	"""

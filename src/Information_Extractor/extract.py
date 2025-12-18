@@ -955,43 +955,22 @@ class Extractor:
 		lignes_description_physique = lignes_description_du_soldat[index_ligne_taille:]
 		texte_description_physique = [item['prediction'] for item in lignes_description_physique]
 
-		# On extrait le numéro de matricule, s'il est présent
-		dict_matricule = {}
-		numero_matricule = "n^o m^le 00000"
-		ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique, numero_matricule, return_index=True)
-		print("\n\n\n\n")
-		print(ligne_matricule['prediction'])
-		# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
-		# Le numéro de matricule n'y est jamais indiqué.
-		if index_matricule == 0:
-			numero_matricule = None
-		else:
-			print("Ligne trouvée.")
-			# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
-			regexp_matricule = r"n?^?o?\s?m^?l?e? (\d+\.?\s{,3}\d+)|n?^?o?\s?m^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
-			fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
-			try:
-				numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(), regex.BESTMATCH).group(1)
-				numero = re.compile(r"(\d+\.?\s{,3}\d+)")
-				numero_extrait = re.search(numero, numero_matricule).group(1)
-			except AttributeError:
-				numero_extrait = None
-			if numero_matricule:
-				baseline_matricule = utils.get_baseline_from_string(ligne_matricule,
-																	numero_matricule,
-																	loaded_image=loaded_image,
-																	show_image=True)
-				dict_matricule["Numéro de matricule"] = numero_extrait
-				dict_matricule["prédiction"] = ligne_matricule['prediction']
-				dict_matricule["baseline"] = baseline_matricule
-			else:
-				dict_matricule = {
-					"Numéro de matricule": None,
-					"prédiction": ligne_matricule['prediction']
-				}
-		description_du_soldat["Matricule"] = dict_matricule
+		# On extrait le numéro de matricule, s'il est présent.
+		description_du_soldat["Matricule"] = extractions.extraire_matricule(
+			lignes_description_physique
+		)
 
-		print("\n\n\n\n")
+		description_du_soldat["Physique"] = {}
+		# On passe à la taille
+		description_du_soldat["Physique"]["Taille"] = extractions.extraire_taille(
+			lignes_description_physique
+		)
+
+		# On passe aux cheveux
+		description_du_soldat["Physique"]["Cheveux"] = extractions.extraire_cheveux(
+							lignes_description_physique
+		)
+
 		return description_du_soldat
 
 	def extraire_date_du_proces(self,
