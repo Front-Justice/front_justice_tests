@@ -473,6 +473,7 @@ def convert_to_csv(extractions:dict, outpath:str):
 	extracted_data = [["Numero_image",
 					   "Id",
 					  "Date du procès",
+					   "Institution engagée",
 					   "Lieu du procès",
 					   "Numéro du jugement",
 					   "Numéro d'ordre",
@@ -530,7 +531,13 @@ def convert_to_csv(extractions:dict, outpath:str):
 
 			# Lieu du procès
 			try:
-				lieu_proces = page['extractions']['lieu_jugement']['institution']
+				institution = page['extractions']['lieu_jugement']['institution']
+			except TypeError:
+				institution = "?"
+			interm.append(institution)
+
+			try:
+				lieu_proces = page['extractions']['lieu_jugement']['siège']
 			except TypeError:
 				lieu_proces = "?"
 			interm.append(lieu_proces)

@@ -100,39 +100,42 @@ def extraire_taille(lignes_description_physique):
 def extraire_matricule(lignes_description_physique):
 	dict_matricule = {}
 	numero_matricule = "n^o m^le 00000"
+	numero_matricule_2 = "numero matricule 00000"
 	ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique,
 																			numero_matricule, return_index=True)
 	print(ligne_matricule['prediction'])
 	# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
 	# Le numéro de matricule n'y est jamais indiqué.
 	if index_matricule == 0:
-		numero_matricule = None
+		ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique,
+																				numero_matricule_2, return_index=True)
+		if index_matricule == 0:
+			return None
+	print("Ligne trouvée.")
+	# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
+	regexp_matricule = r"[Nn]um[eé]ro matricule (\d+\.?\s{,3}\d+)|[Nn]?\^?o?\s?m\^?l?e? (\d+\.?\s{,3}\d+)|[nN]?\^?o?\s?m\^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
+	fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
+	try:
+		numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(),
+										regex.BESTMATCH).group(1)
+		numero = re.compile(r"(\d+\.?\s{,3}\d+)")
+		numero_extrait = re.search(numero, numero_matricule).group(1)
+	except AttributeError:
+		numero_extrait = None
+	if numero_matricule:
+		baseline_matricule = utils.get_baseline_from_string(ligne_matricule,
+															numero_matricule)
+		dict_matricule["extracted"] = numero_extrait
+		dict_matricule["matching"] = numero_matricule
+		dict_matricule["prediction"] = ligne_matricule['prediction']
+		dict_matricule["baseline"] = baseline_matricule
 	else:
-		print("Ligne trouvée.")
-		# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
-		regexp_matricule = r"[Nn]?^?o?\s?m^?l?e? (\d+\.?\s{,3}\d+)|n?^?o?\s?m^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
-		fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
-		try:
-			numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(),
-											regex.BESTMATCH).group(1)
-			numero = re.compile(r"(\d+\.?\s{,3}\d+)")
-			numero_extrait = re.search(numero, numero_matricule).group(1)
-		except AttributeError:
-			numero_extrait = None
-		if numero_matricule:
-			baseline_matricule = utils.get_baseline_from_string(ligne_matricule,
-																numero_matricule)
-			dict_matricule["extracted"] = numero_extrait
-			dict_matricule["matching"] = numero_matricule
-			dict_matricule["prediction"] = ligne_matricule['prediction']
-			dict_matricule["baseline"] = baseline_matricule
-		else:
-			dict_matricule = {
-				"extracted": None,
-				"matching": None,
-				"prediction": ligne_matricule['prediction']
-			}
-		return dict_matricule
+		dict_matricule = {
+			"extracted": None,
+			"matching": None,
+			"prediction": ligne_matricule['prediction']
+		}
+	return dict_matricule
 
 def extraire_cheveux(lignes_description_physique):
 	"""
@@ -299,6 +302,56 @@ def extraire_yeux(lignes_description_physique):
 			"prediction": ligne_yeux["prediction"]}
 
 
+def extraire_renseignements_complementaires(lignes_description_physique, matricule):
+	"""
+		Cette fonction extrait l'information sur les marques complémentaires
+		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
+		:return: Un dictionnaire de la forme
+		{
+			"extracted": "",
+			"matching": ""
+			"baseline": [[1416,3746],
+						[2582,3735]],
+			"prediction": ""
+		}
+		La baseline correspond à l'information extraite uniquement.
+		"""
+	chaine_renseignements = "Renseignements physionomiques complémentaires"
+	clean_regexp = re.compile("^\s?:?\s?")
+	ligne_renseignements, debug, index_renseignements = utils.check_substring_in_line(lignes_description_physique, chaine_renseignements,
+																return_index=True)
+	print(ligne_renseignements['prediction'])
+	try:
+		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements['prediction'],
+																		  "complémentaires",
+																		  sensibility=0.9,
+																		  return_word=True)
+	except TypeError:
+		return {"extracted": None,
+				"baseline": ligne_renseignements["baseline"],
+				"prediction": ligne_renseignements["prediction"]}
+
+	try:
+		corresp_string = complementaire[-1]
+	except TypeError:
+		return {"extracted": None,
+				"baseline": ligne_renseignements["baseline"],
+				"prediction": ligne_renseignements["prediction"]}
+	clean = re.sub(clean_regexp, "", corresp_string)
+
+	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
+	try:
+		clean = clean.lower().replace(matricule["matching"], "")
+	except TypeError:
+		pass
+	clean = clean.strip()
+	clean = utils.clean_small_string(clean)
+	if clean == "":
+		clean = "RàS"
+
+	return {"extracted": clean,
+			"baseline": ligne_renseignements["baseline"],
+			"prediction": ligne_renseignements["prediction"]}
 
 def extraire_nez(lignes_description_physique):
 	"""

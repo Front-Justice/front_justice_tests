@@ -189,31 +189,48 @@ class Extractor:
 		else:
 			party_prediction = kraken_prediction
 
-		chaine_seant = "s[ée]ant à|s[ée]ant aux"
-		chaine_permanent = "⟦?permanent⟧? du|⟦?permanent⟧? de la"
+		chaine_seant = "séant"
+		chaine_permanent = "permanent"
+		clean_regexp_lieu = re.compile("^\s?[àa]\s?")
+		clean_regexp_institution = re.compile("^\s?d[eu]?\s?")
 
-		avant_seant_kraken = utils.split_before_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[
-			0]
 		try:
+			avant_seant_kraken = utils.approximate_split(sentence=kraken_prediction, word=chaine_seant, sensibility=0.75)[
+				0]
 			institution_kraken = \
-				utils.split_after_keep_delimiter(avant_seant_kraken, delimiter=chaine_permanent)[1]
+				utils.approximate_split(sentence=avant_seant_kraken, word=chaine_permanent)[1]
+			institution_kraken = re.sub(clean_regexp_institution, "", institution_kraken)
 		except IndexError:
 			institution_kraken = None
+		except TypeError:
+			institution_kraken = None
 		try:
-			lieu_kraken = utils.split_after_keep_delimiter(target_string=kraken_prediction, delimiter=chaine_seant)[1]
+			lieu_kraken, matching_word = utils.approximate_split(sentence=kraken_prediction, word=chaine_seant, return_word=True)
+			lieu_kraken = lieu_kraken[1]
+			lieu_kraken = re.sub(clean_regexp_lieu, "", lieu_kraken)
 		except IndexError:
 			lieu_kraken = None
+		except TypeError:
+			lieu_kraken = None
 
-		avant_seant_party = utils.split_before_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[0]
 		try:
+			avant_seant_party = utils.approximate_split(sentence=party_prediction, word=chaine_seant, sensibility=0.75)[
+				0]
 			institution_party = \
-				utils.split_after_keep_delimiter(avant_seant_party, delimiter=chaine_permanent)[1]
+				utils.approximate_split(sentence=avant_seant_party, word=chaine_permanent)[1]
+			institution_party = re.sub(clean_regexp_institution, "", institution_party)
 		except IndexError:
-			institution_party = ""
+			institution_party = None
+		except TypeError:
+			institution_party = None
 		try:
-			lieu_party = utils.split_after_keep_delimiter(target_string=party_prediction, delimiter=chaine_seant)[1]
+			lieu_party, matching_word = utils.approximate_split(sentence=party_prediction, word=chaine_seant, return_word=True)
+			lieu_party = lieu_party[1]
+			lieu_party = re.sub(clean_regexp_lieu, "", lieu_party)
 		except IndexError:
-			lieu_party = ""
+			lieu_party = None
+		except TypeError:
+			lieu_party = None
 
 		if party_prediction == kraken_prediction:
 			certitude = 1
@@ -1000,7 +1017,10 @@ class Extractor:
 		)
 
 		# TODO: ajouter les renseignements physiques complémentaires et les marques particulières
-
+		description_du_soldat["physique"]["complementaire"] = extractions.extraire_renseignements_complementaires(
+			lignes_description_physique,
+			description_du_soldat["matricule"]
+		)
 
 		return description_du_soldat
 
