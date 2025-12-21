@@ -45,7 +45,7 @@ class Pipeline():
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_170p_lignes_best.mlmodel"
-		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/model_550p_best.mlmodel"
+		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_638p.mlmodel"
 		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
@@ -144,6 +144,8 @@ class Pipeline():
 		:param transcription_only: faut-il lancer la transcription uniquement ?
 		:return:
 		"""
+		assert os.path.isfile(self.kraken_ocr_model), f"No model named {self.kraken_ocr_model}"
+		assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
 		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(".jpg", "_segments.json")}'
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
@@ -354,6 +356,8 @@ class Pipeline():
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
 		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		# utils.convert_to_csv(minutes, "results/database.csv")
+		# exit(0)
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if target:

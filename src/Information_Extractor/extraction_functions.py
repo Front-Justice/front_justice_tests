@@ -67,7 +67,7 @@ def extraire_taille(lignes_description_physique):
 		"""
 
 	chaine_taille = "Taille d'un mètre milimètres"
-	ligne_taille, debug, index_taille = utils.check_substring_in_line(lignes_description_physique, chaine_taille,
+	ligne_taille, debug, index_taille = utils.match_line_by_substring(lignes_description_physique, chaine_taille,
 																	  return_index=True)
 	# On récupère la chaîne avant millimètres
 	taille, matching_millimetre = utils.approximate_split(ligne_taille['prediction'], "millimètres", sensibility=0.8,
@@ -89,7 +89,7 @@ def extraire_taille(lignes_description_physique):
 			try:
 				taille = 1000 + text2num(taille, "fr")
 			except ValueError:
-				taille = "Error"
+				taille = "UNK"
 	if taille == "":
 		taille = None
 	return {"extracted": taille,
@@ -101,13 +101,13 @@ def extraire_matricule(lignes_description_physique):
 	dict_matricule = {}
 	numero_matricule = "n^o m^le 00000"
 	numero_matricule_2 = "numero matricule 00000"
-	ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique,
+	ligne_matricule, debug, index_matricule = utils.match_line_by_substring(lignes_description_physique,
 																			numero_matricule, return_index=True)
 	print(ligne_matricule['prediction'])
 	# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
 	# Le numéro de matricule n'y est jamais indiqué.
 	if index_matricule == 0:
-		ligne_matricule, debug, index_matricule = utils.check_substring_in_line(lignes_description_physique,
+		ligne_matricule, debug, index_matricule = utils.match_line_by_substring(lignes_description_physique,
 																				numero_matricule_2, return_index=True)
 		if index_matricule == 0:
 			return None
@@ -152,7 +152,7 @@ def extraire_cheveux(lignes_description_physique):
 	La baseline correspond à l'information extraite uniquement.
 	"""
 	chaine_cheveux = "cheveux"
-	ligne_cheveux, debug, index_cheveux = utils.check_substring_in_line(lignes_description_physique, chaine_cheveux,
+	ligne_cheveux, debug, index_cheveux = utils.match_line_by_substring(lignes_description_physique, chaine_cheveux,
 																		return_index=True)
 
 	cheveux, matching_cheveux = utils.approximate_split(ligne_cheveux['prediction'], "cheveux",
@@ -193,8 +193,8 @@ def extraire_front(lignes_description_physique):
 	La baseline correspond à l'information extraite uniquement.
 	"""
 	chaine_front = "front"
-	ligne_front, debug, index_front = utils.check_substring_in_line(lignes_description_physique, chaine_front,
-																		return_index=True)
+	ligne_front, debug, index_front = utils.match_line_by_substring(lignes_description_physique, chaine_front,
+																	return_index=True)
 
 	front, matching_front = utils.approximate_split(ligne_front['prediction'], "front",
 													sensibility=0.7, return_word=True)
@@ -233,13 +233,17 @@ def extraire_visage(lignes_description_physique):
 	La baseline correspond à l'information extraite uniquement.
 	"""
 	chaine_visage = "visage"
-	ligne_visage, debug, index_visage = utils.check_substring_in_line(lignes_description_physique, chaine_visage,
-																		return_index=True)
+	ligne_visage, debug, index_visage = utils.match_line_by_substring(lignes_description_physique, chaine_visage,
+																	  return_index=True)
 
 	visage, matching_visage = utils.approximate_split(ligne_visage['prediction'], "visage",
 													sensibility=0.8, return_word=True)
 
-	starting_index = ligne_visage['prediction'].find(matching_visage)
+	try:
+		starting_index = ligne_visage['prediction'].find(matching_visage)
+	except TypeError:
+		return {"extracted": None,
+				"prediction": ligne_visage["prediction"]}
 
 	matching_string = ligne_visage['prediction'][starting_index:]
 	specific_baseline = utils.get_baseline_from_string(ligne_visage, matching_string)
@@ -267,8 +271,8 @@ def extraire_yeux(lignes_description_physique):
 	La baseline correspond à l'information extraite uniquement.
 	"""
 	chaine_yeux = "yeux"
-	ligne_yeux, debug, index_yeux = utils.check_substring_in_line(lignes_description_physique, chaine_yeux,
-																		return_index=True)
+	ligne_yeux, debug, index_yeux = utils.match_line_by_substring(lignes_description_physique, chaine_yeux,
+																  return_index=True)
 
 	yeux, matching_yeux = utils.approximate_split(ligne_yeux['prediction'], "yeux",
 													sensibility=0.8, return_word=True)
@@ -301,25 +305,90 @@ def extraire_yeux(lignes_description_physique):
 			"baseline": specific_baseline,
 			"prediction": ligne_yeux["prediction"]}
 
+def extraire_affectation_soldat(lignes_description_physique):
+	derniere_ligne = lignes_description_physique[-1]
+	if utils.check_word_in_sentence(derniere_ligne['prediction'],
+									target_word=['Inculpé', 'Accusé'],
+									sensibility=0.6,
+									debug=False)[0] is True:
+		ligne_affectation = None
+	elif len(derniere_ligne['prediction']) < 10:
+		ligne_affectation = None
+	else:
+		ligne_affectation = derniere_ligne['prediction']
+	return {"prediction": ligne_affectation,
+			"extracted": ligne_affectation}
 
-def extraire_renseignements_complementaires(lignes_description_physique, matricule):
+def extraire_marques_particulieres(lignes_description_physique, matricule) -> dict:
 	"""
-		Cette fonction extrait l'information sur les marques complémentaires
+		Cette fonction extrait l'information sur les marques particulières du soldat
 		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
 		:return: Un dictionnaire de la forme
 		{
-			"extracted": "",
-			"matching": ""
+			"extracted": "RàS",
 			"baseline": [[1416,3746],
 						[2582,3735]],
-			"prediction": ""
+			"prediction": "Renseignements physionomiques complémentaires:  Numero matricule: 17.615."
+		}
+		La baseline correspond à l'information extraite uniquement.
+		"""
+	chaine_marques = "Marques particulières"
+	clean_regexp = re.compile("^\s?:?\s?")
+	ligne_marques, debug, index_marques = utils.match_line_by_substring(lignes_description_physique, chaine_marques,
+																		return_index=True)
+	print(ligne_marques['prediction'])
+	try:
+		particulieres, matching_particulieres = utils.approximate_split(ligne_marques['prediction'],
+																		  "particulières",
+																		  sensibility=0.9,
+																		  return_word=True)
+	except TypeError:
+		return {"extracted": None,
+				"baseline": ligne_marques["baseline"],
+				"prediction": ligne_marques["prediction"]}
+
+	try:
+		corresp_string = particulieres[-1]
+	except TypeError:
+		return {"extracted": None,
+				"baseline": ligne_marques["baseline"],
+				"prediction": ligne_marques["prediction"]}
+	clean = re.sub(clean_regexp, "", corresp_string)
+
+	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
+	try:
+		clean = clean.lower().replace(matricule["matching"], "")
+	except TypeError:
+		pass
+	clean = clean.strip()
+	clean = utils.clean_small_string(clean)
+	if clean == "":
+		clean = "RàS"
+	elif utils.check_neant(clean) is True:
+		clean = "RàS"
+
+	return {"extracted": clean,
+			"baseline": ligne_marques["baseline"],
+			"prediction": ligne_marques["prediction"]}
+
+def extraire_renseignements_complementaires(lignes_description_physique, matricule):
+	"""
+		Cette fonction extrait l'information sur les marques particulières
+		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
+		:return: Un dictionnaire de la forme
+		{
+			"extracted": "RàS",
+			"baseline": [[1416,3746],
+						[2582,3735]],
+			"prediction": "Renseignements physionomiques complémentaires:  Numero matricule: 17.615."
 		}
 		La baseline correspond à l'information extraite uniquement.
 		"""
 	chaine_renseignements = "Renseignements physionomiques complémentaires"
 	clean_regexp = re.compile("^\s?:?\s?")
-	ligne_renseignements, debug, index_renseignements = utils.check_substring_in_line(lignes_description_physique, chaine_renseignements,
-																return_index=True)
+
+	ligne_renseignements, debug, index_renseignements = utils.match_line_by_substring(lignes_description_physique, chaine_renseignements,
+																					  return_index=True)
 	print(ligne_renseignements['prediction'])
 	try:
 		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements['prediction'],
@@ -348,6 +417,8 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 	clean = utils.clean_small_string(clean)
 	if clean == "":
 		clean = "RàS"
+	elif utils.check_neant(clean) is True:
+		clean = "RàS"
 
 	return {"extracted": clean,
 			"baseline": ligne_renseignements["baseline"],
@@ -368,8 +439,8 @@ def extraire_nez(lignes_description_physique):
 	La baseline correspond à l'information extraite uniquement.
 	"""
 	chaine_nez = "nez"
-	ligne_nez, debug, index_nez = utils.check_substring_in_line(lignes_description_physique, chaine_nez,
-																		return_index=True)
+	ligne_nez, debug, index_nez = utils.match_line_by_substring(lignes_description_physique, chaine_nez,
+																return_index=True)
 
 	nez, matching_nez = utils.approximate_split(ligne_nez['prediction'], "nez",
 													sensibility=0.8, return_word=True)
@@ -411,7 +482,7 @@ def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	:return: un dictionnaire contenant les informations importantes
 	"""
 	greffier_dict = {}
-	ligne_greffier, _ = utils.check_substring_in_line(lignes_zone_magistrat, "pres ledit conseil")
+	ligne_greffier, _ = utils.match_line_by_substring(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier['baseline']
 	ligne_greffier = ligne_greffier['prediction']
 	greffier, form_greffier = utils.check_word_in_sentence(ligne_greffier, "Greffier")
@@ -566,7 +637,7 @@ def extraire_commissaire(lignes_zone_magistrat:list, ner_pipeline):
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
 	commissaire_dict = {}
-	ligne_commissaire, _ = utils.check_substring_in_line(lignes_zone_magistrat,
+	ligne_commissaire, _ = utils.match_line_by_substring(lignes_zone_magistrat,
 														 "commissaire du gouvernement")
 	baseline = ligne_commissaire['baseline']
 	ligne_commissaire = ligne_commissaire['prediction']
@@ -608,7 +679,7 @@ def extraire_general(lignes_zone_magistrat:list, ner_pipeline):
 	:param ner_pipeline:
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
-	ligne_grade, _ = utils.check_substring_in_line(lignes_zone_magistrat, "nommés par le (1) général")
+	ligne_grade, _ = utils.match_line_by_substring(lignes_zone_magistrat, "nommés par le (1) général")
 	baseline = ligne_grade['baseline']
 	ligne_grade = ligne_grade['prediction']
 	ligne_grade = utils.nfc_normalize(ligne_grade)

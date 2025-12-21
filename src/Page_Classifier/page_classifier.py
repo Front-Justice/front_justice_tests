@@ -19,6 +19,8 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 
+from src.Page_Classifier.utils.utils import show_image
+
 
 class PageClassifier():
 	def __init__(self,
@@ -27,16 +29,23 @@ class PageClassifier():
 				 model=None,
 				 vocab=None):
 		if build_vocab:
-			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="data/page_classification/corpus/page_*")
-		self.model_path = None
+			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="src/Page_Classifier/data/corpus/page_*")
+			joblib.dump(self.vocab, vocab)
+			exit(0)
+		self.model_path = model
 		self.corpus_path = corpus_path
-		self.model = joblib.load(model)
-		self.vocab = joblib.load(vocab)
+		self.vocab_path = vocab
+		try:
+			self.model = joblib.load(model)
+			if build_vocab is False:
+				self.vocab = joblib.load(vocab)
+		except FileNotFoundError:
+			self.model = model
+			self.vocab = vocab
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
 		image = image.crop((0, 0, image.width, height_resized))
-		# dims = (image.width // resize_factor, image.height // resize_factor)
 		image = image.resize((1062, 391))
 		# image = image.resize(dims)
 		#print(image.size)
@@ -51,7 +60,7 @@ class PageClassifier():
 		if show_features:
 			fd, hog_image = skimage.feature.hog(
 				image,
-				orientations=8,
+				orientations=9,
 				pixels_per_cell=(16, 16),
 				cells_per_block=(2, 2),
 				visualize=True,
@@ -81,7 +90,6 @@ class PageClassifier():
 		ax2.axis('off')
 		ax2.imshow(hog_image_rescaled, cmap=plt.cm.gray)
 		ax2.set_title('HOG visualization')
-		# plt.show()
 		plt.savefig('assets/foo.png', dpi=300)
 		exit(0)
 
@@ -106,7 +114,7 @@ class PageClassifier():
 
 	def build_dataset(self):
 		print("Treating images.")
-		images = glob.glob('data/page_classification/corpus/page_*/*.jpg')
+		images = glob.glob('src/Page_Classifier/data/corpus/page_*/*.jpg')
 		random.shuffle(images)
 		with Pool(12) as p:
 			corpus = p.map(self.retrieve_hog_and_label, images)
@@ -122,25 +130,34 @@ class PageClassifier():
 		return inputs, labels
 
 	def train(self,
-			  model_path=None,
-			  vocab_path=None,
 			  show_features=False):
 		if not os.path.isfile(self.corpus_path):
+			print("Creating corpus file...")
 			inputs, labels = self.build_dataset()
 		else:
 			inputs, labels = self.load_corpus()
+		assert inputs != [], "Inputs empty"
 		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
-		model = RandomForestClassifier(n_estimators=100, random_state=0)
-		model = svm.SVC()
+		self.model = RandomForestClassifier(n_estimators=100, random_state=0)
+		self.model = svm.SVC()
 		# fit the model to the training set
-		model.fit(X_train, y_train)
-		accuracy = model.score(X_test, y_test)
+		self.model.fit(X_train, y_train)
+		accuracy = self.model.score(X_test, y_test)
 		print(accuracy)
-		y_pred = model.predict(X_test)
+		y_pred = self.model.predict(X_test)
 		print(classification_report(y_pred, y_test))
 		# https://stackoverflow.com/a/20662980
-		joblib.dump(self.model, model_path)
-		joblib.dump(self.vocab, vocab_path)
+		joblib.dump(self.model, self.model_path)
+		joblib.dump(self.vocab, self.vocab_path)
+
+	def test(self):
+		inputs, labels = self.load_corpus()
+		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
+		self.model.fit(X_train, y_train)
+		accuracy = self.model.score(X_test, y_test)
+		print(accuracy)
+		y_pred = self.model.predict(X_test)
+		print(classification_report(y_pred, y_test))
 
 	def predict(self,
 				debug_model=False,
@@ -168,24 +185,30 @@ class PageClassifier():
 
 
 if __name__ == '__main__':
-	classifier = PageClassifier(build_vocab=True,
-								corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/"
-								"alternative_pipeline/page_classification/data/page_classification/corpus.data",
-								model="models/PageClassifier.joblib",
-								vocab="models/vocab.joblib")
+	classifier = PageClassifier(build_vocab=False,
+								corpus_path="src/Page_Classifier/data/corpus.data",
+								model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
+								vocab="src/Page_Classifier/models/vocab_SVC.joblib")
+	print(classifier.vocab)
 	if len(sys.argv) > 1:
 		images = glob.glob(f"{sys.argv[1]}*.jpg")
 		assert images != [], "No images found."
-	# classifier.train(model_path="models/PageClassifier.joblib", vocab_path="models/vocab.joblib")
-	for image in images:
-		prediction = classifier.predict(images=images)
-		out_dir = classifier.vocab[prediction[0]]
+		out_dir = sys.argv[2]
+	else:
+		out_dir = "src/Page_Classifier/data/predictions/"
+	# classifier.train()
+	# exit(0)
+	for image in tqdm.tqdm(images):
+		if len(glob.glob(f"{out_dir}/*/{image.split('/')[-1]}")) > 0:
+			print("Already treated.")
+			continue
+		prediction = classifier.predict(image=image)
 		try:
-			os.mkdir(f"data/page_classification/predictions/")
+			os.mkdir(f"{out_dir}")
 		except FileExistsError:
 			pass
 		try:
-			os.mkdir(f"data/page_classification/predictions/{out_dir}")
+			os.mkdir(f"{out_dir}/{prediction}")
 		except FileExistsError:
 			pass
-		shutil.copyfile(image, f"data/page_classification/predictions/{out_dir}/{image.split('/')[-1]}")
+		shutil.copyfile(image, f"{out_dir}/{prediction}/{image.split('/')[-1]}")

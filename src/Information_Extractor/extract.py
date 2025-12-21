@@ -515,10 +515,10 @@ class Extractor:
 																	   intersect_ratio=0.7)
 		# On commence par l'inculpation
 		corresponding_lines = utils.vertical_order_lines(corresponding_lines)
-		lignes_inculpe, _, correct_index_inculpe = utils.check_substring_in_line(
+		lignes_inculpe, _, correct_index_inculpe = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines,
 			string_to_match=["Inculpé de:", "Prévenu de:", "Accusé de:"], return_index=True)
-		ligne_condamnations, _, correct_index_condamnations = utils.check_substring_in_line(
+		ligne_condamnations, _, correct_index_condamnations = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines, string_to_match="Condamnations", return_index=True)
 		lignes_inculpation = corresponding_lines[correct_index_inculpe:correct_index_condamnations]
 		lignes_inculpation_str = " ".join([item['prediction'] for item in lignes_inculpation])
@@ -767,7 +767,7 @@ class Extractor:
 		# On peut avoir plusieurs lignes, car le nom est écrit en gros module. On va
 		# Donc tester la distance au début de la ligne qui commence par "A l'effet de juger"
 		# TODO: Transformer ça en fonction pour réutilisation à d'autres endroits
-		name_line, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+		name_line, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
 													 string_to_match="A l'effet de juger")
 
 		# On a la ligne correspondante. Maintenant, on va identifier les caractères
@@ -843,7 +843,7 @@ class Extractor:
 																		  intersect_ratio=0.1)
 
 		lignes_description_du_soldat = utils.vertical_order_lines(lignes_description_du_soldat)
-		effet_de_juger_line, debug = utils.check_substring_in_line(corresponding_lines=lignes_description_du_soldat,
+		effet_de_juger_line, debug = utils.match_line_by_substring(corresponding_lines=lignes_description_du_soldat,
 																   string_to_match="A l'effet de juger le")
 		first_line_index = lignes_description_du_soldat.index(effet_de_juger_line)
 		filtered_lines = lignes_description_du_soldat[first_line_index:]
@@ -880,7 +880,7 @@ class Extractor:
 		try:
 			age = utils.calcule_age(date_normalisee['when'], date_proces=self.date_proces['when'])
 		except TypeError:
-			age = "Inconnu"
+			age = "UNK"
 		date_naissance = {"date_normalisee": date_normalisee,
 						  "Date naissance extraite": date_naissance_extraite,
 						  "Date corrigée": date_naissance_corrigee,
@@ -896,7 +896,14 @@ class Extractor:
 		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
 		profession_et_situation_maritale = \
 			utils.approximate_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
-		check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants = extractions.extraire_situation_maritale(
+		(check_veuf,
+		 token_veuf,
+		 check_celibataire,
+		 celibataire,
+		 token_celibataire,
+		 marie,
+		 token_marie,
+		 nombre_enfants) = extractions.extraire_situation_maritale(
 			profession_et_situation_maritale)
 
 		# Si on infère le célibat, il n'a peut être pas été trouvé. On va chercher en ampliant la zone à l'ensemble des lignes.
@@ -931,7 +938,7 @@ class Extractor:
 		elif celibataire is True and isinstance(token_celibataire, str):
 			cleaned_profession = utils.strip_punctuation(cleaned_profession.split(token_celibataire)[0].strip())
 		corrected_profession = utils.full_clean_string(cleaned_profession)
-		matching_line_profession:dict = utils.check_substring_in_line(filtered_lines, cleaned_profession)[0]
+		matching_line_profession:dict = utils.match_line_by_substring(filtered_lines, cleaned_profession)[0]
 		description_du_soldat["profession"] = {
 			"matching": cleaned_profession,
 			"extracted": corrected_profession,
@@ -976,7 +983,7 @@ class Extractor:
 
 
 		# On s'occupe maintenant de la description physique du soldat
-		_, _, index_ligne_taille = utils.check_substring_in_line(corresponding_lines=lignes_description_du_soldat, string_to_match="taille d'", return_index=True)
+		_, _, index_ligne_taille = utils.match_line_by_substring(corresponding_lines=lignes_description_du_soldat, string_to_match="taille d'", return_index=True)
 		lignes_description_physique = lignes_description_du_soldat[index_ligne_taille:]
 		texte_description_physique = [item['prediction'] for item in lignes_description_physique]
 
@@ -1017,9 +1024,19 @@ class Extractor:
 		)
 
 		# TODO: ajouter les renseignements physiques complémentaires et les marques particulières
-		description_du_soldat["physique"]["complementaire"] = extractions.extraire_renseignements_complementaires(
+		description_du_soldat["physique"]["renseignements_complementaires"] = extractions.extraire_renseignements_complementaires(
 			lignes_description_physique,
 			description_du_soldat["matricule"]
+		)
+
+		description_du_soldat["physique"]["marques_particulieres"] = extractions.extraire_marques_particulieres(
+			lignes_description_physique,
+			description_du_soldat["matricule"]
+		)
+
+
+		description_du_soldat["affectation"] = extractions.extraire_affectation_soldat(
+			lignes_description_physique
 		)
 
 		return description_du_soldat
@@ -1080,9 +1097,9 @@ class Extractor:
 																	 intersect_ratio=0.1)
 
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
-		cejourdui_date, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+		cejourdui_date, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
 														  string_to_match="CEJOURD'HUI")
-		an_mil_neuf_date, _ = utils.check_substring_in_line(corresponding_lines=corresponding_lines,
+		an_mil_neuf_date, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
 															string_to_match="an mil neuf cent")
 		if cejourdui_date == an_mil_neuf_date:
 			correct_line = cejourdui_date

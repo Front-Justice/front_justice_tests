@@ -5,7 +5,6 @@ import random
 import string
 import unicodedata
 import PIL.Image as Image
-import PIL
 import re
 from thefuzz import fuzz
 from Levenshtein import distance
@@ -13,6 +12,7 @@ from difflib import SequenceMatcher
 from shapely.geometry import Polygon
 from collections import namedtuple
 import spellchecker
+import pandas as pd
 
 number_dict = {"un": 1,
 				"deux": 2,
@@ -470,7 +470,8 @@ def strip_punctuation(string:str|None, debug=False) -> str|None:
 
 
 def convert_to_csv(extractions:dict, outpath:str):
-	extracted_data = [["Numero_image",
+	extracted_data = []
+	header = ["Numero_image",
 					   "Id",
 					  "Date du procès",
 					   "Institution engagée",
@@ -496,6 +497,8 @@ def convert_to_csv(extractions:dict, outpath:str):
 					   "Yeux",
 					   "Nez",
 					   "Visage",
+					  "Renseignements complémentaires",
+					  "Marques particulières",
 					   "Ville de naissance",
 					   "Arrondissement de naissance",
 					   "Département de naissance",
@@ -506,9 +509,10 @@ def convert_to_csv(extractions:dict, outpath:str):
 					   "Enfants",
 					   "Profession",
 					   "Rang du soldat",
+					   "Affectation du soldat",
 					   "Numéro de matricule",
 					   "Chef d'accusation",
-					   "Antécédents"]]
+					   "Antécédents"]
 	for idx_minute, minute in extractions.items():
 		for idx_page, page in enumerate(minute):
 			try:
@@ -526,36 +530,36 @@ def convert_to_csv(extractions:dict, outpath:str):
 			try:
 				date_proces = page['extractions']['date_proces']['date_normalisee']['when']
 			except TypeError:
-				date_proces = "?"
+				date_proces = "UNK"
 			interm.append(date_proces)
 
 			# Lieu du procès
 			try:
 				institution = page['extractions']['lieu_jugement']['institution']
 			except TypeError:
-				institution = "?"
+				institution = "UNK"
 			interm.append(institution)
 
 			try:
 				lieu_proces = page['extractions']['lieu_jugement']['siège']
 			except TypeError:
-				lieu_proces = "?"
+				lieu_proces = "UNK"
 			interm.append(lieu_proces)
 
 			# Numéro de jugement
 			try:
 				numero_jugement = page['extractions']['numero_jugement']['extracted']
 			except TypeError:
-				numero_jugement = "?"
+				numero_jugement = "UNK"
 			except KeyError:
-				numero_jugement = "?"
+				numero_jugement = "UNK"
 			interm.append(numero_jugement)
 
 			# Numéro d'ordre
 			try:
 				numero_ordre = page['extractions']['numero_ordre']['extracted']
 			except TypeError:
-				numero_ordre = "?"
+				numero_ordre = "UNK"
 			interm.append(numero_ordre)
 
 			# Président du jury (rôle non extrait)
@@ -569,7 +573,7 @@ def convert_to_csv(extractions:dict, outpath:str):
 				try:
 					extracted_jure = jure['extracted']['persName']
 				except TypeError:
-					extracted_jure = "?"
+					extracted_jure = "UNK"
 				interm.append(extracted_jure)
 
 			# Greffier (on n'extrait pas les rôles)
@@ -588,10 +592,12 @@ def convert_to_csv(extractions:dict, outpath:str):
 			try:
 				date_crime = page['extractions']['date_du_crime_ou_delit']['date_normalisee']
 			except KeyError:
-				date_crime = "?"
+				date_crime = "UNK"
 			except TypeError:
-				date_crime = "?"
-			interm.append(json.dumps(date_crime))
+				date_crime = "UNK"
+			if isinstance(date_crime, dict):
+				date_crime = json.dumps(date_crime)
+			interm.append(date_crime)
 
 			# Nom et prénom du soldat
 			try:
@@ -611,44 +617,54 @@ def convert_to_csv(extractions:dict, outpath:str):
 			try:
 				date_naissance = page['extractions']['description_soldat']['date_de_naissance']['date_normalisee']['when']
 			except TypeError:
-				date_naissance = "?"
+				date_naissance = "UNK"
 			try:
 				age = page['extractions']['description_soldat']["Âge"]
 			except KeyError:
-				age = "?"
+				age = "UNK"
 			interm.append(date_naissance)
 			interm.append(age)
 
 			try:
 				taille = page['extractions']['description_soldat']["physique"]["taille"]["extracted"]
 			except KeyError:
-				taille = "?"
+				taille = "UNK"
 			try:
 				cheveux = page['extractions']['description_soldat']["physique"]["cheveux"]["extracted"]
 			except KeyError:
-				cheveux = "?"
+				cheveux = "UNK"
 			try:
 				front = page['extractions']['description_soldat']["physique"]["front"]["extracted"]
 			except KeyError:
-				front = "?"
+				front = "UNK"
 			try:
 				yeux = page['extractions']['description_soldat']["physique"]["yeux"]["extracted"]
 			except KeyError:
-				yeux = "?"
+				yeux = "UNK"
 			try:
 				nez = page['extractions']['description_soldat']["physique"]["nez"]["extracted"]
 			except KeyError:
-				nez = "?"
+				nez = "UNK"
 			try:
 				visage = page['extractions']['description_soldat']["physique"]["visage"]["extracted"]
 			except KeyError:
-				visage = "?"
+				visage = "UNK"
+			try:
+				renseignements_complementaires = page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
+			except KeyError:
+				renseignements_complementaires = "UNK"
+			try:
+				marques_particulieres = page['extractions']['description_soldat']["physique"]["marques_particulieres"]["extracted"]
+			except KeyError:
+				marques_particulieres = "UNK"
 			interm.append(taille)
 			interm.append(cheveux)
 			interm.append(front)
 			interm.append(yeux)
 			interm.append(nez)
 			interm.append(visage)
+			interm.append(renseignements_complementaires)
+			interm.append(marques_particulieres)
 
 			# Lieu de naissance
 			ville_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['ville']
@@ -687,6 +703,12 @@ def convert_to_csv(extractions:dict, outpath:str):
 			rang = page['extractions']['description_soldat']['rang']['extracted']
 			interm.append(rang)
 
+
+			# Affectation du soldat
+			affectation = page['extractions']['description_soldat']['affectation']['extracted']
+			interm.append(affectation)
+
+
 			# Numéro de matricule
 			try:
 				matricule = page['extractions']['description_soldat']['matricule']['extracted']
@@ -704,9 +726,18 @@ def convert_to_csv(extractions:dict, outpath:str):
 				antecedents = len(antecedents)
 			interm.append(antecedents)
 			extracted_data.append(interm)
-	with open(outpath, 'w', newline='') as f:
-		writer = csv.writer(f, delimiter="$")
-		writer.writerows(extracted_data)
+
+	df = pd.DataFrame(extracted_data, columns=header)
+	examples_number = df.shape[1]
+	counts = []
+	ratios = []
+	for item in df.columns.values:
+		missing_value = len(df[df[item] == 'UNK'])
+		counts.append(missing_value)
+		ratios.append(round(missing_value / examples_number, 2))
+	df.loc[-1] = counts
+	df.loc[-1] = ratios
+	df.to_csv(outpath, sep='$')
 
 
 def random_string():
@@ -765,13 +796,28 @@ def test_number_of_zones(annotations:list[dict], label:str, number:int) -> bool:
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
+def check_neant(string:str) -> bool:
+	"""
+	Cette fonction vérifie si le terme `néant` se trouve dans une chaîne
+	:param string:
+	:return: True/False
+	"""
+	if similarite_ratcliff(string, "neant") > 0.5:
+		return True
+	else:
+		return False
+
+def clean_small_string(string):
+	regexp = re.compile("^\s?[.:,?\-;!]?\s?$")
+	return re.sub(regexp, "", string)
+
 def approximate_split(sentence:str, word:str, sensibility:float=0.5, return_word:bool=False) -> list|tuple[list, str]|None|tuple[None, None]:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
 	:param word: le mot sur lequel s'appuyer
 	:param sensibility: la sensibilité a appliquer à la recherche (à trouver par l'expérience)
-	:return:
+	:return: La chaîne splittée, ou la chaîne splittée et le mot qui matche.
 	"""
 	sentence = nfc_normalize(sentence)
 	word = nfc_normalize(word)
@@ -810,7 +856,7 @@ def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (boo
 	return True, matching_words[max_dist]
 
 
-def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5) -> tuple[bool, str|None]:
+def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5, debug:bool=False) -> tuple[bool, str|None]:
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
 	:param sentence: la phrase cible
@@ -832,6 +878,9 @@ def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5) 
 			item = item.lower().strip()
 			item = nfc_normalize(item)
 			dist = similarite_ratcliff(word_lower, item)
+			if debug is True:
+				print(word_lower)
+				print(dist)
 			if dist > sensibility:
 				distances.append(dist)
 				matching_word.append(word)
@@ -847,7 +896,7 @@ def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5) 
 
 
 
-def check_substring_in_line(corresponding_lines:list, string_to_match:str|list, return_index:bool=False):
+def match_line_by_substring(corresponding_lines:list, string_to_match: str | list, return_index:bool=False):
 	"""
 	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
