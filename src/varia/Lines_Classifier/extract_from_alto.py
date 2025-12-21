@@ -22,14 +22,14 @@ current_line_number = 0
 random.shuffle(input_files)
 all_widths = []
 all_heights = []
-for file in input_files[11:100]:
+for file in input_files[201:300]:
 	corresponding_image = file.replace(".xml", ".jpg")
 	file_as_xml = ET.parse(file)
 	all_lines = file_as_xml.xpath("//alto:TextLine/alto:Shape/alto:Polygon", namespaces=namespaces)
 	assert len(all_lines) != [], "Problem with namespace"
 	# https://stackoverflow.com/a/22650239
 	for idx, line in enumerate(all_lines):
-		current_line_number += 1
+		current_line_number += 1000000
 		coordinates = line.xpath("@POINTS")[0]
 		coordinates = convert_xml_polygon_to_list_of_tuples(coordinates)
 		im = Image.open(corresponding_image).convert("RGBA")
@@ -58,7 +58,7 @@ for file in input_files[11:100]:
 		resized = cropped_img.resize((int(width/2), int(height/2)))
 		all_widths.append(width/2)
 		all_heights.append(height/2)
-		resized.save(f"lines/v_2{current_line_number}.png")
+		resized.save(f"lines/v_3{current_line_number}.png")
 
 max_width = max(all_widths)
 max_height = max(all_heights)
