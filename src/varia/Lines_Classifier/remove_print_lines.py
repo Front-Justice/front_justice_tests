@@ -106,7 +106,10 @@ def main(input_files):
 			print(file)
 			continue
 		corresponding_image = file.replace(".xml", ".jpg")
-		im = Image.open(corresponding_image).convert("RGBA")
+		try:
+			im = Image.open(corresponding_image).convert("RGBA")
+		except FileNotFoundError:
+			continue
 		print(corresponding_file_mixed)
 		try:
 			file_as_xml = ET.parse(file)
