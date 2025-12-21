@@ -237,8 +237,8 @@ class LinesClassifier():
 
 if __name__ == '__main__':
 	classifier = LinesClassifier(build_vocab=True,
-								 corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/varia/Lines_Classifier/data/*",
-								 binary_corpus_path="/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/varia/Lines_Classifier/data/corpus.data",
+								 corpus_path="data/*",
+								 binary_corpus_path="data/corpus.data",
 								 max_size=(1735,161),
 								 model_path="models/LinesClassifierRF.joblib",
 								vocab_path="models/LinesClassifierVocabRF.joblib")
