@@ -6,3 +6,4 @@ data/
 __pycache__/
 __init__.py
 *.png
+*.json
