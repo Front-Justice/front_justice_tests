@@ -18,7 +18,7 @@ class KRAKEN():
 
 	def segment_lines_with_kraken(self, image):
 		seg_model = vgsl.TorchVGSLModel.load_model(self.segmentation_model)
-		baseline_seg = blla.segment(image, model=seg_model)
+		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model)
 		return baseline_seg
 
 	def predict_with_kraken(self, im:PIL.Image.Image, segments:kraken.blla.Segmentation) -> list[dict]:

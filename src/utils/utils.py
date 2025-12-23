@@ -4,6 +4,7 @@ import pickle
 import random
 import string
 import unicodedata
+import PIL.ImageDraw
 import PIL.Image as Image
 import re
 from thefuzz import fuzz
@@ -1068,3 +1069,10 @@ def get_baseline_from_string(line:dict,
 		cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
 		cropped.show()
 	return target_baseline
+
+def draw_lines_on_image(image:PIL.Image.Image, baseline:list):
+	print("Attempting to show image")
+	draw = PIL.ImageDraw.Draw(image)
+	for line in baseline:
+		draw.line(line, width=5, fill="green", joint="curve")
+	image.show()

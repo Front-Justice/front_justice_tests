@@ -947,12 +947,20 @@ class Extractor:
 
 		# Le rang du soldat se trouve juste avant le nom
 		apres_effet_de_juger = utils.split_after_keep_delimiter(name_line['prediction'], "juger")[-1]
-		rang = apres_effet_de_juger.split(nom_du_soldat_kraken)[0].replace("le", "").strip()
-		description_du_soldat['rang'] = {
-			"prediction": rang,
-			"extracted": rang,
-			"baseline": name_line['baseline']
-		}
+		try:
+			rang = apres_effet_de_juger.split(nom_du_soldat_kraken)[0].replace("le", "").strip()
+			description_du_soldat['rang'] = {
+				"prediction": rang,
+				"extracted": rang,
+				"baseline": name_line['baseline']
+			}
+		except ValueError:
+			description_du_soldat['rang'] = {
+				"prediction": apres_effet_de_juger,
+				"extracted": None,
+				"baseline": name_line['baseline']
+			}
+
 
 		# Le lieu de naissance est après la date de naissance
 		informations_naissance = {}
@@ -1163,7 +1171,8 @@ class Extractor:
 		]
 		:param image: [Debug] le chemin vers l'image à afficher
 		:param show_images: [Debug] afficher l'image
-		:return: Un dictionnaire de la forme:
+		:return: Un dictionnaire de la forme qui suit. l'entrée baseline peut contenir plusieurs lignes, d'où une liste
+		de niveau 3: [ligne[points[coords]]]
 			{
 			  "president": {
 				"extracted": {

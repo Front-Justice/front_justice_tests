@@ -44,7 +44,12 @@ class Pipeline():
 		# Les modèles d'OCR
 		self.resegment = resegment
 		self.retranscribe = retranscribe
-		self.kraken_lines_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_170p_lignes_best.mlmodel"
+		self.kraken_lines_model = {
+			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_1.mlmodel",
+			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
+			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
+			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel",
+			 }
 		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_638p.mlmodel"
 		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
 		self.minutes_annotation_file = ""
@@ -137,7 +142,7 @@ class Pipeline():
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
-	def transcription_kraken(self, image:str, transcription_only:bool):
+	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int):
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
@@ -145,10 +150,10 @@ class Pipeline():
 		:return:
 		"""
 		assert os.path.isfile(self.kraken_ocr_model), f"No model named {self.kraken_ocr_model}"
-		assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
+		# assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
 		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(".jpg", "_segments.json")}'
 		loaded_page = Image.open(image)
-		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model,
+		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
 								   ocr_model=self.kraken_ocr_model)
 		if transcription_only:
 			baseline = utils.unpickle_object(path=segmentation_json)
@@ -157,7 +162,7 @@ class Pipeline():
 			utils.pickle_object(obj=baseline, path=segmentation_json)
 		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
 
-	def traitement_p_1(self, page):
+	def traitement_p_1(self, page, show_image=False):
 		"""
 		Extraction d'information de la première page du procès. On propose une approche modulaire: une méthode par type
 		d'information recherchée
@@ -177,11 +182,16 @@ class Pipeline():
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe:
 			print("Segmentation/Transcription with kraken")
 			self.current_page_transcription = self.transcription_kraken(image=page["image_path"],
-																		transcription_only=self.resegment is False and self.retranscribe is True)
+																		transcription_only=self.resegment is False and self.retranscribe is True,
+																		current_page=1)
 			utils.save_as_dict(self.current_page_transcription, target_transcription)
 		else:
 			print("Found existing kraken transcription")
 			self.current_page_transcription = utils.load_json_to_dict(target_transcription)
+		if show_image:
+			image = Image.open(page["image_path"])
+			baselines = [line["baseline"] for line in self.current_page_transcription]
+			utils.draw_lines_on_image(image=image, baseline=baselines)
 		# Puis ont travaille sur les zones qu'on extrait entièrement
 
 		# La liste qui suit permet de vérifier si une zone est manquante.
@@ -364,7 +374,7 @@ class Pipeline():
 					if page['image_path'] != target:
 						continue
 				if page["classe"] == "page_1":
-					zones, annotations = self.traitement_p_1(page)
+					zones, annotations = self.traitement_p_1(page, show_image=True)
 					page["extractions"] = annotations
 					page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
