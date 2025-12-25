@@ -5,6 +5,7 @@ from kraken.lib import models
 from kraken import rpred
 import kraken
 import PIL.Image as Image
+from src.utils.utils import OCRRecord
 
 
 class KRAKEN():
@@ -49,4 +50,5 @@ class KRAKEN():
 			interm_dict['prediction'] = record.prediction
 			interm_dict['cuts'] = record.cuts
 			prediction.append(interm_dict)
-		return prediction
+		my_OCR_record = OCRRecord(record=prediction)
+		return my_OCR_record

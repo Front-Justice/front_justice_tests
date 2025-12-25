@@ -3,6 +3,9 @@ import re
 from text_to_num import text2num
 import regex
 
+from src.utils.utils import OCRLine, OCRRecord
+
+
 def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeline):
 	"""
 	Cette fonction extrait et formatte des informations géographiques.
@@ -70,15 +73,22 @@ def extraire_taille(lignes_description_physique):
 	ligne_taille, debug, index_taille = utils.match_line_by_substring(lignes_description_physique, chaine_taille,
 																	  return_index=True)
 	# On récupère la chaîne avant millimètres
-	taille, matching_millimetre = utils.approximate_split(ligne_taille['prediction'], "millimètres", sensibility=0.8,
+	taille, matching_millimetre = utils.approximate_split(ligne_taille.prediction, "millimètres", sensibility=0.8,
 														  return_word=True)
 	# Puis la chaîne après mètre
-	taille, matching_metre = utils.approximate_split(taille[0], "mètre", return_word=True)
+	try:
+		taille, matching_metre = utils.approximate_split(taille[0], "mètre", return_word=True)
+	except TypeError:
+		taille, matching_metre = utils.approximate_split(ligne_taille.prediction, "mètre", return_word=True)
 	taille = taille[1]
-	ligne_taille['prediction'] = utils.nfc_normalize(ligne_taille['prediction'])
-	starting_index = ligne_taille['prediction'].find(f"un {matching_metre}")
-	ending_index = ligne_taille['prediction'].find(f"{matching_millimetre}") + len(matching_millimetre)
-	matching_string = ligne_taille['prediction'][starting_index:ending_index]
+	prediction_taille = ligne_taille.prediction
+	prediction_taille = utils.nfc_normalize(prediction_taille)
+	starting_index = prediction_taille.find(f"un {matching_metre}")
+	try:
+		ending_index = prediction_taille.find(f"{matching_millimetre}") + len(matching_millimetre)
+	except TypeError:
+		ending_index = len(ligne_taille.prediction)
+	matching_string = ligne_taille.prediction[starting_index:ending_index]
 	specific_baseline = utils.get_baseline_from_string(ligne_taille, matching_string)
 	if taille == "" or set(taille) == {" "}:
 		taille = None
@@ -95,7 +105,7 @@ def extraire_taille(lignes_description_physique):
 	return {"extracted": taille,
 			"matching": matching_string,
 		   "baseline": specific_baseline,
-		   "prediction": ligne_taille["prediction"]}
+		   "prediction": ligne_taille.prediction}
 
 def extraire_matricule(lignes_description_physique):
 	dict_matricule = {}
@@ -103,7 +113,6 @@ def extraire_matricule(lignes_description_physique):
 	numero_matricule_2 = "numero matricule 00000"
 	ligne_matricule, debug, index_matricule = utils.match_line_by_substring(lignes_description_physique,
 																			numero_matricule, return_index=True)
-	print(ligne_matricule['prediction'])
 	# Si l'index est 0, c'est qu'il a identifié la première ligne qui contient des chiffres.
 	# Le numéro de matricule n'y est jamais indiqué.
 	if index_matricule == 0:
@@ -116,7 +125,7 @@ def extraire_matricule(lignes_description_physique):
 	regexp_matricule = r"[Nn]um[eé]ro matricule (\d+\.?\s{,3}\d+)|[Nn]?\^?o?\s?m\^?l?e? (\d+\.?\s{,3}\d+)|[nN]?\^?o?\s?m\^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
 	fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
 	try:
-		numero_matricule = regex.search(fuzzy_pattern, ligne_matricule['prediction'].lower(),
+		numero_matricule = regex.search(fuzzy_pattern, ligne_matricule.prediction.lower(),
 										regex.BESTMATCH).group(1)
 		numero = re.compile(r"(\d+\.?\s{,3}\d+)")
 		numero_extrait = re.search(numero, numero_matricule).group(1)
@@ -127,13 +136,13 @@ def extraire_matricule(lignes_description_physique):
 															numero_matricule)
 		dict_matricule["extracted"] = numero_extrait
 		dict_matricule["matching"] = numero_matricule
-		dict_matricule["prediction"] = ligne_matricule['prediction']
+		dict_matricule["prediction"] = ligne_matricule.prediction
 		dict_matricule["baseline"] = baseline_matricule
 	else:
 		dict_matricule = {
 			"extracted": None,
 			"matching": None,
-			"prediction": ligne_matricule['prediction']
+			"prediction": ligne_matricule.prediction
 		}
 	return dict_matricule
 
@@ -155,20 +164,20 @@ def extraire_cheveux(lignes_description_physique):
 	ligne_cheveux, debug, index_cheveux = utils.match_line_by_substring(lignes_description_physique, chaine_cheveux,
 																		return_index=True)
 
-	cheveux, matching_cheveux = utils.approximate_split(ligne_cheveux['prediction'], "cheveux",
-														sensibility=0.8, return_word=True)
-	front, matching_front = utils.approximate_split(ligne_cheveux['prediction'], "front",
+	cheveux, matching_cheveux = utils.approximate_split(ligne_cheveux.prediction, "cheveux",
+														sensibility=0.7, return_word=True)
+	front, matching_front = utils.approximate_split(ligne_cheveux.prediction, "front",
 													sensibility=0.7, return_word=True)
 
-	starting_index = ligne_cheveux['prediction'].find(matching_cheveux)
+	starting_index = ligne_cheveux.prediction.find(matching_cheveux)
 
 	# Dans certains cas l'information est sur une ligne isolée et le front apparaît sur une autre ligne
 	try:
-		ending_index = ligne_cheveux['prediction'].find(f"{matching_front}") + len(matching_front)
+		ending_index = ligne_cheveux.prediction.find(f"{matching_front}") + len(matching_front)
 	except TypeError:
 		matching_front = ""
-		ending_index = len(ligne_cheveux['prediction'])
-	matching_string = ligne_cheveux['prediction'][starting_index:ending_index]
+		ending_index = len(ligne_cheveux.prediction)
+	matching_string = ligne_cheveux.prediction[starting_index:ending_index]
 	specific_baseline = utils.get_baseline_from_string(ligne_cheveux, matching_string)
 	extracted_cheveux = utils.strip_punctuation(matching_string.replace(matching_cheveux, "").replace(matching_front, ""))
 	if extracted_cheveux == "":
@@ -176,7 +185,7 @@ def extraire_cheveux(lignes_description_physique):
 	return {"extracted": extracted_cheveux,
 			"matching":  matching_string.replace(matching_front, ""),
 			"baseline": specific_baseline,
-			"prediction": ligne_cheveux["prediction"]}
+			"prediction": ligne_cheveux.prediction}
 
 def extraire_front(lignes_description_physique):
 	"""
@@ -196,18 +205,18 @@ def extraire_front(lignes_description_physique):
 	ligne_front, debug, index_front = utils.match_line_by_substring(lignes_description_physique, chaine_front,
 																	return_index=True)
 
-	front, matching_front = utils.approximate_split(ligne_front['prediction'], "front",
+	front, matching_front = utils.approximate_split(ligne_front.prediction, "front",
 													sensibility=0.7, return_word=True)
 
 	try:
-		starting_index = ligne_front['prediction'].find(matching_front)
+		starting_index = ligne_front.prediction.find(matching_front)
 	except TypeError:
 		return {"extracted": None,
 			"matching":  None,
-			"baseline": ligne_front["baseline"],
-			"prediction": ligne_front["prediction"]}
+			"baseline": ligne_front.baseline,
+			"prediction": ligne_front.prediction}
 
-	matching_string = ligne_front['prediction'][starting_index:]
+	matching_string = ligne_front.prediction[starting_index:]
 	specific_baseline = utils.get_baseline_from_string(ligne_front, matching_string)
 	extracted_front = utils.strip_punctuation(matching_string.replace(matching_front, ""))
 	if extracted_front == "":
@@ -215,7 +224,7 @@ def extraire_front(lignes_description_physique):
 	return {"extracted": extracted_front,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
-			"prediction": ligne_front["prediction"]}
+			"prediction": ligne_front.prediction}
 
 
 def extraire_visage(lignes_description_physique):
@@ -236,16 +245,16 @@ def extraire_visage(lignes_description_physique):
 	ligne_visage, debug, index_visage = utils.match_line_by_substring(lignes_description_physique, chaine_visage,
 																	  return_index=True)
 
-	visage, matching_visage = utils.approximate_split(ligne_visage['prediction'], "visage",
+	visage, matching_visage = utils.approximate_split(ligne_visage.prediction, "visage",
 													sensibility=0.8, return_word=True)
 
 	try:
-		starting_index = ligne_visage['prediction'].find(matching_visage)
+		starting_index = ligne_visage.prediction.find(matching_visage)
 	except TypeError:
 		return {"extracted": None,
-				"prediction": ligne_visage["prediction"]}
+				"prediction": ligne_visage.prediction}
 
-	matching_string = ligne_visage['prediction'][starting_index:]
+	matching_string = ligne_visage.prediction[starting_index:]
 	specific_baseline = utils.get_baseline_from_string(ligne_visage, matching_string)
 	extracted_visage = utils.strip_punctuation(matching_string.replace(matching_visage, ""))
 	if extracted_visage == "":
@@ -253,7 +262,7 @@ def extraire_visage(lignes_description_physique):
 	return {"extracted": extracted_visage,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
-			"prediction": ligne_visage["prediction"]}
+			"prediction": ligne_visage.prediction}
 
 
 def extraire_yeux(lignes_description_physique):
@@ -274,28 +283,28 @@ def extraire_yeux(lignes_description_physique):
 	ligne_yeux, debug, index_yeux = utils.match_line_by_substring(lignes_description_physique, chaine_yeux,
 																  return_index=True)
 
-	yeux, matching_yeux = utils.approximate_split(ligne_yeux['prediction'], "yeux",
+	yeux, matching_yeux = utils.approximate_split(ligne_yeux.prediction, "yeux",
 													sensibility=0.8, return_word=True)
-	nez, matching_nez = utils.approximate_split(ligne_yeux['prediction'], "nez",
+	nez, matching_nez = utils.approximate_split(ligne_yeux.prediction, "nez",
 													sensibility=0.8, return_word=True)
 
 	try:
-		starting_index = ligne_yeux['prediction'].find(matching_yeux)
+		starting_index = ligne_yeux.prediction.find(matching_yeux)
 	except TypeError:
 		return {"extracted": None,
 				"matching":  None,
-				"baseline": ligne_yeux["baseline"],
-				"prediction": ligne_yeux["prediction"]}
+				"baseline": ligne_yeux.baseline,
+				"prediction": ligne_yeux.prediction}
 
 
 	# Dans certains cas l'information est sur une ligne isolée et le yeux apparaît sur une autre ligne
 	try:
-		ending_index = ligne_yeux['prediction'].find(f"{matching_nez}")
+		ending_index = ligne_yeux.prediction.find(f"{matching_nez}")
 	except TypeError:
 		matching_yeux = ""
-		ending_index = len(ligne_yeux['prediction'])
+		ending_index = len(ligne_yeux.prediction)
 
-	matching_string = ligne_yeux['prediction'][starting_index:ending_index]
+	matching_string = ligne_yeux.prediction[starting_index:ending_index]
 	specific_baseline = utils.get_baseline_from_string(ligne_yeux, matching_string)
 	extracted_yeux = utils.strip_punctuation(matching_string.replace(matching_yeux, ""))
 	if extracted_yeux == "":
@@ -303,19 +312,19 @@ def extraire_yeux(lignes_description_physique):
 	return {"extracted": extracted_yeux,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
-			"prediction": ligne_yeux["prediction"]}
+			"prediction": ligne_yeux.prediction}
 
 def extraire_affectation_soldat(lignes_description_physique):
 	derniere_ligne = lignes_description_physique[-1]
-	if utils.check_word_in_sentence(derniere_ligne['prediction'],
+	if utils.check_word_in_sentence(derniere_ligne.prediction,
 									target_word=['Inculpé', 'Accusé'],
 									sensibility=0.6,
 									debug=False)[0] is True:
 		ligne_affectation = None
-	elif len(derniere_ligne['prediction']) < 10:
+	elif len(derniere_ligne.prediction) < 10:
 		ligne_affectation = None
 	else:
-		ligne_affectation = derniere_ligne['prediction']
+		ligne_affectation = derniere_ligne.prediction
 	return {"prediction": ligne_affectation,
 			"extracted": ligne_affectation}
 
@@ -336,23 +345,23 @@ def extraire_marques_particulieres(lignes_description_physique, matricule) -> di
 	clean_regexp = re.compile("^\s?:?\s?")
 	ligne_marques, debug, index_marques = utils.match_line_by_substring(lignes_description_physique, chaine_marques,
 																		return_index=True)
-	print(ligne_marques['prediction'])
+	print(ligne_marques.prediction)
 	try:
-		particulieres, matching_particulieres = utils.approximate_split(ligne_marques['prediction'],
+		particulieres, matching_particulieres = utils.approximate_split(ligne_marques.prediction,
 																		  "particulières",
 																		  sensibility=0.9,
 																		  return_word=True)
 	except TypeError:
 		return {"extracted": None,
-				"baseline": ligne_marques["baseline"],
-				"prediction": ligne_marques["prediction"]}
+				"baseline": ligne_marques.baseline,
+				"prediction": ligne_marques.prediction}
 
 	try:
 		corresp_string = particulieres[-1]
 	except TypeError:
 		return {"extracted": None,
-				"baseline": ligne_marques["baseline"],
-				"prediction": ligne_marques["prediction"]}
+				"baseline": ligne_marques.baseline,
+				"prediction": ligne_marques.prediction}
 	clean = re.sub(clean_regexp, "", corresp_string)
 
 	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
@@ -368,8 +377,8 @@ def extraire_marques_particulieres(lignes_description_physique, matricule) -> di
 		clean = "RàS"
 
 	return {"extracted": clean,
-			"baseline": ligne_marques["baseline"],
-			"prediction": ligne_marques["prediction"]}
+			"baseline": ligne_marques.baseline,
+			"prediction": ligne_marques.prediction}
 
 def extraire_renseignements_complementaires(lignes_description_physique, matricule):
 	"""
@@ -389,23 +398,23 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 
 	ligne_renseignements, debug, index_renseignements = utils.match_line_by_substring(lignes_description_physique, chaine_renseignements,
 																					  return_index=True)
-	print(ligne_renseignements['prediction'])
+	print(ligne_renseignements.prediction)
 	try:
-		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements['prediction'],
+		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements.prediction,
 																		  "complémentaires",
 																		  sensibility=0.9,
 																		  return_word=True)
 	except TypeError:
 		return {"extracted": None,
-				"baseline": ligne_renseignements["baseline"],
-				"prediction": ligne_renseignements["prediction"]}
+				"baseline": ligne_renseignements.baseline,
+				"prediction": ligne_renseignements.prediction}
 
 	try:
 		corresp_string = complementaire[-1]
 	except TypeError:
 		return {"extracted": None,
-				"baseline": ligne_renseignements["baseline"],
-				"prediction": ligne_renseignements["prediction"]}
+				"baseline": ligne_renseignements.baseline,
+				"prediction": ligne_renseignements.prediction}
 	clean = re.sub(clean_regexp, "", corresp_string)
 
 	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
@@ -421,8 +430,8 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 		clean = "RàS"
 
 	return {"extracted": clean,
-			"baseline": ligne_renseignements["baseline"],
-			"prediction": ligne_renseignements["prediction"]}
+			"baseline": ligne_renseignements.baseline,
+			"prediction": ligne_renseignements.prediction}
 
 def extraire_nez(lignes_description_physique):
 	"""
@@ -442,26 +451,26 @@ def extraire_nez(lignes_description_physique):
 	ligne_nez, debug, index_nez = utils.match_line_by_substring(lignes_description_physique, chaine_nez,
 																return_index=True)
 
-	nez, matching_nez = utils.approximate_split(ligne_nez['prediction'], "nez",
+	nez, matching_nez = utils.approximate_split(ligne_nez.prediction, "nez",
 													sensibility=0.8, return_word=True)
-	visage, matching_visage = utils.approximate_split(ligne_nez['prediction'], "visage",
+	visage, matching_visage = utils.approximate_split(ligne_nez.prediction, "visage",
 													sensibility=0.8, return_word=True)
 
 	try:
-		starting_index = ligne_nez['prediction'].find(matching_nez)
+		starting_index = ligne_nez.prediction.find(matching_nez)
 	except TypeError:
 		return {"extracted": None,
 				"matching": None,
-				"baseline": ligne_nez["baseline"],
-				"prediction": ligne_nez["prediction"]}
+				"baseline": ligne_nez.baseline,
+				"prediction": ligne_nez.prediction}
 	# Dans certains cas l'information est sur une ligne isolée et le nez apparaît sur une autre ligne
 	try:
-		ending_index = ligne_nez['prediction'].find(f"{matching_visage}")
+		ending_index = ligne_nez.prediction.find(f"{matching_visage}")
 	except TypeError:
 		matching_nez = ""
-		ending_index = len(ligne_nez['prediction'])
+		ending_index = len(ligne_nez.prediction)
 
-	matching_string = ligne_nez['prediction'][starting_index:ending_index]
+	matching_string = ligne_nez.prediction[starting_index:ending_index]
 	specific_baseline = utils.get_baseline_from_string(ligne_nez, matching_string)
 	extracted_nez = utils.strip_punctuation(matching_string.replace(matching_nez, ""))
 	if extracted_nez == "":
@@ -469,7 +478,7 @@ def extraire_nez(lignes_description_physique):
 	return {"extracted": extracted_nez,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
-			"prediction": ligne_nez["prediction"]}
+			"prediction": ligne_nez.prediction}
 
 
 
@@ -483,8 +492,8 @@ def extraire_greffier(lignes_zone_magistrat:list, ner_pipeline):
 	"""
 	greffier_dict = {}
 	ligne_greffier, _ = utils.match_line_by_substring(lignes_zone_magistrat, "pres ledit conseil")
-	baseline = ligne_greffier['baseline']
-	ligne_greffier = ligne_greffier['prediction']
+	baseline = ligne_greffier.baseline
+	ligne_greffier = ligne_greffier.prediction
 	greffier, form_greffier = utils.check_word_in_sentence(ligne_greffier, "Greffier")
 	if greffier is True:
 		debut_de_chaine = ligne_greffier.split(form_greffier)[0]
@@ -639,8 +648,8 @@ def extraire_commissaire(lignes_zone_magistrat:list, ner_pipeline):
 	commissaire_dict = {}
 	ligne_commissaire, _ = utils.match_line_by_substring(lignes_zone_magistrat,
 														 "commissaire du gouvernement")
-	baseline = ligne_commissaire['baseline']
-	ligne_commissaire = ligne_commissaire['prediction']
+	baseline = ligne_commissaire.baseline
+	ligne_commissaire = ligne_commissaire.prediction
 	commissaire, form_commissaire = utils.check_word_in_sentence(ligne_commissaire, "commissaire")
 	if commissaire is True:
 		debut_de_chaine = ligne_commissaire.split(form_commissaire)[0]
@@ -671,7 +680,7 @@ def extraire_commissaire(lignes_zone_magistrat:list, ner_pipeline):
 	return commissaire_dict
 
 
-def extraire_general(lignes_zone_magistrat:list, ner_pipeline):
+def extraire_general(lignes_zone_magistrat:OCRRecord, ner_pipeline):
 	"""
 	Cette fonction extrait les informations concernant le militaire gradé nommant les magistrats:
 	"tous nommés par le (1) Général Commandant la 2^e Armée"
@@ -680,8 +689,8 @@ def extraire_general(lignes_zone_magistrat:list, ner_pipeline):
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
 	ligne_grade, _ = utils.match_line_by_substring(lignes_zone_magistrat, "nommés par le (1) général")
-	baseline = ligne_grade['baseline']
-	ligne_grade = ligne_grade['prediction']
+	baseline = ligne_grade.baseline
+	ligne_grade = ligne_grade.prediction
 	ligne_grade = utils.nfc_normalize(ligne_grade)
 	grade, form_grade = utils.check_word_in_sentence(ligne_grade, "général")
 	if grade is True:

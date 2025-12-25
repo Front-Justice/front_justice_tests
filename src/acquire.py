@@ -1,7 +1,5 @@
 import argparse
-import json
 import os
-import sys
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
@@ -39,13 +37,13 @@ class Pipeline():
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
 			self.yolo_models[name] = yolo.load(path)
-		self.YOLO_Segmenter_P1 = yolo.YOLOSegmenter(models=self.yolo_models)
+		self.YOLO_Segmenter = yolo.YOLOSegmenter(models=self.yolo_models)
 
 		# Les modèles d'OCR
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = {
-			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_1.mlmodel",
+			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
 			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
 			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
 			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel",
@@ -126,7 +124,6 @@ class Pipeline():
 				self.minutes[current_minute_number] = current_minute
 				current_minute = []
 				current_minute_number += 1
-		print(self.minutes)
 		utils.save_as_dict(self.minutes, out_dir)
 
 	def check_image_consistency(self, current_image):
@@ -162,6 +159,86 @@ class Pipeline():
 			utils.pickle_object(obj=baseline, path=segmentation_json)
 		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
 
+
+	def traitement_p_2(self, page, show_image=False):
+		"""
+		Extraction d'information de la deuxième page du procès. On propose une approche modulaire: une méthode par type
+		d'information recherchée
+		On extrait d'abord toutes les informations à l'aide d'un modèle généraliste
+		Puis on extrait les magistrats
+		:return: On amende le fichier JSON général.
+		"""
+
+		# On segmente la page 2: boxes générales
+		print("---")
+		print(f"Treating {page}")
+		# On s'occupe d'abord de la transcription des lignes
+
+
+		classes_page_2 = ["avertissement",
+						  "defense",
+						  "formalites",
+						  "identite_soldat",
+						  "Nom du soldat",
+						  "questions",
+						  "requisitoire",
+						  "seance_ouverte"]
+		current_dict = {}
+		loaded_image = Image.open(page["image_path"])
+		width, height = loaded_image.size
+		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
+		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
+		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
+		loaded_image = loaded_image.resize(new_size)
+		zones_page_2, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=classes_page_2,
+																		   confidence=0.5,
+																		   model=self.yolo_models["page_2"],
+																		   show_image=False)
+
+		current_dict["identite_soldat"] = self.extractor.extraire_identite_soldat_p2(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_2,
+			image=page["image_path"],
+			show_images=False,
+			loaded_image=loaded_image)
+
+		zone_dict = {}
+		zone_dict["zones_identifiées"] = zones_page_2
+		zone_dict["zones_manquantes"] = zones_manquantes
+		return zone_dict, current_dict
+
+	def transcription_page(self, page:str, show_image:bool = False):
+		"""
+		Fonction wrapper de transcription d'une page
+		:param page: La page à transcrire
+		:param show_image: Montrer l'image transcrite avec les lignes ?
+		:return:
+		"""
+		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.pickle')}"
+		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe:
+			print("Segmentation/Transcription with kraken")
+			self.current_page_transcription = self.transcription_kraken(
+				image=page["image_path"],
+				transcription_only=self.resegment is False
+								   and self.retranscribe is True,
+				current_page=int(
+					page['classe'].split("_")[-1]
+																		)
+																		)
+			utils.pickle_object(self.current_page_transcription, target_transcription)
+		else:
+			print("Found existing kraken transcription")
+			self.current_page_transcription = utils.unpickle_object(target_transcription)
+
+		if show_image:
+			image = Image.open(page["image_path"])
+			baselines = [line["baseline"] for line in self.current_page_transcription]
+			utils.draw_lines_on_image(image=image, baseline=baselines)
+
+
+
+
 	def traitement_p_1(self, page, show_image=False):
 		"""
 		Extraction d'information de la première page du procès. On propose une approche modulaire: une méthode par type
@@ -175,24 +252,6 @@ class Pipeline():
 		print("---")
 		print(f"Treating {page}")
 		# On s'occupe d'abord de la transcription des lignes
-
-		# TODO: à supprimer, éventuellement, utile pour le debug. On vérifie si le fichier n'existe pas
-		# Il faut re-lancer les prédictions en cas de nouveau modèle d'HTR/Segmentation
-		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
-		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe:
-			print("Segmentation/Transcription with kraken")
-			self.current_page_transcription = self.transcription_kraken(image=page["image_path"],
-																		transcription_only=self.resegment is False and self.retranscribe is True,
-																		current_page=1)
-			utils.save_as_dict(self.current_page_transcription, target_transcription)
-		else:
-			print("Found existing kraken transcription")
-			self.current_page_transcription = utils.load_json_to_dict(target_transcription)
-		if show_image:
-			image = Image.open(page["image_path"])
-			baselines = [line["baseline"] for line in self.current_page_transcription]
-			utils.draw_lines_on_image(image=image, baseline=baselines)
-		# Puis ont travaille sur les zones qu'on extrait entièrement
 
 		# La liste qui suit permet de vérifier si une zone est manquante.
 		classes_page_1 = ["Description du Soldat",
@@ -211,16 +270,15 @@ class Pipeline():
 		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
 		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
 		loaded_image = loaded_image.resize(new_size)
-		zones_page_1, zones_manquantes = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
-																			  target_classes=classes_page_1,
-																			  confidence=0.5,
-																			  model=self.yolo_models["page_1"],
-																			  show_image=False)
+		zones_page_1, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=classes_page_1,
+																		   confidence=0.5,
+																		   model=self.yolo_models["page_1"],
+																		   show_image=False)
 
 		zone_dict = {}
 		zone_dict["zones_identifiées"] = zones_page_1
 		zone_dict["zones_manquantes"] = zones_manquantes
-
 
 		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
 			ocr_prediction=self.current_page_transcription,
@@ -272,11 +330,11 @@ class Pipeline():
 		else:
 			classes_magistrats = ["ligne",
 								  "Colonne"]
-			magistrats, _ = self.YOLO_Segmenter_P1.segment_zones(page["image_path"],
-																 target_classes=classes_magistrats,
-																 confidence=0.5,
-																 model=self.yolo_models["magistrats"],
-																 show_image=False)
+			magistrats, _ = self.YOLO_Segmenter.segment_zones(page["image_path"],
+															  target_classes=classes_magistrats,
+															  confidence=0.5,
+															  model=self.yolo_models["magistrats"],
+															  show_image=False)
 			test_lignes = utils.test_number_of_zones(magistrats, label="ligne", number=6)
 			if test_lignes is False:
 				print("Warning: une des lignes du jury n'a pas été identifiée.")
@@ -370,13 +428,16 @@ class Pipeline():
 		# exit(0)
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
+				self.transcription_page(page=page)
 				if target:
 					if page['image_path'] != target:
 						continue
 				if page["classe"] == "page_1":
-					zones, annotations = self.traitement_p_1(page, show_image=True)
-					page["extractions"] = annotations
-					page["zones"] = zones
+					zones, annotations = self.traitement_p_1(page=page, show_image=False)
+				elif page['classe'] == "page_2":
+					zones, annotations = self.traitement_p_2(page=page, show_image=False)
+				page["extractions"] = annotations
+				page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 		utils.convert_to_csv(self.minutes, "results/database.csv")
 		exit(0)
@@ -395,6 +456,7 @@ def main(images_dir:str, target:str=None, debug:bool=False, use_party:bool=True,
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov11_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
+		"page_2": "src/Vision/models/yolov11_page_2.pt"
 	}
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab_SVC.joblib",

@@ -14,6 +14,35 @@ from shapely.geometry import Polygon
 from collections import namedtuple
 import spellchecker
 import pandas as pd
+from dataclasses import dataclass
+
+
+
+@dataclass
+class OCRLine:
+	"""
+	Classe principale pour la description d'une ligne en sortie de Kraken ou Party. Contient la baseline, la prédiction,
+	les cuts (= les polygones individuels pour chaque caractère prédit)
+	"""
+	baseline: list
+	prediction: str
+	cuts: list
+
+class OCRRecord(list):
+	"""
+	Classe principale qui contient les résultats de l'OCR.
+	Une liste d'objets OCRLine qui contiennent chacun la baseline, la prédiction, les cuts.
+	"""
+	def __init__(self, record):
+		super().__init__()
+		self.record:list = []
+		for item in record:
+			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
+			self.record.append(Line)
+
+	def __iter__(self):
+		return iter(self.record)
+
 
 number_dict = {"un": 1,
 				"deux": 2,
@@ -281,14 +310,14 @@ def point_in_box(coord, box_coord):
 # 								   self.prediction,
 # 								   self.cuts)
 
-def vertical_order_lines(lines: list[dict]) -> list[dict]:
+def vertical_order_lines(lines: OCRRecord) -> OCRRecord:
 	"""
 	Cette fonction trie les lignes de façon verticale (de haut en bas). Elle suppose un filtre
 	préalable des lignes au sein des zones pour être efficace
 	:param lines: la liste de dictionnaires (baseline, prediction, cuts)
 	:return: la liste ordonnée
 	"""
-	sorted_list = sorted(lines, key=lambda x: x["baseline"][0][1])
+	sorted_list = sorted(lines, key=lambda x: x.baseline[0][1])
 	return sorted_list
 
 
@@ -392,7 +421,9 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	return forename, certainty
 
 
-def match_lines_in_zones(ocr_prediction: list[dict], zone_as_rectangle: namedtuple, intersect_ratio=0.5):
+def match_lines_in_zones(ocr_prediction: OCRRecord,
+						 zone_as_rectangle: namedtuple,
+						 intersect_ratio=0.5) -> list[OCRLine]:
 	"""
 	Cette fonction identifie toutes les lignes qui traversent une boîte
 	:param ocr_prediction: un objet de classe OCRPrediction. les lignes comme une liste de dictionnaires (baseline, prediction, cuts)
@@ -402,16 +433,26 @@ def match_lines_in_zones(ocr_prediction: list[dict], zone_as_rectangle: namedtup
 	"""
 	corresponding_lines = []
 	for idx, line in enumerate(ocr_prediction):
-		baseline = line['baseline']
+		baseline = line.baseline
 
 		# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
 		converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
 		is_in_box = check_if_line_in_box(box_coord=zone_as_rectangle,
 										 baseline=converted_baseline,
 										 intersect_ratio=intersect_ratio)
+
 		if is_in_box is True:
 			corresponding_lines.append(line)
 	return corresponding_lines
+
+def draw_rectangle(image, rectangle, return_image=False):
+	print("Attempting to show image")
+	draw = PIL.ImageDraw.Draw(image)
+	draw.rectangle(rectangle, outline="red", width=10)
+	if return_image is False:
+		image.show()
+	else:
+		return image
 
 def clean_spaces(string) -> str:
 	spaces_regexp = re.compile("\s+")
@@ -516,6 +557,8 @@ def convert_to_csv(extractions:dict, outpath:str):
 					   "Antécédents"]
 	for idx_minute, minute in extractions.items():
 		for idx_page, page in enumerate(minute):
+			if page['classe'] != "page_1":
+				continue
 			try:
 				page['extractions']
 			except KeyError:
@@ -744,7 +787,7 @@ def convert_to_csv(extractions:dict, outpath:str):
 def random_string():
 	return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
-def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
+def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 	"""
 	Cette fonction extrait les caractères compris dans une boîte par la comparaison
 	entre cette boîte et les polygones individuels de la prédiction
@@ -765,7 +808,7 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 		}
 	:return: la chaîne de caractères reconstruite à partir des intersections
 	"""
-	assert len(line['prediction']) == len(line['cuts']), ("Un problème dans les données est apparu. "
+	assert len(line.prediction) == len(line.cuts), ("Un problème dans les données est apparu. "
 														  "La longueur de la prédiction doit être identique "
 														  "à celle des cuts")
 	out_string = ""
@@ -773,7 +816,7 @@ def extract_string_from_cuts(box: list[list[int]], line: dict) -> str:
 
 	# Solution tirée de https://gis.stackexchange.com/a/90063
 	polygon_soldat = Polygon([(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)])
-	for char, cut in zip(line['prediction'], line['cuts']):
+	for char, cut in zip(line.prediction, line.cuts):
 		cut = Polygon([tuple(coords) for coords in cut])
 		intersection = polygon_soldat.intersects(cut)
 		if intersection:
@@ -824,12 +867,12 @@ def approximate_split(sentence:str, word:str, sensibility:float=0.5, return_word
 	word = nfc_normalize(word)
 	match, matching_word = check_word_in_sentence(sentence, word, sensibility)
 	if match:
-		if return_word:
+		if return_word is True:
 			return sentence.split(matching_word), matching_word
 		else:
 			return sentence.split(matching_word)
 	else:
-		if return_word:
+		if return_word is True:
 			return None, None
 		else:
 			return None
@@ -897,18 +940,20 @@ def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5, 
 
 
 
-def match_line_by_substring(corresponding_lines:list, string_to_match: str | list, return_index:bool=False):
+def match_line_by_substring(corresponding_lines:OCRRecord, string_to_match: str | list, return_index:bool=False) -> tuple[OCRLine,list,int] | tuple[OCRLine,list]:
 	"""
 	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
-	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher
+	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher. Objet OCRRecord
 	:param string_to_match: la chaîne à trouver ou une liste de chaines alternatives à identifier
 	:return: la ligne qui contient la chaîne de caractères et le zip de 1) la ligne et 2) la similarité avec la requête.
 	Peut également retourner l'indice de l'item identifié dans la liste.
 	"""
 	# On commence par normaliser la chaîne à matcher
 	distances = []
+	print(f"Trying to match {string_to_match}. Lines: {corresponding_lines}.")
 	for idx, ligne in enumerate(corresponding_lines):
-		prediction = ligne['prediction']
+		prediction = ligne.prediction
+		print(prediction)
 		prediction = prediction.lower()
 		prediction = nfc_normalize(prediction)
 		# On identifie la ligne pouvant contenir à l'effet de juger
@@ -931,7 +976,7 @@ def match_line_by_substring(corresponding_lines:list, string_to_match: str | lis
 		distances.append(max(interm_distances))
 	correct_line_index = distances.index(max(distances))
 	name_line = corresponding_lines[correct_line_index]
-	debug_zip = list(zip([item['prediction'] for item in corresponding_lines], distances))
+	debug_zip = list(zip([item.prediction for item in corresponding_lines], distances))
 	if return_index is True:
 		return name_line, debug_zip, correct_line_index
 	else:
@@ -947,19 +992,18 @@ def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
 
-def check_if_line_in_box(box_coord, baseline, intersect_ratio=.5) -> bool:
+def check_if_line_in_box(box_coord:list[list[int]], baseline:list[int], intersect_ratio=.5) -> bool:
 	"""
 	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone.
-	Présuppose des lignes globalement droites (= représentables par des fonctions affines)
-	:param box_coord: les coordonnées de la zone
-	:param baseline: les points de la ligne
-	:param intersect_ratio: la proportion de la ligne comprise dans la zone pour retourner vrai
+	Présuppose des lignes globalement droites (= représentables par des fonctions affines).
+	:param box_coord: les coordonnées de la zone [[x1, y1], [x2, y2]]
+	:param baseline: les points de la ligne [x1, y1, x2, y2]
+	:param intersect_ratio: la proportion de la ligne comprise dans la zone pour retourner vrai. Diminuer pour les petites zones.
 	:return: Bool
 	"""
 
 	# On identifie la fonction qui représente la droite passant par les 2 points extrêmes de la ligne
 	a, b = produce_line_function(baseline)
-
 	# On regarde la distance horizontale entre ces deux points
 	number_points = 20
 	x_distance = round(baseline[-2] - baseline[0])
@@ -1030,7 +1074,7 @@ def format_coordinates(coords):
 	return [[rounded[0], rounded[1]], [rounded[2], rounded[3]]]
 
 
-def get_baseline_from_string(line:dict,
+def get_baseline_from_string(line:OCRLine,
 							 target_string:str,
 							 loaded_image:Image.Image=None,
 							 show_image:bool=False) -> tuple[tuple[int, int], tuple[int, int]] | None:
@@ -1039,10 +1083,9 @@ def get_baseline_from_string(line:dict,
 	:param line: La ligne, dictionnaire {prediction, baseline, cuts}
 	:return: La ligne de base qui contient le texte : [[x_1, y_1], [x_2, y_2]]
 	"""
-	assert all([item in line for item in ['cuts', 'prediction', 'baseline']]), f"La structure de la ligne est incorrecte: {line}"
-	cuts = line["cuts"]
-	baseline = line["baseline"]
-	prediction = line["prediction"]
+	cuts = line.cuts
+	baseline = line.baseline
+	prediction = line.prediction
 	prediction = prediction.lower()
 	target_string = target_string.lower()
 	if target_string not in prediction.lower():
@@ -1070,9 +1113,12 @@ def get_baseline_from_string(line:dict,
 		cropped.show()
 	return target_baseline
 
-def draw_lines_on_image(image:PIL.Image.Image, baseline:list):
+def draw_lines_on_image(image:PIL.Image.Image, baseline:list, return_image=False):
 	print("Attempting to show image")
 	draw = PIL.ImageDraw.Draw(image)
 	for line in baseline:
 		draw.line(line, width=5, fill="green", joint="curve")
-	image.show()
+	if return_image is False:
+		image.show()
+	else:
+		return image
