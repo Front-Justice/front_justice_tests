@@ -12,11 +12,47 @@ from Levenshtein import distance
 from difflib import SequenceMatcher
 from shapely.geometry import Polygon
 from collections import namedtuple
-import spellchecker
 import pandas as pd
 from dataclasses import dataclass
+import collections
+import fuzzysearch
 
+@dataclass
+class YOLOZone:
+	"""CLasse principale pour la description d'une zone"""
+	label: str
+	coordinates: list[list]
 
+class YOLORecord():
+	def __init__(self, record:list[dict]):
+		self.record:list = []
+		for item in record:
+			Zone: YOLOZone = YOLOZone(label=item['label'], coordinates=item['coordinates'])
+			self.record.append(Zone)
+
+	def index(self, item):
+		return self.record.index(item)
+
+	def __iter__(self):
+		return iter(self.record)
+
+	def __len__(self) -> int:
+		return len(self.record)
+
+	def __getitem__(self, index: int) -> YOLOZone:
+		return self.record[index]
+
+	def to_json(self):
+		"""
+		Transforme un objet YOLORecord en dictionnaire.
+		:return:
+		"""
+		dictionnary = []
+		for item in self.record:
+			dictionnary.append({"label": item.label,
+								"coordinates": item.coordinates
+								})
+		return dictionnary
 
 @dataclass
 class OCRLine:
@@ -28,20 +64,59 @@ class OCRLine:
 	prediction: str
 	cuts: list
 
-class OCRRecord(list):
+class OCRRecord():
 	"""
 	Classe principale qui contient les résultats de l'OCR.
 	Une liste d'objets OCRLine qui contiennent chacun la baseline, la prédiction, les cuts.
 	"""
-	def __init__(self, record):
-		super().__init__()
+	def __init__(self, record:list[dict] = []):
 		self.record:list = []
 		for item in record:
 			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
 			self.record.append(Line)
 
+	def recreate_record(self, list_of_lines:list[OCRLine]):
+		self.record:list = []
+		for line in list_of_lines:
+			self.record.append(line)
+
+	def join_transcription(self) -> str:
+		"""
+		Cette fonction retourne le texte fusionné de toutes les lignes d'un OCRRecord.
+		:return: Une chaîne de caractères.
+		"""
+		return " ".join([line.prediction for line in self.record])
+
+	def index(self, item):
+		return self.record.index(item)
+
 	def __iter__(self):
 		return iter(self.record)
+
+	def __len__(self) -> int:
+		return len(self.record)
+
+	def __getitem__(self, index: int) -> OCRLine:
+		return self.record[index]
+
+	def to_json(self):
+		"""
+		Transforme un objet OCRRecord en dictionnaire.
+		:return:
+		"""
+		dictionnary = []
+		for item in self.record:
+			dictionnary.append({"prediction": item.prediction,
+								"baseline": item.baseline,
+								"cuts": item.cuts})
+		return dictionnary
+
+	def from_json(self, path):
+		lines_as_dict = load_json_to_dict(path)
+		self.record = []
+		for item in lines_as_dict:
+			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
+			self.record.append(Line)
 
 
 number_dict = {"un": 1,
@@ -91,7 +166,6 @@ def calcule_age(date_naissance:str, date_proces:str) -> int|None:
 	:param date_proces: la date du procès, format DD/JJ/MMMM
 	:return: l'age ou "Inconnu" si il manque une des deux dates.
 	"""
-	print(date_naissance, date_proces)
 	annee_proces = int(date_proces.split("/")[-1])
 	annee_naissance = int(date_naissance.split("/")[-1])
 
@@ -120,6 +194,7 @@ def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 		pos = position + 1
 		out_split.append(target_string[delimiters[pos - 1]: delimiters[pos]])
 	return out_split
+
 
 def tokenize_sent(sentence:str) -> list:
 	punctuation_and_space = re.compile(r'(["\'\-?,!;\.:\s])')
@@ -214,7 +289,6 @@ def correct_based_on_list(sentence, list):
 			result.append(token)
 	normalized = " ".join([item for item in result if item != ""])
 	normalized = normalized.lower()
-	print(f"{sentence} -> {normalized}")
 	return normalized
 
 def correct_description_soldat(string:str):
@@ -321,7 +395,7 @@ def vertical_order_lines(lines: OCRRecord) -> OCRRecord:
 	return sorted_list
 
 
-def vertical_order_zones(annotations: list[dict]) -> list[dict]:
+def vertical_order_zones(annotations: YOLORecord) -> YOLORecord:
 	"""
 	Fonction pour ordonner les zones verticalement (du plus haut au plus bas).
 	On ordonne par la deuxième coordonnée de la boîte (y1)
@@ -338,7 +412,7 @@ def vertical_order_zones(annotations: list[dict]) -> list[dict]:
 	]
 	:return: Les mêmes annotations ordonnées
 	"""
-	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0][1])
+	sorted_list = sorted(annotations, key=lambda x: x.coordinates[0][1])
 	return sorted_list
 
 
@@ -346,7 +420,7 @@ def rectanglify(coords):
 	return
 
 
-def horizontal_order_zones(annotations):
+def horizontal_order_zones(annotations: YOLORecord) -> YOLORecord:
 	"""
 	Fonction pour ordonner les zones horizontalement (de gauche à droite).
 	On ordonne par la première coordonnée de la boîte (x1)
@@ -363,7 +437,7 @@ def horizontal_order_zones(annotations):
 	]
 	:return: Les mêmes annotations ordonnées
 	"""
-	sorted_list = sorted(annotations, key=lambda x: x["coordinates"][0][0])
+	sorted_list = sorted(annotations, key=lambda x: x.coordinates[0][0])
 	return sorted_list
 
 
@@ -423,7 +497,7 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 
 def match_lines_in_zones(ocr_prediction: OCRRecord,
 						 zone_as_rectangle: namedtuple,
-						 intersect_ratio=0.5) -> list[OCRLine]:
+						 intersect_ratio=0.5) -> OCRRecord:
 	"""
 	Cette fonction identifie toutes les lignes qui traversent une boîte
 	:param ocr_prediction: un objet de classe OCRPrediction. les lignes comme une liste de dictionnaires (baseline, prediction, cuts)
@@ -532,7 +606,7 @@ def convert_to_csv(extractions:dict, outpath:str):
 					  "Nom",
 					  "Prénoms",
 					  "Date de naissance",
-					  "Âge",
+					  "age",
 					   "Taille",
 					   "Cheveux",
 					   "Front",
@@ -565,7 +639,6 @@ def convert_to_csv(extractions:dict, outpath:str):
 				continue
 			interm = []
 			# Image
-			print(page['image_path'])
 			interm.append(page['image_path'])
 
 			# ID
@@ -629,7 +702,10 @@ def convert_to_csv(extractions:dict, outpath:str):
 			interm.append(commissaire)
 
 			# Général
-			general = page['extractions']['magistrats']['general']['extracted']
+			try:
+				general = page['extractions']['magistrats']['general']['extracted']
+			except KeyError:
+				general = "UNK"
 			interm.append(general)
 
 			# Date du crime
@@ -823,7 +899,7 @@ def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 			out_string += char
 	return out_string
 
-def test_number_of_zones(annotations:list[dict], label:str, number:int) -> bool:
+def test_number_of_zones(annotations:YOLORecord, label:str, number:int) -> bool:
 	"""
 	Cette fonction permet de vérifier si les annotations YOLO contiennent le nombre de zones attendues
 	:param annotations: La liste des annotations (dictionnaire {label, coordinates})
@@ -831,7 +907,7 @@ def test_number_of_zones(annotations:list[dict], label:str, number:int) -> bool:
 	:param number: le nombre de zones attendues
 	:return:
 	"""
-	filtered_list = [item for item in annotations if item['label'] == label]
+	filtered_list = [item for item in annotations if item.label == label]
 	if len(filtered_list) == number:
 		return True
 	else:
@@ -900,6 +976,16 @@ def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (boo
 	return True, matching_words[max_dist]
 
 
+def check_substring_in_sentence(sentence:str, target_substring:str) -> bool:
+	avocat = fuzzysearch.find_near_matches(target_substring,
+										   sentence,
+										   max_l_dist=1)
+	if len(avocat) == 0:
+		match = False
+	else:
+		match = True
+	return match
+
 def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5, debug:bool=False) -> tuple[bool, str|None]:
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
@@ -950,10 +1036,8 @@ def match_line_by_substring(corresponding_lines:OCRRecord, string_to_match: str 
 	"""
 	# On commence par normaliser la chaîne à matcher
 	distances = []
-	print(f"Trying to match {string_to_match}. Lines: {corresponding_lines}.")
 	for idx, ligne in enumerate(corresponding_lines):
 		prediction = ligne.prediction
-		print(prediction)
 		prediction = prediction.lower()
 		prediction = nfc_normalize(prediction)
 		# On identifie la ligne pouvant contenir à l'effet de juger
@@ -1062,6 +1146,11 @@ def load_json_to_dict(path):
 		return json.load(f)
 
 
+def serialize_dict(dictionnary, path):
+	with open(path, 'w') as f:
+		json.dump(dictionnary, f, indent=2, default=str)
+
+
 def get_name_from_path(path):
 	basename = path.split('/')[-1].split('.')[0]
 	dossier = "_".join(basename.split('_')[:-1])
@@ -1088,8 +1177,8 @@ def get_baseline_from_string(line:OCRLine,
 	prediction = line.prediction
 	prediction = prediction.lower()
 	target_string = target_string.lower()
-	if target_string not in prediction.lower():
-		print(f"La ligne ne contient pas {target_string}")
+	if target_string.lower() not in prediction.lower():
+		print(f"Attention, la ligne ne contient pas le mot cherché: '{target_string}'.")
 		return None
 	first_char_idx, last_char_idx = (prediction.find(target_string),
 									 prediction.find(target_string) + len(target_string) - 1)

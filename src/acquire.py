@@ -4,11 +4,12 @@ import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
-import src.Vision.PARTY as PARTY
+# import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
 
-import Vision.yolo as yolo
+import Vision.YOLO as YOLO
+from src.utils.utils import OCRRecord
 
 
 class Pipeline():
@@ -36,8 +37,8 @@ class Pipeline():
 		self.yolo_models = {}
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
-			self.yolo_models[name] = yolo.load(path)
-		self.YOLO_Segmenter = yolo.YOLOSegmenter(models=self.yolo_models)
+			self.yolo_models[name] = YOLO.load(path)
+		self.YOLO_Segmenter = YOLO.YOLOSegmenter(models=self.yolo_models)
 
 		# Les modèles d'OCR
 		self.resegment = resegment
@@ -53,7 +54,7 @@ class Pipeline():
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
-		if debug == True:
+		if debug == True or use_party == False:
 			party_engine = None
 		else:
 			party_engine = PARTY.PartyPredict()
@@ -139,7 +140,7 @@ class Pipeline():
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
-	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int):
+	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int) -> OCRRecord:
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
@@ -148,7 +149,7 @@ class Pipeline():
 		"""
 		assert os.path.isfile(self.kraken_ocr_model), f"No model named {self.kraken_ocr_model}"
 		# assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
-		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(".jpg", "_segments.json")}'
+		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(".jpg", "_segments.pickle")}'
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
 								   ocr_model=self.kraken_ocr_model)
@@ -203,8 +204,15 @@ class Pipeline():
 			show_images=False,
 			loaded_image=loaded_image)
 
+
+		current_dict["identite_defenseur"] = self.extractor.extraire_identite_defenseur(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_2,
+			image=page["image_path"],
+			loaded_image=loaded_image)
+
 		zone_dict = {}
-		zone_dict["zones_identifiées"] = zones_page_2
+		zone_dict["zones_identifiees"] = zones_page_2.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
 		return zone_dict, current_dict
 
@@ -215,9 +223,10 @@ class Pipeline():
 		:param show_image: Montrer l'image transcrite avec les lignes ?
 		:return:
 		"""
-		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.pickle')}"
+		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe:
-			print("Segmentation/Transcription with kraken")
+			print("Cas 1")
+			print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = self.transcription_kraken(
 				image=page["image_path"],
 				transcription_only=self.resegment is False
@@ -226,14 +235,17 @@ class Pipeline():
 					page['classe'].split("_")[-1]
 																		)
 																		)
-			utils.pickle_object(self.current_page_transcription, target_transcription)
+
+			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
-			print("Found existing kraken transcription")
-			self.current_page_transcription = utils.unpickle_object(target_transcription)
+			print("Found existing kraken transcription: " + target_transcription)
+			print("Cas 2")
+			self.current_page_transcription = OCRRecord()
+			self.current_page_transcription.from_json(path=target_transcription)
 
 		if show_image:
 			image = Image.open(page["image_path"])
-			baselines = [line["baseline"] for line in self.current_page_transcription]
+			baselines = [line.baseline for line in self.current_page_transcription]
 			utils.draw_lines_on_image(image=image, baseline=baselines)
 
 
@@ -277,7 +289,7 @@ class Pipeline():
 																		   show_image=False)
 
 		zone_dict = {}
-		zone_dict["zones_identifiées"] = zones_page_1
+		zone_dict["zones_identifiées"] = zones_page_1.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
 
 		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
@@ -423,19 +435,22 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
 		# utils.convert_to_csv(minutes, "results/database.csv")
 		# exit(0)
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
-				self.transcription_page(page=page)
 				if target:
 					if page['image_path'] != target:
 						continue
+				if page['classe'] in ["page_2", "page_1"]:
+					self.transcription_page(page=page, show_image=False)
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
 				elif page['classe'] == "page_2":
 					zones, annotations = self.traitement_p_2(page=page, show_image=False)
+				else:
+					continue
 				page["extractions"] = annotations
 				page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)

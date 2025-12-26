@@ -6,6 +6,7 @@ from kraken import rpred
 import kraken
 import PIL.Image as Image
 from src.utils.utils import OCRRecord
+from src.utils.utils import YOLORecord
 
 
 class KRAKEN():
@@ -22,7 +23,7 @@ class KRAKEN():
 		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model)
 		return baseline_seg
 
-	def predict_with_kraken(self, im:PIL.Image.Image, segments:kraken.blla.Segmentation) -> list[dict]:
+	def predict_with_kraken(self, im:PIL.Image.Image, segments:kraken.blla.Segmentation) -> OCRRecord:
 		"""
 		Production de l'inférence à l'aide d'un modèle kraken et de segments.
 		:param im: L'image chargée

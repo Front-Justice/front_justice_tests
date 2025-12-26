@@ -3,20 +3,21 @@
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
 
 ###############
-import regex
 import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import glob
 import re
 from src.utils.utils import OCRRecord
 from src.utils.utils import OCRLine
+from src.utils.utils import YOLORecord
 import src.utils.utils as utils
 import copy
 import PIL.Image as Image
 import PIL
 from collections import namedtuple
-import src.Vision.PARTY as PARTY
+# import src.Vision.PARTY as PARTY
 import src.date.parse_date as date
+import fuzzysearch
 import src.Information_Extractor.extraction_functions as extractions
 
 
@@ -28,7 +29,7 @@ class Extractor:
 	 	- du même corpus d'images
 	"""
 
-	def __init__(self, party_engine: PARTY.PartyPredict,
+	def __init__(self, party_engine,
 				 resize_factor: int = 1,
 				 debug: bool = False,
 				 use_party=True):
@@ -64,7 +65,7 @@ class Extractor:
 		self.extracted_annotations = {}
 		self.excluded_classes = ["Titre"]
 
-	def filter_zones(self, annotations: list[dict], category: str) -> list[dict]:
+	def filter_zones(self, annotations: YOLORecord, category: str) -> YOLORecord:
 		"""
 		Fonction permettant de filtrer les zones par catégorie
 		:param annotations: Une liste de dictionnaires de la forme:
@@ -76,7 +77,7 @@ class Extractor:
 		:param category: la catégorie à filtrer
 		:return: La même liste avec la zone ciblée
 		"""
-		return [annotation for annotation in annotations if annotation['label'] == category]
+		return [annotation for annotation in annotations if annotation.label == category]
 
 	def extract_lines_from_zone(self,
 								annotations,
@@ -84,7 +85,7 @@ class Extractor:
 								show_images: bool = False,
 								loaded_image: PIL.Image.Image = None,
 								ocr_prediction: OCRRecord = None,
-								intersect_ratio: float|list[float] = 0.5) -> tuple[OCRRecord,list]:
+								intersect_ratio: float|list[float] = 0.5) -> tuple[OCRRecord,list] | tuple[None, None]:
 		"""
 		Cette fonction extrait la ou les lignes correspondant à une zone
 		:param annotations: L'ensemble des zones prédites
@@ -116,7 +117,7 @@ class Extractor:
 				return None, None
 
 			# On va commencer par identifier le nom prédit par kraken
-			coordonnees_zones_filtrees = zones[0]['coordinates']
+			coordonnees_zones_filtrees = zones[0].coordinates
 			zones_filtrees.append(coordonnees_zones_filtrees)
 			zones_filtrees_as_rectangle = self.rectangle(coordonnees_zones_filtrees[0][0],
 														 coordonnees_zones_filtrees[0][1],
@@ -137,7 +138,6 @@ class Extractor:
 															 zone_as_rectangle=zones_filtrees_as_rectangle,
 															 intersect_ratio=ratio)
 			corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
-			print(corresponding_lines)
 			all_lines.append([ocr_prediction.index(item) for item in corresponding_lines])
 
 		if len(all_lines) == 1:
@@ -145,12 +145,13 @@ class Extractor:
 		else:
 			# https://stackoverflow.com/a/3852806
 			corresponding_line_index =  set.intersection(*map(set, all_lines))
-		corresponding_lines = [ocr_prediction[idx] for idx in corresponding_line_index]
+		corresponding_lines = OCRRecord()
+		corresponding_lines.recreate_record([ocr_prediction[idx] for idx in corresponding_line_index])
 		return corresponding_lines, zones_filtrees[0] if len(zones_filtrees) == 1 else zones_filtrees
 
 	def extraire_lieu_jugement(self,
-							   ocr_prediction: list[dict],
-							   annotations: list[dict],
+							   ocr_prediction: OCRRecord,
+							   annotations: YOLORecord,
 							   image: str = None,
 							   loaded_image: PIL.Image.Image = None,
 							   show_images: bool = True):
@@ -158,20 +159,8 @@ class Extractor:
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
 		:param party_engine: le moteur de transcription party
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
+		:param annotations: un objet YOLORecord qui contient les coordonnées et labels de zone
+		:param ocr_prediction: un objet OCRRecord qui contient les baselines, predictions et cuts d'une liste de lignes
 		:param image: [Debug] le chemin vers l'image à afficher
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
@@ -279,8 +268,8 @@ class Extractor:
 								"kraken": kraken_prediction}}
 
 	def extraire_numero_jugement(self,
-								 ocr_prediction: list[dict],
-								 annotations: list[dict],
+								 ocr_prediction: OCRRecord,
+								 annotations: YOLORecord,
 								 image: str = None,
 								 loaded_image: PIL.Image.Image = None,
 								 show_images: bool = True):
@@ -375,8 +364,8 @@ class Extractor:
 
 
 	def extraire_date_naissance_soldat_p2(self,
-								 ocr_prediction: list[dict],
-								 annotations: list[dict],
+								 ocr_prediction: OCRRecord,
+								 annotations: YOLORecord,
 								 image: str = None,
 								 loaded_image: PIL.Image.Image = None,
 								 show_images: bool = True):
@@ -469,7 +458,7 @@ class Extractor:
 
 	def extraire_identite_soldat_p2(self,
 								 ocr_prediction: OCRRecord,
-								 annotations: list[dict],
+								 annotations: YOLORecord,
 								 image: str = None,
 								 loaded_image: PIL.Image.Image = None,
 								 show_images: bool = True):
@@ -511,6 +500,14 @@ class Extractor:
 		  }
 		},
 		"""
+
+		dictionnary = {}
+		lignes_identite_soldat, zone_identite_soldat = self.extract_lines_from_zone(annotations=annotations,
+																   target_zone=["identite_soldat"],
+																   show_images=False,
+																   loaded_image=loaded_image,
+																   ocr_prediction=ocr_prediction,
+																   intersect_ratio=[.8])
 		extracted_lines, zone_nom_soldat = self.extract_lines_from_zone(annotations=annotations,
 																   target_zone=["Nom du soldat", "identite_soldat"],
 																   show_images=False,
@@ -547,23 +544,103 @@ class Extractor:
 															  target_string=nom_complet,
 															  loaded_image=loaded_image,
 															  show_image=False)
+		print(nom_complet)
+		dictionnary['age_du_soldat'] = extractions.extraire_age_soldat(lignes_identite_soldat=lignes_identite_soldat)
 
-
-
-		return {"extracted":
+		dictionnary['nom_du_soldat'] =  {"extracted":
 					{"forename": {"persName":prenoms,
 								  "certainty": certitude_prenoms},
 					 "surname": {"persName": nom_soldat,
 								 "certainty": certainty},
 					 },
 				"bbox": zone_nom_soldat,
-				"baseline": baseline_nom_complet
+				"baseline": baseline_nom_complet,
+				"prediction": nom_complet
 				}
+
+		return dictionnary
+
+
+
+	def extraire_identite_defenseur(self,
+								 ocr_prediction: OCRRecord,
+								 annotations: YOLORecord,
+								 image: str = None,
+								 loaded_image: PIL.Image.Image = None,
+								 show_images: bool = False):
+		"""
+		Cette fonction extrait les informations sur la défenser à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: un objet OCRRecord
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+		  "extracted": "501",
+		  "baseline": [
+			[2611, 555],
+			[3203, 555]
+		  ],
+		  "bbox": [
+			[2553, 178],
+			[3249, 634]
+		  ],
+		  "certitude": 0.8,
+		  "predictions": {
+			"party": "N^o 501 D'ORDRE.",
+			"kraken": "N^o 501 D'ORDRE."
+		  }
+		},
+		"""
+
+		dictionnary = {}
+		lignes_identite_defenseur, zone_identite_defenseur = self.extract_lines_from_zone(annotations=annotations,
+																   target_zone=["seance_ouverte"],
+																   show_images=show_images,
+																   loaded_image=loaded_image,
+																   ocr_prediction=ocr_prediction,
+																   intersect_ratio=[.8])
+		ligne_defenseur, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
+														string_to_match="défenseur")
+		all_lines = lignes_identite_defenseur.join_transcription()
+		apres_defenseur = utils.approximate_split(sentence=all_lines,
+												  word="défenseur",
+												  sensibility=.8)[-1]
+		entites_nommees = self.ner(apres_defenseur)
+		nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
+		matching_line_defenseur, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
+																string_to_match=nom_defenseur)
+		print(nom_defenseur)
+		print(entites_nommees)
+		print(apres_defenseur)
+		baseline_nom_defenseur = utils.get_baseline_from_string(line=matching_line_defenseur,
+																target_string=nom_defenseur)
+
+		avocat = utils.check_substring_in_sentence(sentence=apres_defenseur, target_substring="avocat")
+		docteur = utils.check_substring_in_sentence(sentence=apres_defenseur, target_substring="docteur")
+		designe_office = utils.check_substring_in_sentence(sentence=apres_defenseur,
+														   target_substring="désigné d'office")
+
+
+
+		dictionnary['nom_du_defenseur'] =  {"extracted":
+								{"surname": {"persName": nom_defenseur},
+								 "avocat": avocat,
+								 "docteur": docteur,
+								 "designe_office": designe_office,
+					 },
+				"bbox": zone_identite_defenseur,
+				"baseline": baseline_nom_defenseur,
+				"prediction": apres_defenseur
+				}
+
+		return dictionnary
 
 
 	def extraire_date_crime_ou_delit(self,
-									 ocr_prediction: list[dict],
-									 annotations: list[dict],
+									 ocr_prediction: OCRRecord,
+									 annotations: YOLORecord,
 									 image: str = None,
 									 loaded_image: PIL.Image.Image = None,
 									 show_images: bool = True):
@@ -674,8 +751,8 @@ class Extractor:
 								"kraken": date_crime_kraken}}
 
 	def extraire_inculpation_et_antecedents(self,
-											ocr_prediction: list[dict],
-											annotations: list[dict],
+											ocr_prediction: OCRRecord,
+											annotations: YOLORecord,
 											image: str = None,
 											loaded_image: PIL.Image.Image = None,
 											show_images: bool = True):
@@ -781,8 +858,8 @@ class Extractor:
 		return inculpation
 
 	def extraire_numero_ordre(self,
-							  ocr_prediction: list[dict],
-							  annotations: list[dict],
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
 							  image: str = None,
 							  loaded_image: PIL.Image.Image = None,
 							  show_images: bool = True):
@@ -913,7 +990,7 @@ class Extractor:
 
 	def extraire_description_soldat(self,
 									ocr_prediction: OCRRecord,
-									annotations: list[dict],
+									annotations: YOLORecord,
 									image: str = None,
 									loaded_image: PIL.Image.Image = None,
 									show_images: bool = False):
@@ -1092,7 +1169,7 @@ class Extractor:
 						  "Date corrigée": date_naissance_corrigee,
 						  "prediction": lignes_description_as_string}
 		description_du_soldat["date_de_naissance"] = date_naissance
-		description_du_soldat["Âge"] = age
+		description_du_soldat["age"] = age
 
 		# On s'occupe ensuite de la situation maritale
 		try:
@@ -1258,7 +1335,7 @@ class Extractor:
 
 	def extraire_date_du_proces(self,
 								ocr_prediction: OCRRecord,
-								annotations: list[dict],
+								annotations: YOLORecord,
 								image: str = None,
 								loaded_image: PIL.Image.Image = None,
 								show_images: bool = False):
@@ -1434,7 +1511,7 @@ class Extractor:
 		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
 		lignes_table_triees = utils.vertical_order_zones(lines_annotation)
 		first_column, *_ = utils.horizontal_order_zones(column_annotation)
-		first_column = first_column["coordinates"]
+		first_column = first_column.coordinates
 		first_column_as_rectangle = self.rectangle(first_column[0][0],
 												   first_column[0][1],
 												   first_column[1][0],
@@ -1447,7 +1524,7 @@ class Extractor:
 
 		# On itère sur les zones identifiées par YOLO
 		for idx, line in enumerate(lignes_table_triees):
-			corresponding_box = line["coordinates"]
+			corresponding_box = line.coordinates
 			box_as_rectangle = self.rectangle(corresponding_box[0][0],
 											  corresponding_box[0][1],
 											  corresponding_box[1][0],
@@ -1509,7 +1586,7 @@ class Extractor:
 															 self.ner)
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
-		coords_zone_englobante_magistrats = zone_englobante_magistrats[0]['coordinates']
+		coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates
 		zone_magistrat_as_rectangle = self.rectangle(coords_zone_englobante_magistrats[0][0],
 													 coords_zone_englobante_magistrats[0][1],
 													 coords_zone_englobante_magistrats[1][0],

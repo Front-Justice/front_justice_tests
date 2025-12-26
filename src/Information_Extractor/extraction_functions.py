@@ -47,7 +47,6 @@ def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeli
 			ville = None
 	if ville is not None:
 		ville = utils.full_clean_string(ville)
-	print(ner_pipeline(lieu))
 	ner_extractions = ner_pipeline(lieu)
 	lieux = [item['word'] for item in ner_extractions if item['entity_group'] == "LOC"]
 	dictionnaire_informations["extracted"]["NER"] = lieux
@@ -145,6 +144,35 @@ def extraire_matricule(lignes_description_physique):
 			"prediction": ligne_matricule.prediction
 		}
 	return dict_matricule
+
+def extraire_age_soldat(lignes_identite_soldat:OCRRecord) -> dict:
+	out_dict = {}
+	lines_as_text = " ".join([line.prediction for line in lignes_identite_soldat])
+	print(lines_as_text)
+	regexp_age = re.compile("(\d+) ans")
+	age = re.search(regexp_age, lines_as_text)
+	# Si on trouve déjà quelque chose
+	if not age:
+		regexp_age = re.compile("([^\s]+)\sans[\s,.]")
+		age = re.search(regexp_age, lines_as_text)
+	try:
+		full_age = age.group()
+	except AttributeError:
+		return {"extracted": "UNK"}
+	age_digits = re.search(regexp_age, lines_as_text).group(1)
+	try:
+		age_as_int = int(age_digits)
+	except ValueError:
+		age_as_int = age_digits
+	corresponding_line, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_soldat,
+														   string_to_match=full_age)
+
+	box_age = utils.get_baseline_from_string(line=corresponding_line,
+											 target_string=full_age)
+	out_dict = {"extracted": age_as_int,
+									"baseline": box_age,
+									"prediction": full_age}
+	return out_dict
 
 def extraire_cheveux(lignes_description_physique):
 	"""
@@ -345,7 +373,6 @@ def extraire_marques_particulieres(lignes_description_physique, matricule) -> di
 	clean_regexp = re.compile("^\s?:?\s?")
 	ligne_marques, debug, index_marques = utils.match_line_by_substring(lignes_description_physique, chaine_marques,
 																		return_index=True)
-	print(ligne_marques.prediction)
 	try:
 		particulieres, matching_particulieres = utils.approximate_split(ligne_marques.prediction,
 																		  "particulières",
@@ -398,7 +425,6 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 
 	ligne_renseignements, debug, index_renseignements = utils.match_line_by_substring(lignes_description_physique, chaine_renseignements,
 																					  return_index=True)
-	print(ligne_renseignements.prediction)
 	try:
 		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements.prediction,
 																		  "complémentaires",
@@ -611,7 +637,6 @@ def extraire_situation_maritale(string) -> tuple:
 			# On peut éventuellement (???) avoir une indication d'enfants sans mariage, OU rater l'information du mariage
 			check_enfants, token_enfants = utils.check_word_in_sentence(string, "enfant", sensibility=0.85)
 			if check_enfants is True:
-				print(token_enfants)
 				tokens_enfants_clean = token_enfants.replace('(', '').replace(')', '')
 				nombre_enfants = utils.strip_punctuation(tokens_enfants_clean)
 				try:

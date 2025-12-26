@@ -8,8 +8,9 @@
 
 from ultralytics import YOLO
 import PIL.Image as Image
-import utils.utils as utils
-import Vision.PARTY as PARTY
+from src.utils.utils import YOLORecord
+import src.utils.utils as utils
+# import src.Vision.PARTY as PARTY
 
 
 def load(model_path):
@@ -27,7 +28,7 @@ class YOLOSegmenter():
 					  target_classes:list,
 					  confidence=0.5,
 					  model=None,
-					  show_image=False) -> tuple[list[dict], list[str]]:
+					  show_image=False) -> tuple[YOLORecord, list[str]]:
 		"""
 		La segmentation d'une image à l'aide de plusieurs modèles YOLO, adaptés au type de page.
 		:param image: Le chemin vers l'image
@@ -35,7 +36,7 @@ class YOLOSegmenter():
 		:param confidence: Le seuil de confiance minimal
 		:param model: Le modèle de segmentation
 		:param show_image: Option pour faire apparaître l'image
-		:return: Un tuple (liste[dictionnaire], classes manquantes)
+		:return: Un tuple (YOLORecord, classes manquantes)
 		"""
 
 
@@ -61,18 +62,7 @@ class YOLOSegmenter():
 			print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
 		else:
 			missing = []
-		return results_list, missing
-
-	def process_nom_soldat(self, image, coordinate):
-		correct_coord = utils.format_coordinates(coordinate)
-		correct_coord = [[correct_coord[0], correct_coord[1]],
-						 [correct_coord[2], correct_coord[3]]]
-		as_image = Image.open(image)
-		print(correct_coord)
-		predictor = PARTY.PartyPredict()
-		segmentation = predictor.create_baseline(correct_coord, corresponding_image=image)
-		prediction = predictor.inference(segmentation=segmentation, image=as_image)
-		print(prediction)
+		return YOLORecord(results_list), missing
 
 
 if __name__ == '__main__':
