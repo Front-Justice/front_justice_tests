@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import pickle
 import random
 import string
@@ -22,12 +23,14 @@ class YOLOZone:
 	"""CLasse principale pour la description d'une zone"""
 	label: str
 	coordinates: list[list]
+	probs: str
+
 
 class YOLORecord():
-	def __init__(self, record:list[dict]):
-		self.record:list = []
+	def __init__(self, record: list[dict]):
+		self.record: list = []
 		for item in record:
-			Zone: YOLOZone = YOLOZone(label=item['label'], coordinates=item['coordinates'])
+			Zone: YOLOZone = YOLOZone(label=item['label'], coordinates=item['coordinates'], probs=item['probs'])
 			self.record.append(Zone)
 
 	def index(self, item):
@@ -54,6 +57,7 @@ class YOLORecord():
 								})
 		return dictionnary
 
+
 @dataclass
 class OCRLine:
 	"""
@@ -64,19 +68,21 @@ class OCRLine:
 	prediction: str
 	cuts: list
 
+
 class OCRRecord():
 	"""
 	Classe principale qui contient les résultats de l'OCR.
 	Une liste d'objets OCRLine qui contiennent chacun la baseline, la prédiction, les cuts.
 	"""
-	def __init__(self, record:list[dict] = []):
-		self.record:list = []
+
+	def __init__(self, record: list[dict] = []):
+		self.record: list = []
 		for item in record:
 			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
 			self.record.append(Line)
 
-	def recreate_record(self, list_of_lines:list[OCRLine]):
-		self.record:list = []
+	def recreate_record(self, list_of_lines: list[OCRLine]):
+		self.record: list = []
 		for line in list_of_lines:
 			self.record.append(line)
 
@@ -120,45 +126,46 @@ class OCRRecord():
 
 
 number_dict = {"un": 1,
-				"deux": 2,
-				"trois": 3,
-				"quatre": 4,
-				"cinq": 5,
-				"six": 6,
-				"sept": 7,
-				"huit": 8,
-				"neuf": 9,
-				"dix": 10,
-				"onze": 11,
-				"douze": 12,
-				"treize": 13,
-				"quatorze": 14,
-				"quinze": 15,
-				"seize": 16,
-				"dix sept":17,
-				"dix huit": 18,
-				"dix neuf": 19,
-				"vingt": 20,
-				"vingt-et-un": 21,
-				"vingt deux": 22,
-				"vingt trois": 23,
-				"vingt quatre": 24,
-				"vingt cinq": 25,
-				"vingt six": 26,
-				"vingt sept": 27,
-				"vingt huit": 28,
-				"vingt neuf": 29,
-				"trente": 30,
-				"trente et un": 31,
-				"mil": 1000,
-				"cent": 100,
+			   "deux": 2,
+			   "trois": 3,
+			   "quatre": 4,
+			   "cinq": 5,
+			   "six": 6,
+			   "sept": 7,
+			   "huit": 8,
+			   "neuf": 9,
+			   "dix": 10,
+			   "onze": 11,
+			   "douze": 12,
+			   "treize": 13,
+			   "quatorze": 14,
+			   "quinze": 15,
+			   "seize": 16,
+			   "dix sept": 17,
+			   "dix huit": 18,
+			   "dix neuf": 19,
+			   "vingt": 20,
+			   "vingt-et-un": 21,
+			   "vingt deux": 22,
+			   "vingt trois": 23,
+			   "vingt quatre": 24,
+			   "vingt cinq": 25,
+			   "vingt six": 26,
+			   "vingt sept": 27,
+			   "vingt huit": 28,
+			   "vingt neuf": 29,
+			   "trente": 30,
+			   "trente et un": 31,
+			   "mil": 1000,
+			   "cent": 100,
 			   "enfants": "enfants"}
+
 
 def load(path):
 	return Image.open(path)
 
 
-def calcule_age(date_naissance:str, date_proces:str) -> int|None:
+def calcule_age(date_naissance: str, date_proces: str) -> int | None:
 	"""
 	Cette fonction calcule l'âge du soldat étant donné sa date de naissance et la date du procès.
 	Note: l'exception se fait en amont.
@@ -170,6 +177,7 @@ def calcule_age(date_naissance:str, date_proces:str) -> int|None:
 	annee_naissance = int(date_naissance.split("/")[-1])
 
 	return annee_proces - annee_naissance
+
 
 def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	"""
@@ -196,48 +204,48 @@ def split_after_keep_delimiter(target_string: str, delimiter: str) -> list:
 	return out_split
 
 
-def tokenize_sent(sentence:str) -> list:
+def tokenize_sent(sentence: str) -> list:
 	punctuation_and_space = re.compile(r'(["\'\-?,!;\.:\s])')
 	tokenized = re.split(punctuation_and_space, sentence)
 	tokenized = [item for item in tokenized if item != " "]
 	return tokenized
 
 
-def correct_date(date:str) -> str:
+def correct_date(date: str) -> str:
 	number_dict = {"un": 1,
-						"deux": 2,
-						"trois": 3,
-						"quatre": 4,
-						"cinq": 5,
-						"six": 6,
-						"sept": 7,
-						"huit": 8,
-						"neuf": 9,
-						"dix": 10,
-						"onze": 11,
-						"douze": 12,
-						"treize": 13,
-						"quatorze": 14,
-						"quinze": 15,
-						"seize": 16,
-						"vingt": 20,
-						"trente": 30,
-						"mil": 1000,
-						"cent": 100}
+				   "deux": 2,
+				   "trois": 3,
+				   "quatre": 4,
+				   "cinq": 5,
+				   "six": 6,
+				   "sept": 7,
+				   "huit": 8,
+				   "neuf": 9,
+				   "dix": 10,
+				   "onze": 11,
+				   "douze": 12,
+				   "treize": 13,
+				   "quatorze": 14,
+				   "quinze": 15,
+				   "seize": 16,
+				   "vingt": 20,
+				   "trente": 30,
+				   "mil": 1000,
+				   "cent": 100}
 
 	month_dict = {"janvier": "01",
-					   "février": "02",
-					   "mars": "03",
-					   "avril": "04",
-					   "mai": "05",
-					   "juin": "06",
-					   "juillet": "07",
-					   "août": "08",
-					   "septembre": "09",
-					   "octobre": "10",
-					   "novembre": "11",
-					   "décembre": "12",
-					   }
+				  "février": "02",
+				  "mars": "03",
+				  "avril": "04",
+				  "mai": "05",
+				  "juin": "06",
+				  "juillet": "07",
+				  "août": "08",
+				  "septembre": "09",
+				  "octobre": "10",
+				  "novembre": "11",
+				  "décembre": "12",
+				  }
 	date = nfc_normalize(date)
 	date = date.lower().strip()
 	clean_regexp = re.compile(r"(\d+)\^?er?")
@@ -271,6 +279,7 @@ def correct_date(date:str) -> str:
 	normalized = normalized.lower()
 	return normalized
 
+
 def correct_based_on_list(sentence, list):
 	"""
 	Cette fonction corrige une phrase en se fondant sur une liste de mots définie en amont.
@@ -291,7 +300,8 @@ def correct_based_on_list(sentence, list):
 	normalized = normalized.lower()
 	return normalized
 
-def correct_description_soldat(string:str):
+
+def correct_description_soldat(string: str):
 	liste_termes_frequents = ['rectiligne',
 							  'long',
 							  'menton',
@@ -302,7 +312,8 @@ def correct_description_soldat(string:str):
 							  'artillerie',
 							  'cheveux']
 
-def correct_string(string:str) -> str:
+
+def correct_string(string: str) -> str:
 	correcteur = spellchecker.spellchecker.SpellChecker(language='fr')
 	corrected_string = []
 	tokens = tokenize_sent(string)
@@ -311,7 +322,6 @@ def correct_string(string:str) -> str:
 		if corr:
 			corrected_string.append(corr)
 	return " ".join(corrected_string)
-
 
 
 def nfc_normalize(input_string: str) -> str:
@@ -392,7 +402,9 @@ def vertical_order_lines(lines: OCRRecord) -> OCRRecord:
 	:return: la liste ordonnée
 	"""
 	sorted_list = sorted(lines, key=lambda x: x.baseline[0][1])
-	return sorted_list
+	new_record = OCRRecord()
+	new_record.recreate_record(sorted_list)
+	return new_record
 
 
 def vertical_order_zones(annotations: YOLORecord) -> YOLORecord:
@@ -457,7 +469,8 @@ def clean_forename(name):
 	name = name.replace(",", "").strip()
 	return name
 
-def normalize_string_and_strip_spaces(string:str) -> str:
+
+def normalize_string_and_strip_spaces(string: str) -> str:
 	"""
 	Cette fonction neutralise la casse et supprime les espace de début et fin de chaîne
 	:param string: le texte à normaliser
@@ -519,6 +532,7 @@ def match_lines_in_zones(ocr_prediction: OCRRecord,
 			corresponding_lines.append(line)
 	return corresponding_lines
 
+
 def draw_rectangle(image, rectangle, return_image=False):
 	print("Attempting to show image")
 	draw = PIL.ImageDraw.Draw(image)
@@ -528,9 +542,11 @@ def draw_rectangle(image, rectangle, return_image=False):
 	else:
 		return image
 
+
 def clean_spaces(string) -> str:
 	spaces_regexp = re.compile("\s+")
 	return re.sub(spaces_regexp, " ", string)
+
 
 def full_clean_string(string) -> str:
 	"""
@@ -544,12 +560,14 @@ def full_clean_string(string) -> str:
 	string = clean_spaces(string)
 	return string
 
+
 def strip_stopwords(string):
 	stopwords = re.compile("^du |^de la |^de |^[àa] |y |de l'")
 	clean = re.sub(stopwords, "", string)
 	return clean
 
-def remove_all_punctuation(string:str, debug=False) -> str:
+
+def remove_all_punctuation(string: str, debug=False) -> str:
 	"""
 	Cette fonction supprime la ponctuation en début et fin de chaîne
 	:param string: la chaîne à nettoyer
@@ -565,7 +583,8 @@ def remove_all_punctuation(string:str, debug=False) -> str:
 		print(f"|{orig_string}| -> |{string}|")
 	return string
 
-def strip_punctuation(string:str|None, debug=False) -> str|None:
+
+def strip_punctuation(string: str | None, debug=False) -> str | None:
 	"""
 	Cette fonction supprime la ponctuation en début et fin de chaîne
 	:param string: la chaîne à nettoyer
@@ -575,7 +594,7 @@ def strip_punctuation(string:str|None, debug=False) -> str|None:
 		return None
 	orig_string = string
 	punctuation = "[\(\),;.!?\-:]"
-	expression = "^"+ punctuation + "\s{0,}|\s{0,}"+ punctuation + "$"
+	expression = "^" + punctuation + "\s{0,}|\s{0,}" + punctuation + "$"
 	punct_regexp = re.compile(expression)
 	string = string.strip()
 	string = re.sub(punct_regexp, "", string)
@@ -585,50 +604,50 @@ def strip_punctuation(string:str|None, debug=False) -> str|None:
 	return string
 
 
-def convert_to_csv(extractions:dict, outpath:str):
+def convert_to_csv(extractions: dict, outpath: str):
 	extracted_data = []
 	header = ["Numero_image",
-					   "Id",
-					  "Date du procès",
-					   "Institution engagée",
-					   "Lieu du procès",
-					   "Numéro du jugement",
-					   "Numéro d'ordre",
-					   "Président du jury",
-					   "Juré 1",
-					   "Juré 2",
-					   "Juré 3",
-					   "Juré 4",
-					   "Greffier",
-					   "Commissaire",
-					   "Général nommant",
-					   "Date du crime ou du délit",
-					  "Nom",
-					  "Prénoms",
-					  "Date de naissance",
-					  "age",
-					   "Taille",
-					   "Cheveux",
-					   "Front",
-					   "Yeux",
-					   "Nez",
-					   "Visage",
-					  "Renseignements complémentaires",
-					  "Marques particulières",
-					   "Ville de naissance",
-					   "Arrondissement de naissance",
-					   "Département de naissance",
-					   "Ville de résidence",
-					   "Arrondissement de résidence",
-					   "Département de résidence",
-					   "Situation maritale",
-					   "Enfants",
-					   "Profession",
-					   "Rang du soldat",
-					   "Affectation du soldat",
-					   "Numéro de matricule",
-					   "Chef d'accusation",
-					   "Antécédents"]
+			  "Id",
+			  "Date du procès",
+			  "Institution engagée",
+			  "Lieu du procès",
+			  "Numéro du jugement",
+			  "Numéro d'ordre",
+			  "Président du jury",
+			  "Juré 1",
+			  "Juré 2",
+			  "Juré 3",
+			  "Juré 4",
+			  "Greffier",
+			  "Commissaire",
+			  "Général nommant",
+			  "Date du crime ou du délit",
+			  "Nom",
+			  "Prénoms",
+			  "Date de naissance",
+			  "age",
+			  "Taille",
+			  "Cheveux",
+			  "Front",
+			  "Yeux",
+			  "Nez",
+			  "Visage",
+			  "Renseignements complémentaires",
+			  "Marques particulières",
+			  "Ville de naissance",
+			  "Arrondissement de naissance",
+			  "Département de naissance",
+			  "Ville de résidence",
+			  "Arrondissement de résidence",
+			  "Département de résidence",
+			  "Situation maritale",
+			  "Enfants",
+			  "Profession",
+			  "Rang du soldat",
+			  "Affectation du soldat",
+			  "Numéro de matricule",
+			  "Chef d'accusation",
+			  "Antécédents"]
 	for idx_minute, minute in extractions.items():
 		for idx_page, page in enumerate(minute):
 			if page['classe'] != "page_1":
@@ -721,8 +740,10 @@ def convert_to_csv(extractions:dict, outpath:str):
 
 			# Nom et prénom du soldat
 			try:
-				prenoms_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['forename']['persName']
-				nom_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['surname']['persName']
+				prenoms_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['forename'][
+					'persName']
+				nom_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['surname'][
+					'persName']
 			except TypeError:
 				nom_soldat = "Plusieurs soldats"
 				prenoms_soldat = "Plusieurs soldats"
@@ -735,7 +756,8 @@ def convert_to_csv(extractions:dict, outpath:str):
 
 			# Date de naissance et âge du soldat
 			try:
-				date_naissance = page['extractions']['description_soldat']['date_de_naissance']['date_normalisee']['when']
+				date_naissance = page['extractions']['description_soldat']['date_de_naissance']['date_normalisee'][
+					'when']
 			except TypeError:
 				date_naissance = "UNK"
 			try:
@@ -770,11 +792,13 @@ def convert_to_csv(extractions:dict, outpath:str):
 			except KeyError:
 				visage = "UNK"
 			try:
-				renseignements_complementaires = page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
+				renseignements_complementaires = \
+				page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
 			except KeyError:
 				renseignements_complementaires = "UNK"
 			try:
-				marques_particulieres = page['extractions']['description_soldat']["physique"]["marques_particulieres"]["extracted"]
+				marques_particulieres = page['extractions']['description_soldat']["physique"]["marques_particulieres"][
+					"extracted"]
 			except KeyError:
 				marques_particulieres = "UNK"
 			interm.append(taille)
@@ -788,16 +812,20 @@ def convert_to_csv(extractions:dict, outpath:str):
 
 			# Lieu de naissance
 			ville_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['ville']
-			arrondissement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['arrondissement']
-			departement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['departement']
+			arrondissement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted'][
+				'arrondissement']
+			departement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted'][
+				'departement']
 			interm.append(ville_naissance)
 			interm.append(arrondissement_naissance)
 			interm.append(departement_naissance)
 
 			# Lieu de résidence
 			ville_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['ville']
-			arrondissement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['arrondissement']
-			departement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['departement']
+			arrondissement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted'][
+				'arrondissement']
+			departement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted'][
+				'departement']
 			interm.append(ville_residence)
 			interm.append(arrondissement_residence)
 			interm.append(departement_residence)
@@ -823,11 +851,9 @@ def convert_to_csv(extractions:dict, outpath:str):
 			rang = page['extractions']['description_soldat']['rang']['extracted']
 			interm.append(rang)
 
-
 			# Affectation du soldat
 			affectation = page['extractions']['description_soldat']['affectation']['extracted']
 			interm.append(affectation)
-
 
 			# Numéro de matricule
 			try:
@@ -863,6 +889,7 @@ def convert_to_csv(extractions:dict, outpath:str):
 def random_string():
 	return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
+
 def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 	"""
 	Cette fonction extrait les caractères compris dans une boîte par la comparaison
@@ -885,8 +912,8 @@ def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 	:return: la chaîne de caractères reconstruite à partir des intersections
 	"""
 	assert len(line.prediction) == len(line.cuts), ("Un problème dans les données est apparu. "
-														  "La longueur de la prédiction doit être identique "
-														  "à celle des cuts")
+													"La longueur de la prédiction doit être identique "
+													"à celle des cuts")
 	out_string = ""
 	(xmin, ymin), (xmax, ymax) = box
 
@@ -899,7 +926,8 @@ def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 			out_string += char
 	return out_string
 
-def test_number_of_zones(annotations:YOLORecord, label:str, number:int) -> bool:
+
+def test_number_of_zones(annotations: YOLORecord, label: str, number: int) -> bool:
 	"""
 	Cette fonction permet de vérifier si les annotations YOLO contiennent le nombre de zones attendues
 	:param annotations: La liste des annotations (dictionnaire {label, coordinates})
@@ -913,10 +941,12 @@ def test_number_of_zones(annotations:YOLORecord, label:str, number:int) -> bool:
 	else:
 		return False
 
+
 def similarite_ratcliff(string_a, string_b):
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
-def check_neant(string:str) -> bool:
+
+def check_neant(string: str) -> bool:
 	"""
 	Cette fonction vérifie si le terme `néant` se trouve dans une chaîne
 	:param string:
@@ -927,11 +957,19 @@ def check_neant(string:str) -> bool:
 	else:
 		return False
 
+
 def clean_small_string(string):
+	if string is None:
+		return None
 	regexp = re.compile("^\s?[.:,?\-;!]?\s?$")
 	return re.sub(regexp, "", string)
 
-def approximate_split(sentence:str, word:str, sensibility:float=0.5, return_word:bool=False) -> list|tuple[list, str]|None|tuple[None, None]:
+
+def approximate_word_split(sentence: str, word: str, sensibility: float = 0.5, return_word: bool = False) -> list | \
+																											 tuple[
+																												 list, str] | None | \
+																											 tuple[
+																												 None, None]:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
@@ -954,7 +992,33 @@ def approximate_split(sentence:str, word:str, sensibility:float=0.5, return_word
 			return None
 
 
-def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (bool, str|None):
+def approximate_sentence_split(sentence: str, substring: str, max_dist:int=1, return_match:bool=False) -> list | None:
+	"""
+	Cette fonction découpe une phrase selon un groupe de mots qui peut être approximatif. Le mot n'est pas retourné.
+	:param sentence: la phrase à découper
+	:param substring: la sous-chaîne cible
+	:param max_dist: la distance de levensthein maximale
+	:param return_match: faut-il retourner la chaîne de caractère trouvée qui sert de délimiteur
+	:return: La chaîne splittée ou None
+	"""
+	sentence = nfc_normalize(sentence)
+	substring = nfc_normalize(substring)
+	is_match, matches = check_substring_in_sentence(sentence=sentence,
+													target_substring=substring,
+													return_subtring=True,
+													max_distance=max_dist)
+	if is_match is True:
+		longest_match = [(item.matched, len(item.matched)) for item in matches]
+		longest_match.sort(key=lambda x: x[1], reverse=True)
+		if return_match:
+			return sentence.split(longest_match[0][0]), longest_match[0][0]
+		else:
+			return sentence.split(longest_match[0][0])
+	else:
+		return None
+
+
+def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une liste de mots
 	:param sentence: la phrase cible
@@ -972,21 +1036,29 @@ def check_word_in_list(word_list:list, target_word:str, sensibility=0.7) -> (boo
 			distances.append(dist)
 	if len(distances) == 0:
 		return False, target_word
-	max_dist:int = distances.index(max(distances))
+	max_dist: int = distances.index(max(distances))
 	return True, matching_words[max_dist]
 
 
-def check_substring_in_sentence(sentence:str, target_substring:str) -> bool:
-	avocat = fuzzysearch.find_near_matches(target_substring,
+def check_substring_in_sentence(sentence: str,
+								target_substring: str,
+								return_subtring: bool = False,
+								max_distance:int=1) -> bool:
+	search = fuzzysearch.find_near_matches(target_substring,
 										   sentence,
-										   max_l_dist=1)
-	if len(avocat) == 0:
+										   max_l_dist=max_distance)
+	if len(search) == 0:
 		match = False
 	else:
 		match = True
-	return match
+	if return_subtring is False:
+		return match
+	else:
+		return match, search
 
-def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5, debug:bool=False) -> tuple[bool, str|None]:
+
+def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0.5, debug: bool = False) -> tuple[
+	bool, str | None]:
 	"""
 	Cette fonction vérifie si un mot (pouvant présenter des coquilles) est présent dans une phrase
 	:param sentence: la phrase cible
@@ -1025,47 +1097,78 @@ def check_word_in_sentence(sentence:str, target_word:str|list, sensibility=0.5, 
 		return True, matching_word[0]
 
 
+def recursive_search(corresponding_lines:OCRRecord, string_to_match:str, n_gram:int):
+	print(f"Recursion with {n_gram}grams.")
+	print(f"Searching for {string_to_match}")
+	string_to_match = nfc_normalize(string_to_match)
+	lines = [line.prediction for line in corresponding_lines]
+	n_gram_lines = [((n,n+n_gram), nfc_normalize(" ".join(lines[n:n+n_gram]))) for n in range(len(lines))]
+	print(f"Current ngram: {n_gram_lines}")
+	inclusion_test = [string_to_match in line_group[1] for line_group in n_gram_lines]
+	print(inclusion_test)
+	if any(inclusion_test):
+		current_lines = next(idx for idx, item in enumerate(inclusion_test) if item is True)
+		print(current_lines)
+		print(n_gram_lines[current_lines][1])
+		lines_range = n_gram_lines[current_lines][0]
+		return corresponding_lines[slice(*lines_range)]
+	else:
+		if n_gram + 1 == len(corresponding_lines):
+			return None
+		result = recursive_search(corresponding_lines, string_to_match, n_gram + 1)
+	return result
 
-def match_line_by_substring(corresponding_lines:OCRRecord, string_to_match: str | list, return_index:bool=False) -> tuple[OCRLine,list,int] | tuple[OCRLine,list]:
+def match_line_by_substring(corresponding_lines: OCRRecord,
+							string_to_match: str | list,
+							return_index: bool = False,
+							exact_match: bool = False) -> \
+tuple[OCRLine, list, int] | tuple[OCRLine, list] | OCRLine:
 	"""
-	Cette fonction extrait la ligne qui contient une sous-chaîne la plus proche de la chaîne cible
+	Cette fonction extrait la ou les lignes qui contiennent une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher. Objet OCRRecord
 	:param string_to_match: la chaîne à trouver ou une liste de chaines alternatives à identifier
+	:param exact_match: Faut-il chercher la chaîne exacte ?
 	:return: la ligne qui contient la chaîne de caractères et le zip de 1) la ligne et 2) la similarité avec la requête.
 	Peut également retourner l'indice de l'item identifié dans la liste.
 	"""
-	# On commence par normaliser la chaîne à matcher
-	distances = []
-	for idx, ligne in enumerate(corresponding_lines):
-		prediction = ligne.prediction
-		prediction = prediction.lower()
-		prediction = nfc_normalize(prediction)
-		# On identifie la ligne pouvant contenir à l'effet de juger
-		if isinstance(string_to_match, list):
-			pass
-		else:
-			string_to_match = [string_to_match]
-		interm_distances = []
-		for item in string_to_match:
-			item = item.lower()
-			item = nfc_normalize(item)
-			if item in prediction:
-				interm_distances.append(9999)
-			elif len(prediction) < 10:
-				interm_distances.append(0)
-			else:
-				# dist = similarite_ratcliff(prediction, string_to_match)
-				dist = fuzz.partial_ratio(prediction, item)
-				interm_distances.append(dist)
-		distances.append(max(interm_distances))
-	correct_line_index = distances.index(max(distances))
-	name_line = corresponding_lines[correct_line_index]
-	debug_zip = list(zip([item.prediction for item in corresponding_lines], distances))
-	if return_index is True:
-		return name_line, debug_zip, correct_line_index
-	else:
-		return name_line, debug_zip
 
+	if exact_match is True:
+		# On va travailler avec des n-grams de ligne
+		# Pour l'instant ne fonctionne que sur du exact matching
+		return recursive_search(corresponding_lines=corresponding_lines,
+						 string_to_match=string_to_match,
+						 n_gram=1)
+	else:
+		distances = []
+		for idx, ligne in enumerate(corresponding_lines):
+			prediction = ligne.prediction
+			prediction = prediction.lower()
+			prediction = nfc_normalize(prediction)
+			# On identifie la ligne pouvant contenir à l'effet de juger
+			if isinstance(string_to_match, list):
+				pass
+			else:
+				string_to_match = [string_to_match]
+			interm_distances = []
+			for item in string_to_match:
+				item = item.lower()
+				item = nfc_normalize(item)
+				if item in prediction:
+					interm_distances.append(9999)
+				elif len(prediction) < 10:
+					interm_distances.append(0)
+				else:
+					# dist = similarite_ratcliff(prediction, string_to_match)
+					dist = fuzz.partial_ratio(prediction, item)
+					interm_distances.append(dist)
+			distances.append(max(interm_distances))
+		correct_line_index = distances.index(max(distances))
+		name_line = corresponding_lines[correct_line_index]
+		debug_zip = list(zip([item.prediction for item in corresponding_lines], distances))
+		if return_index is True:
+			return name_line, debug_zip, correct_line_index
+		else:
+			return name_line, debug_zip
 
 
 def levensthein_distance(string_a, string_b):
@@ -1076,7 +1179,7 @@ def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
 
-def check_if_line_in_box(box_coord:list[list[int]], baseline:list[int], intersect_ratio=.5) -> bool:
+def check_if_line_in_box(box_coord: list[list[int]], baseline: list[int], intersect_ratio=.5) -> bool:
 	"""
 	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone.
 	Présuppose des lignes globalement droites (= représentables par des fonctions affines).
@@ -1126,7 +1229,7 @@ def unpickle_object(path):
 		return pickle.load(segmentation_as_file)
 
 
-def save_as_dict(dictionnary:dict, path:str):
+def save_as_dict(dictionnary: dict, path: str):
 	with open(path, 'w') as f:
 		# https://stackoverflow.com/a/36142844 default permet de gérer la sérialisation des objets bizarres (dates...)
 		json.dump(dictionnary, f, indent=2, default=str)
@@ -1134,7 +1237,7 @@ def save_as_dict(dictionnary:dict, path:str):
 
 def list_depth(lst: list) -> int:
 	"""
-	Retourne la profondeur maximale d'une liste
+	Retourne la profondeur maximale d'une liste de listes
 	:param lst: la liste à analyser
 	:return: un entier
 	"""
@@ -1163,46 +1266,106 @@ def format_coordinates(coords):
 	return [[rounded[0], rounded[1]], [rounded[2], rounded[3]]]
 
 
-def get_baseline_from_string(line:OCRLine,
-							 target_string:str,
-							 loaded_image:Image.Image=None,
-							 show_image:bool=False) -> tuple[tuple[int, int], tuple[int, int]] | None:
+def longest_common_substring(string1, string2):
 	"""
-	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée
-	:param line: La ligne, dictionnaire {prediction, baseline, cuts}
+	Trouver la sous-chaîne commune la plus longue entre deux chaînes
+	:param string1:
+	:param string2:
+	:return:
+	"""
+	# Source - https://stackoverflow.com/q/66162740
+	len1, len2 = len(string1), len(string2)
+	answer = ""
+	for i in range(len1):
+		for j in range(len2):
+			lcs_temp = 0
+			match = ''
+			while ((i + lcs_temp < len1) and (j + lcs_temp < len2) and string1[i + lcs_temp] == string2[j + lcs_temp]):
+				match += string2[j + lcs_temp]
+				lcs_temp += 1
+			if (len(match) > len(answer)):
+				answer = match
+	return answer
+
+
+def get_baseline_from_string(line: list[OCRLine]|OCRLine,
+							 target_string: str,
+							 loaded_image: Image.Image = None,
+							 show_image: bool = False) -> tuple[tuple[int, int], tuple[int, int]] | None:
+	"""
+	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée.
+	Elle extrait plusieurs baselines si une chaîne court sur 2 lignes
+	:param line: La ligne, objet OCRLine ou liste d'OCRLine
 	:return: La ligne de base qui contient le texte : [[x_1, y_1], [x_2, y_2]]
 	"""
-	cuts = line.cuts
-	baseline = line.baseline
-	prediction = line.prediction
-	prediction = prediction.lower()
-	target_string = target_string.lower()
-	if target_string.lower() not in prediction.lower():
-		print(f"Attention, la ligne ne contient pas le mot cherché: '{target_string}'.")
-		return None
-	first_char_idx, last_char_idx = (prediction.find(target_string),
-									 prediction.find(target_string) + len(target_string) - 1)
 
-	first_cut = cuts[first_char_idx]
-	last_cut = cuts[last_char_idx]
-	# On extrait l'abscisse minimale et maximale et on ajoute un peu de marge à droite et à gauche
-	x_1 = min(item[0] for item in first_cut) - 40
-	x_2 = max(item[0] for item in last_cut) + 40
-	baseline = [baseline[0], baseline[-1]]
-	formatted_baseline = baseline[0][0], baseline[0][1], baseline[1][0], baseline[1][1]
-	a, b = produce_line_function(formatted_baseline)
+	# Dans le cas où on a une liste de lignes, on boucle sur chacune d'entre elles, on récupère la portion de string
+	# qui correspond et la baseline correspondant.
+	if isinstance(line, list):
+		baselines = []
+		for item in line:
+			a, b = nfc_normalize(item.prediction), nfc_normalize(target_string)
+			result = longest_common_substring(string1=a, string2=b)
+			first_char_idx = a.find(result)
+			last_char_idx = first_char_idx + len(result)
 
-	# On calcule y1 et y2
-	y_1 = round(a*x_1 + b)
-	y_2 = round(a*x_2 + b)
-	target_baseline = [[x_1, y_1], [x_2, y_2]]
+			# Dans le cas où la sous-chaîne correspond à la chaîne
+			if len(item.prediction) == last_char_idx:
+				last_char_idx = -1
+			cuts = item.cuts
+			baseline = item.baseline
+			first_cut = cuts[first_char_idx]
+			last_cut = cuts[last_char_idx]
+			x_1 = min(item[0] for item in first_cut) - 40
+			x_2 = max(item[0] for item in last_cut) + 40
+			baseline = [baseline[0], baseline[-1]]
+			formatted_baseline = baseline[0][0], baseline[0][1], baseline[1][0], baseline[1][1]
+			a, b = produce_line_function(formatted_baseline)
+			# On calcule y1 et y2
+			y_1 = round(a * x_1 + b)
+			y_2 = round(a * x_2 + b)
+			target_baseline = [[x_1, y_1], [x_2, y_2]]
+			baselines.append(target_baseline)
+			print(target_baseline)
+			if show_image:
+				cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
+				cropped.show()
+		return baselines
+	else:
+		cuts = line.cuts
+		baseline = line.baseline
+		prediction = line.prediction
+		prediction = prediction.lower()
+		target_string = target_string.lower()
+		target_string = nfc_normalize(target_string)
+		prediction = nfc_normalize(prediction)
+		if target_string not in prediction:
+			print(f"Attention, la ligne '{prediction}' ne contient pas la chaîne recherchée: '{target_string}'.")
+			return None
+		first_char_idx, last_char_idx = (prediction.find(target_string),
+										 prediction.find(target_string) + len(target_string) - 1)
 
-	if show_image:
-		cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
-		cropped.show()
-	return target_baseline
+		first_cut = cuts[first_char_idx]
+		last_cut = cuts[last_char_idx]
+		# On extrait l'abscisse minimale et maximale et on ajoute un peu de marge à droite et à gauche
+		x_1 = min(item[0] for item in first_cut) - 40
+		x_2 = max(item[0] for item in last_cut) + 40
+		baseline = [baseline[0], baseline[-1]]
+		formatted_baseline = baseline[0][0], baseline[0][1], baseline[1][0], baseline[1][1]
+		a, b = produce_line_function(formatted_baseline)
 
-def draw_lines_on_image(image:PIL.Image.Image, baseline:list, return_image=False):
+		# On calcule y1 et y2
+		y_1 = round(a * x_1 + b)
+		y_2 = round(a * x_2 + b)
+		target_baseline = [[x_1, y_1], [x_2, y_2]]
+
+		if show_image:
+			cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
+			cropped.show()
+		return target_baseline
+
+
+def draw_lines_on_image(image: PIL.Image.Image, baseline: list, return_image=False):
 	print("Attempting to show image")
 	draw = PIL.ImageDraw.Draw(image)
 	for line in baseline:

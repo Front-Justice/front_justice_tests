@@ -14,6 +14,14 @@ import src.utils.utils as utils
 
 
 def load(model_path):
+	"""
+	Cette fonction charge un modèle YOLO à partir d'un chemin donné.
+	Elle prend en argument le chemin vers le fichier de modèle et
+	renvoie une instance de la classe YOLO, qui représente le modèle
+	chargé.
+	:param model_path: le chemin vers le modèle
+	:return: le modèle chargé
+	"""
 	return YOLO(model_path)
 
 
@@ -50,11 +58,13 @@ class YOLOSegmenter():
 		classes_dict = model.names
 		boxes = results.boxes  # Boxes object for bounding box outputs
 		classes = [round(item) for item in boxes.cls.tolist()]
+		probs = [round(item, 3) for item in boxes.conf.tolist()]
 		as_labels = [classes_dict[obj] for obj in classes]
 		coordinates = boxes.xyxy.tolist()
-		for label, coordinate in list(zip(as_labels, coordinates)):
+		for label, coordinate, prob in list(zip(as_labels, coordinates, probs)):
 			results_list.append({"label": label,
-								 "coordinates": utils.format_coordinates(coordinate)})
+								 "coordinates": utils.format_coordinates(coordinate),
+								 "probs": prob})
 			check_list.append(label)
 
 		missing = utils.check_if_missing(target_classes, check_list)

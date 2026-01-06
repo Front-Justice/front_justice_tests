@@ -4,7 +4,7 @@ import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
-# import src.Vision.PARTY as PARTY
+import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
 
@@ -209,6 +209,27 @@ class Pipeline():
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
 			image=page["image_path"],
+			loaded_image=loaded_image)
+
+
+		current_dict["renseignements_procedure_complementaires"] = self.extractor.extraire_informations_procedure(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_2,
+			image=page["image_path"],
+			loaded_image=loaded_image)
+
+
+		current_dict["requisitoire"] = self.extractor.extraire_requisitoire(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_2,
+			image=page["image_path"],
+			loaded_image=loaded_image)
+
+
+
+		current_dict["questions"] = self.extractor.extraire_questions(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_2,
 			loaded_image=loaded_image)
 
 		zone_dict = {}
@@ -458,7 +479,12 @@ class Pipeline():
 		exit(0)
 
 
-def main(images_dir:str, target:str=None, debug:bool=False, use_party:bool=True, resegment:bool=False, retranscribe:bool=False):
+def main(images_dir:str,
+		 target:str=None,
+		 debug:bool=False,
+		 use_party:bool=True,
+		 resegment:bool=False,
+		 retranscribe:bool=False):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]

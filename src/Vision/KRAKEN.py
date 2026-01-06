@@ -20,7 +20,7 @@ class KRAKEN():
 
 	def segment_lines_with_kraken(self, image):
 		seg_model = vgsl.TorchVGSLModel.load_model(self.segmentation_model)
-		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model)
+		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device="cuda:0")
 		return baseline_seg
 
 	def predict_with_kraken(self, im:PIL.Image.Image, segments:kraken.blla.Segmentation) -> OCRRecord:
@@ -42,7 +42,7 @@ class KRAKEN():
 		]
 		"""
 
-		model = models.load_any(self.ocr_model)
+		model = models.load_any(self.ocr_model, device="cuda:0")
 		pred_it = rpred.rpred(model, im, segments)
 		prediction = []
 		for line, record in zip(segments.lines, pred_it):

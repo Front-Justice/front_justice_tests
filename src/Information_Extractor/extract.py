@@ -47,7 +47,8 @@ class Extractor:
 		self.ner = pipeline('ner',
 							model=self.ner_model,
 							tokenizer=self.tokenizer,
-							aggregation_strategy="simple")
+							aggregation_strategy="simple",
+							device="cpu")
 
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
@@ -85,7 +86,8 @@ class Extractor:
 								show_images: bool = False,
 								loaded_image: PIL.Image.Image = None,
 								ocr_prediction: OCRRecord = None,
-								intersect_ratio: float|list[float] = 0.5) -> tuple[OCRRecord,list] | tuple[None, None]:
+								intersect_ratio: float|list[float] = 0.5,
+								select_highest_prob_zone:bool=False) -> tuple[OCRRecord,list] | tuple[None, None]:
 		"""
 		Cette fonction extrait la ou les lignes correspondant à une zone
 		:param annotations: L'ensemble des zones prédites
@@ -96,6 +98,7 @@ class Extractor:
 		:param ocr_prediction: OCRRecord: La liste de lignes transcrites (baseline, prediction, cuts)
 		:param intersect_ratio: La proportion d'intersection minimale pour considérer la ligne dans la zone ciblée. Un flottant
 		ou une liste de flottant si on vise plusieurs zones
+		:param select_highest_prob_zone: Faut-il sélectionner la zone détecter la plus probable, en cas de zones multiples
 		:return: La liste des lignes concernées par la zone et les zones.
 		"""
 		# On récupère la boîte correspondante
@@ -114,7 +117,11 @@ class Extractor:
 				return None, None
 			elif len(zones) > 1 and len(all_zones) == 1:
 				print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
-				return None, None
+				# Si on active l'option du choix de la zone la plus probable, il n'y a qu'à ordonner la liste
+				if select_highest_prob_zone:
+					zones.sort(key=lambda x:x.probs, reverse=True)
+				else:
+					return None, None
 
 			# On va commencer par identifier le nom prédit par kraken
 			coordonnees_zones_filtrees = zones[0].coordinates
@@ -208,17 +215,17 @@ class Extractor:
 		clean_regexp_institution = re.compile("^\s?d[eu]?\s?")
 
 		try:
-			avant_seant_kraken = utils.approximate_split(sentence=kraken_prediction, word=chaine_seant, sensibility=0.75)[
+			avant_seant_kraken = utils.approximate_word_split(sentence=kraken_prediction, word=chaine_seant, sensibility=0.75)[
 				0]
 			institution_kraken = \
-				utils.approximate_split(sentence=avant_seant_kraken, word=chaine_permanent)[1]
+				utils.approximate_word_split(sentence=avant_seant_kraken, word=chaine_permanent)[1]
 			institution_kraken = re.sub(clean_regexp_institution, "", institution_kraken)
 		except IndexError:
 			institution_kraken = None
 		except TypeError:
 			institution_kraken = None
 		try:
-			lieu_kraken, matching_word = utils.approximate_split(sentence=kraken_prediction, word=chaine_seant, return_word=True)
+			lieu_kraken, matching_word = utils.approximate_word_split(sentence=kraken_prediction, word=chaine_seant, return_word=True)
 			lieu_kraken = lieu_kraken[1]
 			lieu_kraken = re.sub(clean_regexp_lieu, "", lieu_kraken)
 		except IndexError:
@@ -227,17 +234,17 @@ class Extractor:
 			lieu_kraken = None
 
 		try:
-			avant_seant_party = utils.approximate_split(sentence=party_prediction, word=chaine_seant, sensibility=0.75)[
+			avant_seant_party = utils.approximate_word_split(sentence=party_prediction, word=chaine_seant, sensibility=0.75)[
 				0]
 			institution_party = \
-				utils.approximate_split(sentence=avant_seant_party, word=chaine_permanent)[1]
+				utils.approximate_word_split(sentence=avant_seant_party, word=chaine_permanent)[1]
 			institution_party = re.sub(clean_regexp_institution, "", institution_party)
 		except IndexError:
 			institution_party = None
 		except TypeError:
 			institution_party = None
 		try:
-			lieu_party, matching_word = utils.approximate_split(sentence=party_prediction, word=chaine_seant, return_word=True)
+			lieu_party, matching_word = utils.approximate_word_split(sentence=party_prediction, word=chaine_seant, return_word=True)
 			lieu_party = lieu_party[1]
 			lieu_party = re.sub(clean_regexp_lieu, "", lieu_party)
 		except IndexError:
@@ -420,9 +427,9 @@ class Extractor:
 		except (TypeError, IndexError):
 			target_string = "a repondu se nommer"
 			ligne_nom_soldat, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match=target_string)
-			name_split, matching_word = utils.approximate_split(word="nommer",
-																		 sentence=ligne_nom_soldat.prediction,
-																		 return_word=True)
+			name_split, matching_word = utils.approximate_word_split(word="nommer",
+																	 sentence=ligne_nom_soldat.prediction,
+																	 return_word=True)
 			after_target_string = name_split[-1]
 			nom_soldat = after_target_string.split()[0]
 			entities = self.ner(after_target_string)
@@ -515,38 +522,80 @@ class Extractor:
 																   ocr_prediction=ocr_prediction,
 																   intersect_ratio=[0.05, .8])
 		try:
-			ligne_nom_soldat = extracted_lines[0]
+			if len(extracted_lines) == 1:
+				ligne_nom_soldat = extracted_lines[0]
+			else:
+				ligne_nom_soldat = extracted_lines[1]
 			nom_soldat = utils.extract_string_from_cuts(box=zone_nom_soldat[0],
 														line=ligne_nom_soldat)
 		except (TypeError, IndexError):
 			target_string = "a repondu se nommer"
 			ligne_nom_soldat, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
 																string_to_match=target_string)
-			name_split, matching_word = utils.approximate_split(word="nommer",
-																		 sentence=ligne_nom_soldat.prediction,
-																		 return_word=True)
+			name_split, matching_word = utils.approximate_word_split(word="nommer",
+																	 sentence=ligne_nom_soldat.prediction,
+																	 return_word=True)
 			after_target_string = name_split[-1]
-			nom_soldat = after_target_string.split()[0]
+			print(f"|{after_target_string}|")
+			print(ligne_nom_soldat.prediction)
+			try:
+				nom_soldat = after_target_string.split()[0]
+			except IndexError:
+				nom_soldat = None
 		entities = self.ner(ligne_nom_soldat.prediction)
-		if nom_soldat == entities[0]['word']:
-			certainty = 1
+		if len(entities) != 0:
+			if nom_soldat == entities[0]['word']:
+				certainty = 0.8
+			elif nom_soldat is None:
+				certainty = None
+			else:
+				certainty = 0.5
 		else:
 			certainty = 0.5
 		nom_soldat = utils.clean_small_string(nom_soldat)
-
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(ligne_nom_soldat.prediction,
 																	   nom_soldat,
 																	   pipeline=self.ner)
-		range_prenom_debut = ligne_nom_soldat.prediction.find(nom_soldat)
-		range_prenom_fin = ligne_nom_soldat.prediction.find(prenoms) + len(prenoms)
-		nom_complet = ligne_nom_soldat.prediction[range_prenom_debut:range_prenom_fin]
-		baseline_nom_complet = utils.get_baseline_from_string(line=ligne_nom_soldat,
-															  target_string=nom_complet,
-															  loaded_image=loaded_image,
-															  show_image=False)
-		print(nom_complet)
+		try:
+			range_prenom_debut = ligne_nom_soldat.prediction.find(nom_soldat)
+		except TypeError:
+			range_prenom_debut = None
+		try:
+			range_prenom_fin = ligne_nom_soldat.prediction.find(prenoms) + len(prenoms)
+			nom_complet = ligne_nom_soldat.prediction[range_prenom_debut:range_prenom_fin]
+			baseline_nom_complet = utils.get_baseline_from_string(line=ligne_nom_soldat,
+																  target_string=nom_complet,
+																  loaded_image=loaded_image,
+																  show_image=False)
+		except TypeError:
+			nom_complet = None
+			baseline_nom_complet = None
 		dictionnary['age_du_soldat'] = extractions.extraire_age_soldat(lignes_identite_soldat=lignes_identite_soldat)
 
+		# Lieu de naissance
+		naissance = utils.nfc_normalize("né à")
+		lignes_identite_soldat_string = lignes_identite_soldat.join_transcription()
+		splits = utils.approximate_sentence_split(sentence=utils.nfc_normalize(lignes_identite_soldat_string),
+												substring=naissance,
+												  max_dist=1)
+		if not splits:
+			dictionnary['lieu_naissance'] = {"prediction": lignes_identite_soldat_string,
+												"extracted": "UNK"}
+		else:
+			splits = splits[-1]
+			ner = self.ner(splits)
+			first_entity = ner[0]
+			if first_entity['entity_group'] == 'LOC' and first_entity['start'] == 0:
+				lieu_naissance = first_entity['word']
+				certainty_naissance = 0.8
+			else:
+				lieu_naissance = splits.split()[0]
+				certainty_naissance = 0.5
+
+			dictionnary['lieu_naissance'] = {"prediction": splits,
+												"extracted": lieu_naissance,
+												"certainty": certainty_naissance}
+		dictionnary['prediction'] = lignes_identite_soldat_string
 		dictionnary['nom_du_soldat'] =  {"extracted":
 					{"forename": {"persName":prenoms,
 								  "certainty": certitude_prenoms},
@@ -559,7 +608,6 @@ class Extractor:
 				}
 
 		return dictionnary
-
 
 
 	def extraire_identite_defenseur(self,
@@ -604,20 +652,27 @@ class Extractor:
 		ligne_defenseur, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
 														string_to_match="défenseur")
 		all_lines = lignes_identite_defenseur.join_transcription()
-		apres_defenseur = utils.approximate_split(sentence=all_lines,
-												  word="défenseur",
-												  sensibility=.8)[-1]
+		apres_defenseur = utils.approximate_sentence_split(sentence=all_lines,
+														   substring="accompagné de son défenseur",
+														   max_dist=5)[-1]
 		entites_nommees = self.ner(apres_defenseur)
-		nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
-		matching_line_defenseur, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
-																string_to_match=nom_defenseur)
-		print(nom_defenseur)
-		print(entites_nommees)
-		print(apres_defenseur)
+		try:
+			nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
+		except IndexError:
+			return  {'nom_du_defenseur': {
+				"extracted": "UNK",
+				"prediction": apres_defenseur}
+					 }
+		matching_line_defenseur = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
+																string_to_match=nom_defenseur,
+																	exact_match=True)
 		baseline_nom_defenseur = utils.get_baseline_from_string(line=matching_line_defenseur,
-																target_string=nom_defenseur)
+																target_string=nom_defenseur,
+																loaded_image=loaded_image,
+																show_image=False)
 
 		avocat = utils.check_substring_in_sentence(sentence=apres_defenseur, target_substring="avocat")
+		notaire = utils.check_substring_in_sentence(sentence=apres_defenseur, target_substring="notaire")
 		docteur = utils.check_substring_in_sentence(sentence=apres_defenseur, target_substring="docteur")
 		designe_office = utils.check_substring_in_sentence(sentence=apres_defenseur,
 														   target_substring="désigné d'office")
@@ -628,12 +683,179 @@ class Extractor:
 								{"surname": {"persName": nom_defenseur},
 								 "avocat": avocat,
 								 "docteur": docteur,
+								 "notaire": notaire,
 								 "designe_office": designe_office,
 					 },
 				"bbox": zone_identite_defenseur,
 				"baseline": baseline_nom_defenseur,
 				"prediction": apres_defenseur
 				}
+
+		return dictionnary
+
+
+
+	def extraire_informations_procedure(self,
+										ocr_prediction: OCRRecord,
+										annotations: YOLORecord,
+										image: str = None,
+										loaded_image: PIL.Image.Image = None,
+										show_images: bool = False):
+		"""
+		Cette fonction extrait les informations sur la défenser à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: un objet OCRRecord
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		"""
+
+		dictionnary = {}
+		lignes_formalites, zone_formalites = self.extract_lines_from_zone(annotations=annotations,
+																   target_zone=["formalites"],
+																   show_images=show_images,
+																   loaded_image=loaded_image,
+																   ocr_prediction=ocr_prediction,
+																   intersect_ratio=[.8])
+		lignes_formalites_as_string = lignes_formalites.join_transcription()
+		similarite = utils.similarite_ratcliff(string_a="Et le Président ayant, en outre, rempli à leur égard les formalités prescrites par les articles 317 et 319 du Code d'instruction criminelle",
+									 string_b=lignes_formalites_as_string)
+		print(lignes_formalites_as_string)
+		if similarite > .8:
+			precisions_jugement_temoins_defense = None
+		else:
+			try:
+				precisions_jugement_temoins_defense = utils.approximate_sentence_split(sentence=lignes_formalites_as_string, substring="et 319 du Code d'instruction criminelle")[-1]
+			except TypeError:
+				precisions_jugement_temoins_defense = None
+		print(precisions_jugement_temoins_defense)
+
+		return {"prediction": lignes_formalites_as_string,
+				"extracted": precisions_jugement_temoins_defense,
+				"bbox": zone_formalites}
+
+		return dictionnary
+
+
+	def extraire_questions(self,
+							ocr_prediction: OCRRecord,
+							annotations: YOLORecord,
+							loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+		
+		# Si la zone n'est pas reconnue, on récupère tout de même le texte pour vérification
+		if "questions" not in [item.label for item in annotations]:
+			ocr_prediction = utils.vertical_order_lines(ocr_prediction)
+			prediction_as_string = ocr_prediction.join_transcription()
+			split, match = utils.approximate_sentence_split(sentence=prediction_as_string,
+															substring=" Le Conseil délibérant à huis clos, le Président",
+															return_match=True)
+			target = f"{match} {split[-1]}"
+			notes_bas_page_1 = "(1) et à décharge (s'il y en a)"
+			notes_bas_page_2 = "(2) Indiquer si des témoins ont été entendus"
+			split_bas_page_1 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_1)
+			if not split_bas_page_1:
+				split_bas_page_2 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_2)
+				target = split_bas_page_2[0]
+				return {"prediction": target,
+						"extracted": None,
+						"bbox": None}
+			else:
+				target = split_bas_page_1[0]
+				return {"prediction": target,
+						"extracted": None,
+						"bbox": None}
+		lignes_questions, zone_questions = self.extract_lines_from_zone(annotations=annotations,
+																   target_zone=["questions"],
+																   show_images=False,
+																   loaded_image=loaded_image,
+																   ocr_prediction=ocr_prediction,
+																   intersect_ratio=[.8],
+																   select_highest_prob_zone=True)
+		lignes_questions_as_string = lignes_questions.join_transcription()
+		similarite = utils.similarite_ratcliff(string_a="L'accusé a été reconduit par l'escorte à la prison; "
+														"le Commissaire du Gouvernement, le Greffier et les assistants dans "
+														"l'auditoire se sont retirés sur l'invitation du Président (4); "
+														"Le Conseil délibérant à huis clos, le Président a posé la question, "
+														"conformément à l'article 132 du Code de justice militaire, ainsi qu'il suit: ",
+									 string_b=lignes_questions_as_string)
+		print(lignes_questions_as_string)
+		if similarite > .8:
+			questions = None
+		else:
+			try:
+				questions = utils.approximate_sentence_split(sentence=lignes_questions_as_string, substring="ainsi qu'il suit:")[-1]
+			except TypeError:
+				questions = None
+		print(questions)
+
+		return {"prediction": lignes_questions_as_string,
+				"extracted": questions,
+				"bbox": zone_questions}
+
+		return dictionnary
+
+
+	def extraire_requisitoire(self,
+										ocr_prediction: OCRRecord,
+										annotations: YOLORecord,
+										image: str = None,
+										loaded_image: PIL.Image.Image = None,
+										show_images: bool = False):
+		"""
+		Cette fonction extrait les informations sur le réquisitoire à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		"""
+
+		lignes_requisitoire, zone_requisitoire = self.extract_lines_from_zone(annotations=annotations,
+																   target_zone=["requisitoire"],
+																   show_images=show_images,
+																   loaded_image=loaded_image,
+																   ocr_prediction=ocr_prediction,
+																   intersect_ratio=[.8],
+																   select_highest_prob_zone=True)
+		lignes_requisitoire_as_string = lignes_requisitoire.join_transcription()
+		similarite = utils.similarite_ratcliff(string_a="Ouï M. le Commissaire du Gouvernement en ses réquisitions "
+														"tendants à ce que (3)",
+									 string_b=lignes_requisitoire_as_string)
+		print(lignes_requisitoire_as_string)
+		if similarite > .8:
+			requisitoire = None
+		else:
+			try:
+				requisitoire = utils.approximate_sentence_split(sentence=lignes_requisitoire_as_string, substring="tendant à ce que (3)")[-1]
+			except TypeError:
+				requisitoire = None
+
+		if requisitoire:
+			apres_application = utils.approximate_sentence_split(sentence=requisitoire,
+																 substring="articles",
+																 max_dist=2)
+			if not apres_application:
+				apres_application = utils.approximate_sentence_split(sentence=requisitoire,
+																	 substring="application",
+																	 max_dist=2)
+			try:
+				articles_vises = apres_application[-1]
+			except TypeError:
+				articles_vises = None
+		else:
+			articles_vises = None
+
+		return {"prediction": lignes_requisitoire_as_string,
+				"extracted": {
+					"requisitoire": requisitoire,
+					"articles_vises": articles_vises
+				},
+				"bbox": zone_requisitoire}
 
 		return dictionnary
 
@@ -827,8 +1049,11 @@ class Extractor:
 		lignes_condamnation = corresponding_lines[correct_index_condamnations:]
 		lignes_condamnations_str = " ".join([item.prediction for item in lignes_condamnation])
 		lignes_condamnations_str = utils.nfc_normalize(lignes_condamnations_str)
-		check_condamnations, mot_condamnations = utils.check_word_in_sentence(sentence=lignes_condamnations_str,
-												   target_word=["Condamnations", "antérieures"], sensibility=0.8)
+		check_condamnations, mot_condamnations = utils.check_substring_in_sentence(sentence=lignes_condamnations_str,
+																				   target_substring="Condamnations antérieures",
+																				   max_distance=4,
+																				   return_subtring=True)
+		mot_condamnations =  mot_condamnations[0].matched
 		inculpation["antécédents"]["predicted"] = lignes_condamnations_str
 
 		if check_condamnations:
@@ -1176,9 +1401,9 @@ class Extractor:
 			apres_date_naissance = lignes_description_as_string.split(date_naissance_ner)[-1]
 		except IndexError:
 			apres_date_naissance = lignes_description_as_string
-		apres_profession = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
+		apres_profession = utils.approximate_word_split(apres_date_naissance, "profession", sensibility=0.85)[-1]
 		profession_et_situation_maritale = \
-			utils.approximate_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
+			utils.approximate_word_split(apres_profession.lower(), "residant", sensibility=0.8)[0]
 		(check_veuf,
 		 token_veuf,
 		 check_celibataire,
@@ -1248,7 +1473,7 @@ class Extractor:
 		informations_naissance = {}
 		apres_date_naissance = \
 		utils.split_after_keep_delimiter(lignes_description_as_string, date_naissance_extraite.split()[-1])[1]
-		split_lieu_naissance = utils.approximate_split(apres_date_naissance, "profession", sensibility=0.90)
+		split_lieu_naissance = utils.approximate_word_split(apres_date_naissance, "profession", sensibility=0.90)
 		if celibataire is True and isinstance(token_celibataire, str):
 			lieu_naissance = split_lieu_naissance[0].replace(token_celibataire, "")
 		else:
@@ -1260,11 +1485,11 @@ class Extractor:
 		description_du_soldat["lieu_naissance"] = informations_naissance
 
 		informations_residence = {}
-		split_residence = utils.approximate_split(split_lieu_naissance[-1], "service", sensibility=.75)
+		split_residence = utils.approximate_word_split(split_lieu_naissance[-1], "service", sensibility=.75)
 		if split_residence is None:
-			split_residence = utils.approximate_split(split_lieu_naissance[-1], "mobilisation", sensibility=.75)
+			split_residence = utils.approximate_word_split(split_lieu_naissance[-1], "mobilisation", sensibility=.75)
 		try:
-			split_taille = utils.approximate_split(split_residence[-1], "Taille", sensibility=0.85)
+			split_taille = utils.approximate_word_split(split_residence[-1], "Taille", sensibility=0.85)
 			lieu_residence = split_taille[0]
 		except TypeError:
 			split_taille = utils.split_before_keep_delimiter(split_residence[-1], "[tT]aille")
@@ -1401,7 +1626,7 @@ class Extractor:
 			correct_lines = [cejourdui_date, an_mil_neuf_date]
 			line_as_string = f"{cejourdui_date.prediction} {an_mil_neuf_date.prediction}"
 			baseline = [item.baseline for item in correct_lines]
-		date_span = utils.approximate_split(line_as_string, "CEJOURD'HUI")
+		date_span = utils.approximate_word_split(line_as_string, "CEJOURD'HUI")
 
 		date_extraite = date_span[-1]
 		print(f"Orig: {date_extraite}")

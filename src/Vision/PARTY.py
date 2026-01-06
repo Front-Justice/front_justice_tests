@@ -10,8 +10,7 @@ import time
 
 class PartyPredict:
 	def __init__(self):
-		self.fabric = Fabric.Fabric(accelerator="auto",
-							   devices=16,
+		self.fabric = Fabric.Fabric(accelerator="cuda",
 							   precision="bf16-mixed")
 		self.model = PartyModel.from_safetensors(
 			"/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"

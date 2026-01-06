@@ -15,15 +15,15 @@ def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeli
 	:return:
 	"""
 	dictionnaire_informations["extracted"] = {}
-	split_departement = utils.approximate_split(lieu, "département")
+	split_departement = utils.approximate_word_split(lieu, "département")
 	if split_departement:
 		dictionnaire_informations["extracted"]["departement"] = utils.full_clean_string(split_departement[-1])
-		split_arrondissement_1 = utils.approximate_split(split_departement[0], "arrd^t", sensibility=0.5)
-		split_arrondissement_2 = utils.approximate_split(split_departement[0], "arrondissement", sensibility=0.85)
+		split_arrondissement_1 = utils.approximate_word_split(split_departement[0], "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = utils.approximate_word_split(split_departement[0], "arrondissement", sensibility=0.85)
 	else:
 		dictionnaire_informations["extracted"]["departement"] = None
-		split_arrondissement_1 = utils.approximate_split(lieu, "arrd^t", sensibility=0.5)
-		split_arrondissement_2 = utils.approximate_split(lieu, "arrondissement", sensibility=0.7)
+		split_arrondissement_1 = utils.approximate_word_split(lieu, "arrd^t", sensibility=0.5)
+		split_arrondissement_2 = utils.approximate_word_split(lieu, "arrondissement", sensibility=0.7)
 	if split_arrondissement_1:
 		split_arrondissement = split_arrondissement_1
 		arrondissement = utils.full_clean_string(split_arrondissement_1[-1])
@@ -72,13 +72,13 @@ def extraire_taille(lignes_description_physique):
 	ligne_taille, debug, index_taille = utils.match_line_by_substring(lignes_description_physique, chaine_taille,
 																	  return_index=True)
 	# On récupère la chaîne avant millimètres
-	taille, matching_millimetre = utils.approximate_split(ligne_taille.prediction, "millimètres", sensibility=0.8,
-														  return_word=True)
+	taille, matching_millimetre = utils.approximate_word_split(ligne_taille.prediction, "millimètres", sensibility=0.8,
+															   return_word=True)
 	# Puis la chaîne après mètre
 	try:
-		taille, matching_metre = utils.approximate_split(taille[0], "mètre", return_word=True)
+		taille, matching_metre = utils.approximate_word_split(taille[0], "mètre", return_word=True)
 	except TypeError:
-		taille, matching_metre = utils.approximate_split(ligne_taille.prediction, "mètre", return_word=True)
+		taille, matching_metre = utils.approximate_word_split(ligne_taille.prediction, "mètre", return_word=True)
 	taille = taille[1]
 	prediction_taille = ligne_taille.prediction
 	prediction_taille = utils.nfc_normalize(prediction_taille)
@@ -192,10 +192,10 @@ def extraire_cheveux(lignes_description_physique):
 	ligne_cheveux, debug, index_cheveux = utils.match_line_by_substring(lignes_description_physique, chaine_cheveux,
 																		return_index=True)
 
-	cheveux, matching_cheveux = utils.approximate_split(ligne_cheveux.prediction, "cheveux",
-														sensibility=0.7, return_word=True)
-	front, matching_front = utils.approximate_split(ligne_cheveux.prediction, "front",
-													sensibility=0.7, return_word=True)
+	cheveux, matching_cheveux = utils.approximate_word_split(ligne_cheveux.prediction, "cheveux",
+															 sensibility=0.7, return_word=True)
+	front, matching_front = utils.approximate_word_split(ligne_cheveux.prediction, "front",
+														 sensibility=0.7, return_word=True)
 
 	starting_index = ligne_cheveux.prediction.find(matching_cheveux)
 
@@ -233,8 +233,8 @@ def extraire_front(lignes_description_physique):
 	ligne_front, debug, index_front = utils.match_line_by_substring(lignes_description_physique, chaine_front,
 																	return_index=True)
 
-	front, matching_front = utils.approximate_split(ligne_front.prediction, "front",
-													sensibility=0.7, return_word=True)
+	front, matching_front = utils.approximate_word_split(ligne_front.prediction, "front",
+														 sensibility=0.7, return_word=True)
 
 	try:
 		starting_index = ligne_front.prediction.find(matching_front)
@@ -273,8 +273,8 @@ def extraire_visage(lignes_description_physique):
 	ligne_visage, debug, index_visage = utils.match_line_by_substring(lignes_description_physique, chaine_visage,
 																	  return_index=True)
 
-	visage, matching_visage = utils.approximate_split(ligne_visage.prediction, "visage",
-													sensibility=0.8, return_word=True)
+	visage, matching_visage = utils.approximate_word_split(ligne_visage.prediction, "visage",
+														   sensibility=0.8, return_word=True)
 
 	try:
 		starting_index = ligne_visage.prediction.find(matching_visage)
@@ -311,10 +311,10 @@ def extraire_yeux(lignes_description_physique):
 	ligne_yeux, debug, index_yeux = utils.match_line_by_substring(lignes_description_physique, chaine_yeux,
 																  return_index=True)
 
-	yeux, matching_yeux = utils.approximate_split(ligne_yeux.prediction, "yeux",
-													sensibility=0.8, return_word=True)
-	nez, matching_nez = utils.approximate_split(ligne_yeux.prediction, "nez",
-													sensibility=0.8, return_word=True)
+	yeux, matching_yeux = utils.approximate_word_split(ligne_yeux.prediction, "yeux",
+													   sensibility=0.8, return_word=True)
+	nez, matching_nez = utils.approximate_word_split(ligne_yeux.prediction, "nez",
+													 sensibility=0.8, return_word=True)
 
 	try:
 		starting_index = ligne_yeux.prediction.find(matching_yeux)
@@ -374,10 +374,10 @@ def extraire_marques_particulieres(lignes_description_physique, matricule) -> di
 	ligne_marques, debug, index_marques = utils.match_line_by_substring(lignes_description_physique, chaine_marques,
 																		return_index=True)
 	try:
-		particulieres, matching_particulieres = utils.approximate_split(ligne_marques.prediction,
+		particulieres, matching_particulieres = utils.approximate_word_split(ligne_marques.prediction,
 																		  "particulières",
-																		  sensibility=0.9,
-																		  return_word=True)
+																			 sensibility=0.9,
+																			 return_word=True)
 	except TypeError:
 		return {"extracted": None,
 				"baseline": ligne_marques.baseline,
@@ -426,10 +426,10 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 	ligne_renseignements, debug, index_renseignements = utils.match_line_by_substring(lignes_description_physique, chaine_renseignements,
 																					  return_index=True)
 	try:
-		complementaire, matching_complementaire = utils.approximate_split(ligne_renseignements.prediction,
+		complementaire, matching_complementaire = utils.approximate_word_split(ligne_renseignements.prediction,
 																		  "complémentaires",
-																		  sensibility=0.9,
-																		  return_word=True)
+																			   sensibility=0.9,
+																			   return_word=True)
 	except TypeError:
 		return {"extracted": None,
 				"baseline": ligne_renseignements.baseline,
@@ -477,10 +477,10 @@ def extraire_nez(lignes_description_physique):
 	ligne_nez, debug, index_nez = utils.match_line_by_substring(lignes_description_physique, chaine_nez,
 																return_index=True)
 
-	nez, matching_nez = utils.approximate_split(ligne_nez.prediction, "nez",
-													sensibility=0.8, return_word=True)
-	visage, matching_visage = utils.approximate_split(ligne_nez.prediction, "visage",
-													sensibility=0.8, return_word=True)
+	nez, matching_nez = utils.approximate_word_split(ligne_nez.prediction, "nez",
+													 sensibility=0.8, return_word=True)
+	visage, matching_visage = utils.approximate_word_split(ligne_nez.prediction, "visage",
+														   sensibility=0.8, return_word=True)
 
 	try:
 		starting_index = ligne_nez.prediction.find(matching_nez)
