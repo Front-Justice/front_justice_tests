@@ -313,6 +313,20 @@ class Pipeline():
 		zone_dict["zones_identifiées"] = zones_page_1.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
 
+
+		# On extrait le nom et prénom du soldat
+		if "Description du Soldat" in zones_manquantes:
+			current_dict["description_soldat"] = None
+		else:
+			current_dict["description_soldat"] = self.extractor.extraire_description_soldat_NER(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
+			# Production de corpus, à supprimer
+		return zone_dict, current_dict
+
 		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_1,
@@ -320,16 +334,6 @@ class Pipeline():
 			show_images=False,
 			loaded_image=loaded_image)
 
-		# On extrait le nom et prénom du soldat
-		if "Description du Soldat" in zones_manquantes:
-			current_dict["description_soldat"] = None
-		else:
-			current_dict["description_soldat"] = self.extractor.extraire_description_soldat(
-				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1,
-				image=page["image_path"],
-				show_images=False,
-				loaded_image=loaded_image)
 
 		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['nom_du_soldat'] == "Plusieurs soldats":
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
@@ -438,12 +442,13 @@ class Pipeline():
 	def traitement_p_autre(self):
 		pass
 
-	def workflow(self, images:list, target:str|None):
+	def workflow(self, images:list, target:str|None, start_after:int):
 		"""
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
 		:param images: Les images à traiter
 		:param target: [DEBUG] l'image à traiter dans le corpus
+		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
 		"""
 		print("Début du workflow")
@@ -459,8 +464,16 @@ class Pipeline():
 		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
 		# utils.convert_to_csv(minutes, "results/database.csv")
 		# exit(0)
+		image_index = 0
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
+				print("---")
+				print(f"Current index: {image_index}")
+				if start_after > image_index:
+					image_index += 1
+					continue
+				else:
+					image_index += 1
 				if target:
 					if page['image_path'] != target:
 						continue
@@ -484,12 +497,14 @@ def main(images_dir:str,
 		 debug:bool=False,
 		 use_party:bool=True,
 		 resegment:bool=False,
-		 retranscribe:bool=False):
+		 retranscribe:bool=False,
+		 start_after:int=0):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
 	else:
 		target = None
+	# Attention, cette façon de trier ne peut fonctionner qu'au sein d'un même minutier
 	try:
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
@@ -506,7 +521,7 @@ def main(images_dir:str,
 						use_party=use_party,
 						resegment=resegment,
 						retranscribe=retranscribe)
-	pipeline.workflow(images, target)
+	pipeline.workflow(images, target, start_after)
 
 
 if __name__ == '__main__':
@@ -514,6 +529,7 @@ if __name__ == '__main__':
 	arguments.add_argument("-i", "--images", help="Input folder")
 	arguments.add_argument("-d", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
+	arguments.add_argument("-sa", "--start_after", help="Start after given image index", default=0)
 	arguments.add_argument("-rs", "--resegment", help="Launch new segmentation", default=False)
 	arguments.add_argument("-rt", "--retranscribe", help="Launch new transcription", default=False)
 	arguments.add_argument("-up", "--use_party", help="Use party to confirm key OCR predictions", default=True)
@@ -523,5 +539,6 @@ if __name__ == '__main__':
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
 	use_party = True if arguments.use_party == "True" else False
+	start_after = int(arguments.start_after)
 	debug = True if arguments.debug == "True" else False
-	main(images_dir, target, debug, use_party, resegment, retranscribe)
+	main(images_dir, target, debug, use_party, resegment, retranscribe, start_after)

@@ -21,9 +21,15 @@ import fuzzysearch
 @dataclass
 class YOLOZone:
 	"""CLasse principale pour la description d'une zone"""
-	label: str
-	coordinates: list[list]
-	probs: str
+	def __init__(self, label, coordinates, probs):
+		self.label: str = label
+		self.coordinates: list[list] = coordinates
+		self.probs: str = probs
+
+	def __repr__(self):
+		return json.dumps({"label":self.label,
+				"coordinates": self.coordinates,
+				"probs": self.probs})
 
 
 class YOLORecord():
@@ -44,6 +50,17 @@ class YOLORecord():
 
 	def __getitem__(self, index: int) -> YOLOZone:
 		return self.record[index]
+
+	def __repr__(self):
+		return self.record
+
+	def __str__(self):
+		return json.dumps([{"label":item.label,
+							"probs": item.probs,
+							"coordinates": item.coordinates} for item in self.record])
+
+	def filter_zones(self, label):
+		return [item for item in self.record if item.label == label]
 
 	def to_json(self):
 		"""
@@ -330,6 +347,9 @@ def nfc_normalize(input_string: str) -> str:
 	:param input_string:
 	:return:
 	"""
+	assert isinstance(input_string, str), (f"Input string should be a string. "
+										   f"Actually: {type(input_string)}."
+										   f"Current string: {input_string}")
 	return unicodedata.normalize('NFC', input_string)
 
 
@@ -478,6 +498,52 @@ def normalize_string_and_strip_spaces(string: str) -> str:
 	"""
 	return string.lower().strip()
 
+
+def merge_adjacent_entities(tokens:list[dict]):
+	"""
+	Cette fonction fusionne les entités adjacentes de même classe, qui ne sont qu'une entité.
+	:param entities: une liste d'entité produite par une pipeline.
+	:return: la liste avec les entités fusionnées
+	"""
+	entites = []
+	i = 0
+	n = len(tokens)
+	while i < n:
+		token = tokens[i]
+		if token["entity"].startswith("B-"):
+			# Début d'une nouvelle entité
+			entite = {
+				"entity": token["entity"][2:],  # Enlever le préfixe "B-"
+				"word": token["word"],
+				"start": token["start"],
+				"end": token["end"]
+			}
+			# Chercher les tokens suivants de type "I-XXX"
+			j = i + 1
+			while j < n and tokens[j]["entity"] == f"I-{entite['entity']}":
+				entite["word"] += " " + tokens[j]["word"]
+				entite["end"] = tokens[j]["end"]
+				j += 1
+			entites.append(entite)
+			i = j
+		else:
+			i += 1
+	return entites
+
+
+def entities_to_dict(entities:list) -> dict:
+	result = {}
+	for entity in entities:
+		label = entity["entity_group"]
+		word = entity["word"]
+		spans = [entity["start"], entity["end"]]
+		try:
+			result[label].append({"string": word,
+									"spans": spans})
+		except KeyError:
+			result[label] = [{"string": word, "spans": spans}]
+
+	return result
 
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	"""
@@ -958,11 +1024,17 @@ def check_neant(string: str) -> bool:
 		return False
 
 
-def clean_small_string(string):
-	if string is None:
+def clean_small_string(input_string):
+	"""
+	Cette fonction supprime les ponctuations et les espaces
+	de début et de fin de chaîne de caractère.
+	:param input_string: la chaîne à nettoyer
+	:return: la chaîne nettoyée
+	"""
+	if input_string is None:
 		return None
-	regexp = re.compile("^\s?[.:,?\-;!]?\s?$")
-	return re.sub(regexp, "", string)
+	regexp = re.compile("^\s?[.:,?\-;!]?\s?|\s?[.:,?\-;!]?\s?$")
+	return re.sub(regexp, "", input_string)
 
 
 def approximate_word_split(sentence: str, word: str, sensibility: float = 0.5, return_word: bool = False) -> list | \
@@ -1178,6 +1250,11 @@ def levensthein_distance(string_a, string_b):
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
+def retrieve_substring_span(string:str, substring:str) -> list[int, int]:
+	"""
+	Cette fonction récupère la position d'un sous-chaîne étant donnée une chaîne de caractères
+	"""
+	return [string.find(substring), string.find(substring) + len(substring)]
 
 def check_if_line_in_box(box_coord: list[list[int]], baseline: list[int], intersect_ratio=.5) -> bool:
 	"""
@@ -1290,7 +1367,7 @@ def longest_common_substring(string1, string2):
 
 def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 							 target_string: str,
-							 loaded_image: Image.Image = None,
+							 loaded_image: Image.Image=None,
 							 show_image: bool = False) -> tuple[tuple[int, int], tuple[int, int]] | None:
 	"""
 	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée.
@@ -1301,14 +1378,16 @@ def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 
 	# Dans le cas où on a une liste de lignes, on boucle sur chacune d'entre elles, on récupère la portion de string
 	# qui correspond et la baseline correspondant.
-	if isinstance(line, list):
+	if isinstance(line, OCRRecord):
 		baselines = []
 		for item in line:
 			a, b = nfc_normalize(item.prediction), nfc_normalize(target_string)
 			result = longest_common_substring(string1=a, string2=b)
-			first_char_idx = a.find(result)
-			last_char_idx = first_char_idx + len(result)
-
+			if result == target_string:
+				first_char_idx = a.find(result)
+				last_char_idx = first_char_idx + len(result)
+			else:
+				continue
 			# Dans le cas où la sous-chaîne correspond à la chaîne
 			if len(item.prediction) == last_char_idx:
 				last_char_idx = -1
@@ -1328,6 +1407,7 @@ def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 			baselines.append(target_baseline)
 			print(target_baseline)
 			if show_image:
+				assert loaded_image is not None, "Merci d'ajouter l'image si vous voulez la montrer."
 				cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
 				cropped.show()
 		return baselines

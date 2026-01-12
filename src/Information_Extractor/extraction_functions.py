@@ -53,7 +53,34 @@ def extraction_geographique(lieu:str, dictionnaire_informations:dict, ner_pipeli
 	dictionnaire_informations["extracted"]["ville"] = ville
 	return dictionnaire_informations
 
-def extraire_taille(lignes_description_physique):
+
+def extraire_entite_baseline(dictionnaire:dict, nom_entite:str, target_lines:list):
+	"""
+	Cette fonction extrait d'un dictionnaire contenant les entités reconnues par le NER
+	une entité en particulier.
+	:param dictionnaire:
+	:param nom_entite:
+	:return: une liste de dictionnaire de la forme: [{"extracted": "entite",
+														"baseline": baseline}]
+	"""
+
+	entites_extraites = dictionnaire[nom_entite]
+	if len(entites_extraites) == 1:
+		target_baseline = utils.get_baseline_from_string(line=target_lines,
+														 target_string=entites_extraites[0]["string"],
+														 show_image=False)
+		return [{"extracted": entites_extraites[0]['string'], "baseline": target_baseline}]
+	else:
+		extractions = []
+		for entite in entites_extraites:
+			target_baseline = utils.get_baseline_from_string(line=target_lines,
+															 target_string=entite["string"],
+															 show_image=False)
+			extractions.append({"extracted": entite['string'], "baseline": target_baseline})
+		return extractions
+
+def extraire_taille(lignes_description_physique,
+					lignes_description_du_soldat_as_string):
 	"""
 		Cette fonction extrait l'information sur les cheveux de l'inculpé.
 		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -67,7 +94,6 @@ def extraire_taille(lignes_description_physique):
 		}
 		La baseline correspond à l'information extraite uniquement.
 		"""
-
 	chaine_taille = "Taille d'un mètre milimètres"
 	ligne_taille, debug, index_taille = utils.match_line_by_substring(lignes_description_physique, chaine_taille,
 																	  return_index=True)
@@ -84,7 +110,7 @@ def extraire_taille(lignes_description_physique):
 	prediction_taille = utils.nfc_normalize(prediction_taille)
 	starting_index = prediction_taille.find(f"un {matching_metre}")
 	try:
-		ending_index = prediction_taille.find(f"{matching_millimetre}") + len(matching_millimetre)
+		ending_index = prediction_taille.find(f"{matching_millimetre}") + len(matching_millimetre) + 2
 	except TypeError:
 		ending_index = len(ligne_taille.prediction)
 	matching_string = ligne_taille.prediction[starting_index:ending_index]
@@ -101,12 +127,15 @@ def extraire_taille(lignes_description_physique):
 				taille = "UNK"
 	if taille == "":
 		taille = None
+	matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, matching_string)
 	return {"extracted": taille,
 			"matching": matching_string,
+			"matching_spans": matching_spans,
 		   "baseline": specific_baseline,
 		   "prediction": ligne_taille.prediction}
 
-def extraire_matricule(lignes_description_physique):
+def extraire_matricule(lignes_description_physique,
+					   lignes_description_du_soldat_as_string):
 	dict_matricule = {}
 	numero_matricule = "n^o m^le 00000"
 	numero_matricule_2 = "numero matricule 00000"
@@ -137,6 +166,13 @@ def extraire_matricule(lignes_description_physique):
 		dict_matricule["matching"] = numero_matricule
 		dict_matricule["prediction"] = ligne_matricule.prediction
 		dict_matricule["baseline"] = baseline_matricule
+		try:
+			dict_matricule["matching_spans"] = [lignes_description_du_soldat_as_string.find(numero_extrait),
+											   lignes_description_du_soldat_as_string.find(numero_extrait) + len(
+												   numero_extrait)]
+		except TypeError:
+			dict_matricule["matching_spans"] = [lignes_description_du_soldat_as_string.find(numero_matricule),
+						 lignes_description_du_soldat_as_string.find(numero_matricule) + len(numero_matricule)]
 	else:
 		dict_matricule = {
 			"extracted": None,
@@ -174,7 +210,8 @@ def extraire_age_soldat(lignes_identite_soldat:OCRRecord) -> dict:
 									"prediction": full_age}
 	return out_dict
 
-def extraire_cheveux(lignes_description_physique):
+def extraire_cheveux(lignes_description_physique,
+					 lignes_description_du_soldat_as_string):
 	"""
 	Cette fonction extrait l'information sur les cheveux de l'inculpé.
 	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -210,12 +247,17 @@ def extraire_cheveux(lignes_description_physique):
 	extracted_cheveux = utils.strip_punctuation(matching_string.replace(matching_cheveux, "").replace(matching_front, ""))
 	if extracted_cheveux == "":
 		extracted_cheveux = None
+		matching_spans = None
+	else:
+		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_cheveux)
 	return {"extracted": extracted_cheveux,
 			"matching":  matching_string.replace(matching_front, ""),
 			"baseline": specific_baseline,
+			"matching_spans": matching_spans,
 			"prediction": ligne_cheveux.prediction}
 
-def extraire_front(lignes_description_physique):
+def extraire_front(lignes_description_physique,
+				   lignes_description_du_soldat_as_string):
 	"""
 	Cette fonction extrait l'information sur les cheveux de l'inculpé.
 	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -249,13 +291,18 @@ def extraire_front(lignes_description_physique):
 	extracted_front = utils.strip_punctuation(matching_string.replace(matching_front, ""))
 	if extracted_front == "":
 		extracted_front = None
+		matching_spans = None
+	else:
+		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_front)
 	return {"extracted": extracted_front,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
+			"matching_spans": matching_spans,
 			"prediction": ligne_front.prediction}
 
 
-def extraire_visage(lignes_description_physique):
+def extraire_visage(lignes_description_physique,
+					lignes_description_du_soldat_as_string):
 	"""
 	Cette fonction extrait l'information sur le visage de l'inculpé.
 	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -287,13 +334,18 @@ def extraire_visage(lignes_description_physique):
 	extracted_visage = utils.strip_punctuation(matching_string.replace(matching_visage, ""))
 	if extracted_visage == "":
 		extracted_visage = None
+		matching_spans = None
+	else:
+		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_visage)
 	return {"extracted": extracted_visage,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
+			"matching_spans": matching_spans,
 			"prediction": ligne_visage.prediction}
 
 
-def extraire_yeux(lignes_description_physique):
+def extraire_yeux(lignes_description_physique,
+				  lignes_description_du_soldat_as_string):
 	"""
 	Cette fonction extrait l'information sur les yeux de l'inculpé.
 	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -337,9 +389,13 @@ def extraire_yeux(lignes_description_physique):
 	extracted_yeux = utils.strip_punctuation(matching_string.replace(matching_yeux, ""))
 	if extracted_yeux == "":
 		extracted_yeux = None
+		matching_spans = None
+	else:
+		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_yeux)
 	return {"extracted": extracted_yeux,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
+			"matching_spans": matching_spans,
 			"prediction": ligne_yeux.prediction}
 
 def extraire_affectation_soldat(lignes_description_physique):
@@ -459,7 +515,8 @@ def extraire_renseignements_complementaires(lignes_description_physique, matricu
 			"baseline": ligne_renseignements.baseline,
 			"prediction": ligne_renseignements.prediction}
 
-def extraire_nez(lignes_description_physique):
+def extraire_nez(lignes_description_physique,
+				 lignes_description_du_soldat_as_string):
 	"""
 	Cette fonction extrait l'information sur le nez de l'inculpé.
 	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
@@ -501,9 +558,13 @@ def extraire_nez(lignes_description_physique):
 	extracted_nez = utils.strip_punctuation(matching_string.replace(matching_nez, ""))
 	if extracted_nez == "":
 		extracted_nez = None
+		matching_spans = None
+	else:
+		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_nez)
 	return {"extracted": extracted_nez,
 			"matching":  matching_string,
 			"baseline": specific_baseline,
+			"matching_spans": matching_spans,
 			"prediction": ligne_nez.prediction}
 
 
