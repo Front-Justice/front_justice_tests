@@ -7,6 +7,7 @@ import Information_Extractor.extract as extract
 import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
+import json
 
 import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
@@ -38,19 +39,20 @@ class Pipeline():
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
 			self.yolo_models[name] = YOLO.load(path)
-		self.YOLO_Segmenter = YOLO.YOLOSegmenter(models=self.yolo_models)
+		self.YOLO_Segmenter = YOLO.YOLOSegmenter()
 
 		# Les modèles d'OCR
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = {
+			 0: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/lignes_ajouts.mlmodel",
 			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
 			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
 			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
-			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel",
+			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel"
 			 }
 		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_638p.mlmodel"
-		self.party_model = "/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
+		self.party_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
@@ -140,7 +142,7 @@ class Pipeline():
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
-	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int) -> OCRRecord:
+	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int, suffix="") -> OCRRecord:
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
@@ -149,7 +151,7 @@ class Pipeline():
 		"""
 		assert os.path.isfile(self.kraken_ocr_model), f"No model named {self.kraken_ocr_model}"
 		# assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
-		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(".jpg", "_segments.pickle")}'
+		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(f"{suffix}.jpg", "_segments.pickle")}'
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
 								   ocr_model=self.kraken_ocr_model)
@@ -171,8 +173,6 @@ class Pipeline():
 		"""
 
 		# On segmente la page 2: boxes générales
-		print("---")
-		print(f"Treating {page}")
 		# On s'occupe d'abord de la transcription des lignes
 
 
@@ -197,7 +197,7 @@ class Pipeline():
 																		   model=self.yolo_models["page_2"],
 																		   show_image=False)
 
-		current_dict["identite_soldat"] = self.extractor.extraire_identite_soldat_p2(
+		current_dict["soldat"] = self.extractor.extraire_description_soldat_p2_NER(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
 			image=page["image_path"],
@@ -205,7 +205,7 @@ class Pipeline():
 			loaded_image=loaded_image)
 
 
-		current_dict["identite_defenseur"] = self.extractor.extraire_identite_defenseur(
+		current_dict["defenseur"] = self.extractor.extraire_identite_defenseur(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
 			image=page["image_path"],
@@ -227,7 +227,7 @@ class Pipeline():
 
 
 
-		current_dict["questions"] = self.extractor.extraire_questions(
+		current_dict["questions"] = self.extractor.extraire_questions_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
 			loaded_image=loaded_image)
@@ -236,6 +236,113 @@ class Pipeline():
 		zone_dict["zones_identifiees"] = zones_page_2.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
 		return zone_dict, current_dict
+
+
+	def traitement_p_3(self, page, show_image=False):
+		"""
+		Extraction d'information de la deuxième page du procès. On propose une approche modulaire: une méthode par type
+		d'information recherchée
+		On extrait d'abord toutes les informations à l'aide d'un modèle généraliste
+		Puis on extrait les magistrats
+		:return: On amende le fichier JSON général.
+		"""
+
+		# On segmente la page 3: boxes générales
+		# On s'occupe d'abord de la transcription des lignes
+
+
+		classes_page_3 = ["questions",
+							"reponse_questions",
+							"decision_tribunal"]
+		current_dict = {}
+		loaded_image = Image.open(page["image_path"])
+		width, height = loaded_image.size
+		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
+		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
+		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
+		loaded_image = loaded_image.resize(new_size)
+		zones_page_3, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=classes_page_3,
+																		   confidence=0.5,
+																		   model=self.yolo_models["page_3"],
+																		   show_image=False)
+
+
+
+		if "questions" not in zones_manquantes:
+			current_dict["questions"] = self.extractor.extraire_questions_p3(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_3,
+				loaded_image=loaded_image)
+
+
+		current_dict["reponse_questions"] = self.extractor.extraire_reponses_p3(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_3,
+			loaded_image=loaded_image)
+
+
+		current_dict["decision_tribunal"] = self.extractor.extraire_decision_tribunal_p3(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_3,
+			loaded_image=loaded_image)
+
+		zone_dict = {}
+		zone_dict["zones_identifiees"] = zones_page_3.to_json()
+		zone_dict["zones_manquantes"] = zones_manquantes
+		return zone_dict, current_dict
+
+	def traitement_p_4(self, page, show_image=False):
+		"""
+		Extraction d'information de la deuxième page du procès. On propose une approche modulaire: une méthode par type
+		d'information recherchée
+		On extrait d'abord toutes les informations à l'aide d'un modèle généraliste
+		Puis on extrait les magistrats
+		:return: On amende le fichier JSON général.
+		"""
+
+		# On segmente la page 3: boxes générales
+		# On s'occupe d'abord de la transcription des lignes
+
+
+		classes_page_4 = ["recapitulatif_somme",
+							"tableau_frais"]
+		current_dict = {}
+		loaded_image = Image.open(page["image_path"])
+		width, height = loaded_image.size
+		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
+		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
+		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
+		loaded_image = loaded_image.resize(new_size)
+		zones_page_4, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=classes_page_4,
+																		   confidence=0.5,
+																		   model=self.yolo_models["page_4"],
+																		   show_image=False)
+
+
+
+		if "tableau_frais" not in zones_manquantes:
+			current_dict["tableau_frais"] = self.extractor.extraire_tableau_p4(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_4,
+				loaded_image=loaded_image)
+
+		if "recapitulatif_somme" not in zones_manquantes:
+			current_dict["dernier_paragraphe"] = self.extractor.extraire_paragraphe_final_p4(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_4,
+				loaded_image=loaded_image)
+
+
+
+
+
+		zone_dict = {}
+		zone_dict["zones_identifiees"] = zones_page_4.to_json()
+		zone_dict["zones_manquantes"] = zones_manquantes
+		return zone_dict, current_dict
+
 
 	def transcription_page(self, page:str, show_image:bool = False):
 		"""
@@ -265,10 +372,61 @@ class Pipeline():
 			self.current_page_transcription.from_json(path=target_transcription)
 
 		if show_image:
-			image = Image.open(page["image_path"])
 			baselines = [line.baseline for line in self.current_page_transcription]
-			utils.draw_lines_on_image(image=image, baseline=baselines)
+			utils.draw_lines_on_image(image_path=page["image_path"], baseline=baselines)
 
+
+	def process_additions(self, page:json, show_image=False):
+		"""
+		Cette fonction gère les ajouts postérieurs.
+		:param page: the page metadata as json
+		:param show_image: montrer l'image ou pas.
+		:return:
+		"""
+
+		# On segmente la page 1: boxes générales
+		print(f"Checking additions")
+
+		current_dict = {}
+
+		zones_ajouts, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=["MarginTextZone-ajout"],
+																		   confidence=0.5,
+																		   model=self.yolo_models["ajouts"],
+																		   show_image=False)
+
+
+		zone_dict = {}
+		zone_dict["zones_identifiées"] = zones_ajouts.to_json()
+		zone_dict["zones_manquantes"] = zones_manquantes
+		if len(zones_manquantes) == 0:
+			target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.ajouts.json')}"
+			if not os.path.isfile(target_transcription):
+				lignes_glosees = self.transcription_kraken(
+					image=page["image_path"],
+					transcription_only=False,
+					current_page=0,
+					suffix=".ajouts"
+				)
+				utils.serialize_dict(lignes_glosees.to_json(), target_transcription)
+			else:
+				print("Found existing kraken transcription: " + target_transcription)
+				print("Cas 2")
+				lignes_glosees = OCRRecord()
+				lignes_glosees.from_json(path=target_transcription)
+
+			print(lignes_glosees)
+			# baselines = [line.baseline for line in lignes_glosees]
+			# utils.draw_lines_on_image(image_path=page["image_path"], baseline=baselines)
+		else:
+			print("Oh no !")
+			return None, None
+
+		informations_ajouts = self.extractor.extraire_informations_ajouts_posterieurs(ocr_prediction=lignes_glosees,
+																annotations=zones_ajouts)
+
+		informations_ajouts = {"annotations_ajouts": informations_ajouts}
+		return zone_dict, informations_ajouts
 
 
 
@@ -282,8 +440,6 @@ class Pipeline():
 		"""
 
 		# On segmente la page 1: boxes générales
-		print("---")
-		print(f"Treating {page}")
 		# On s'occupe d'abord de la transcription des lignes
 
 		# La liste qui suit permet de vérifier si une zone est manquante.
@@ -313,29 +469,40 @@ class Pipeline():
 		zone_dict["zones_identifiées"] = zones_page_1.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
 
+		if "Magistrats" not in zones_manquantes:
+			current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				image=page["image_path"],
+				show_images=False,
+				loaded_image=loaded_image)
 
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
-			current_dict["description_soldat"] = None
+			current_dict['soldat'] = None
 		else:
-			current_dict["description_soldat"] = self.extractor.extraire_description_soldat_NER(
+			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
 			# Production de corpus, à supprimer
-		return zone_dict, current_dict
 
-		current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			image=page["image_path"],
-			show_images=False,
-			loaded_image=loaded_image)
+		try:
+			date_naissance = current_dict["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		except (KeyError, TypeError):
+			return zone_dict, current_dict
+		try:
+			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
+																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
+		except (TypeError, KeyError, ValueError):
+			current_dict["soldat"]["identite"]["age"] = None
 
 
-		if "Inculpation_antecedents" in zones_manquantes or current_dict['description_soldat']['nom_du_soldat'] == "Plusieurs soldats":
+
+		# if "Inculpation_antecedents" in zones_manquantes or current_dict['soldat']['nom_du_soldat'] == "Plusieurs soldats":
+		if "Inculpation_antecedents" in zones_manquantes:
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
 		else:
 			accusation_antecedants =  self.extractor.extraire_inculpation_et_antecedents(
@@ -430,17 +597,7 @@ class Pipeline():
 
 		return zone_dict, current_dict
 
-	def traitement_p2(self):
-		pass
 
-	def traitement_p3(self):
-		pass
-
-	def traitement_p4(self):
-		pass
-
-	def traitement_p_autre(self):
-		pass
 
 	def workflow(self, images:list, target:str|None, start_after:int):
 		"""
@@ -467,8 +624,6 @@ class Pipeline():
 		image_index = 0
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
-				print("---")
-				print(f"Current index: {image_index}")
 				if start_after > image_index:
 					image_index += 1
 					continue
@@ -477,15 +632,27 @@ class Pipeline():
 				if target:
 					if page['image_path'] != target:
 						continue
-				if page['classe'] in ["page_2", "page_1"]:
+
+				# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
+				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
+					print("---")
+					print(f"Treating {page}")
 					self.transcription_page(page=page, show_image=False)
+					zones_ajouts, ajouts = self.process_additions(page=page)
+					if ajouts is None:
+						ajouts = {"ajouts": None}
+					utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
 				elif page['classe'] == "page_2":
 					zones, annotations = self.traitement_p_2(page=page, show_image=False)
+				elif page['classe'] == "page_3":
+					zones, annotations = self.traitement_p_3(page=page, show_image=False)
+				elif page['classe'] == "page_4":
+					zones, annotations = self.traitement_p_4(page=page, show_image=False)
 				else:
 					continue
-				page["extractions"] = annotations
+				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 		utils.convert_to_csv(self.minutes, "results/database.csv")
@@ -510,9 +677,12 @@ def main(images_dir:str,
 	except:
 		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	yolo_models = {
-		"page_1": "src/Vision/models/yolov11_page_1.pt",
+		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
-		"page_2": "src/Vision/models/yolov11_page_2.pt"
+		"page_2": "src/Vision/models/yolov11_page_2.pt",
+		"page_3": "src/Vision/models/yolo26x_page_3.pt",
+		"page_4": "src/Vision/models/yolov11_page_4.pt",
+		"ajouts": "src/Vision/models/yolo26_ajouts.pt"
 	}
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab_SVC.joblib",
