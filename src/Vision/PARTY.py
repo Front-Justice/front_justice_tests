@@ -13,7 +13,7 @@ class PartyPredict:
 		self.fabric = Fabric.Fabric(accelerator="cuda",
 							   precision="bf16-mixed")
 		self.model = PartyModel.from_safetensors(
-			"/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors"
+			"/home/mgl/Bureau/Travail/scripts_et_programmes/party/models/final.safetensors",
 		)
 
 	def create_baseline(self, coords, corresponding_image:str) -> Containers.Segmentation:

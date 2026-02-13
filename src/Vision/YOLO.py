@@ -26,10 +26,10 @@ def load(model_path):
 
 
 class YOLOSegmenter():
-	def __init__(self, models):
-		self.model_page_1 = models["page_1"]
-		self.model_table_magistrats = models["magistrats"]
-
+	# def __init__(self, models):
+	# 	self.model_page_1 = models["page_1"]
+	# 	self.model_table_magistrats = models["magistrats"]
+	#
 
 	def segment_zones(self,
 					  image:str,

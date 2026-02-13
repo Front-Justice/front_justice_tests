@@ -18,18 +18,20 @@ from dataclasses import dataclass
 import collections
 import fuzzysearch
 
+
 @dataclass
 class YOLOZone:
 	"""CLasse principale pour la description d'une zone"""
+
 	def __init__(self, label, coordinates, probs):
 		self.label: str = label
 		self.coordinates: list[list] = coordinates
 		self.probs: str = probs
 
 	def __repr__(self):
-		return json.dumps({"label":self.label,
-				"coordinates": self.coordinates,
-				"probs": self.probs})
+		return json.dumps({"label": self.label,
+						   "coordinates": self.coordinates,
+						   "probs": self.probs})
 
 
 class YOLORecord():
@@ -55,11 +57,11 @@ class YOLORecord():
 		return self.record
 
 	def __str__(self):
-		return json.dumps([{"label":item.label,
+		return json.dumps([{"label": item.label,
 							"probs": item.probs,
 							"coordinates": item.coordinates} for item in self.record])
 
-	def filter_zones(self, label):
+	def filter_zones(self, label) -> list[YOLOZone]:
 		return [item for item in self.record if item.label == label]
 
 	def to_json(self):
@@ -103,12 +105,16 @@ class OCRRecord():
 		for line in list_of_lines:
 			self.record.append(line)
 
-	def join_transcription(self) -> str:
+	def join_transcription(self, merge_newlines=True) -> str:
 		"""
 		Cette fonction retourne le texte fusionné de toutes les lignes d'un OCRRecord.
 		:return: Une chaîne de caractères.
 		"""
-		return " ".join([line.prediction for line in self.record])
+		if merge_newlines is False:
+			delimiter = "\n"
+		else:
+			delimiter = " "
+		return delimiter.join([line.prediction for line in self.record])
 
 	def index(self, item):
 		return self.record.index(item)
@@ -121,6 +127,19 @@ class OCRRecord():
 
 	def __getitem__(self, index: int) -> OCRLine:
 		return self.record[index]
+
+	def __str__(self, show_cuts=False):
+		out_dict = []
+		for line in self.record:
+			if show_cuts is True:
+				out_dict.append({"baseline": line.baseline,
+								 "cuts": line.cuts,
+								"prediction": line.prediction})
+			else:
+				out_dict.append({"baseline": line.baseline,
+								"prediction": line.prediction})
+		return json.dumps(out_dict)
+
 
 	def to_json(self):
 		"""
@@ -181,6 +200,9 @@ number_dict = {"un": 1,
 def load(path):
 	return Image.open(path)
 
+def show_image(path):
+	loaded_image = Image.open(path)
+	loaded_image.show()
 
 def calcule_age(date_naissance: str, date_proces: str) -> int | None:
 	"""
@@ -386,7 +408,12 @@ def produce_line_function(baseline) -> tuple[int, int]:
 	:return: a, b.
 	"""
 	x_1, y_1, x_2, y_2 = baseline
-	a = (y_2 - y_1) / (x_2 - x_1)
+
+	# Dans certains cas de ligne verticale, on a une division par 0
+	try:
+		a = (y_2 - y_1) / (x_2 - x_1)
+	except ZeroDivisionError:
+		a = (y_2 - y_1) / 0.00001
 	b = y_1 - a * x_1
 	return a, b
 
@@ -499,7 +526,7 @@ def normalize_string_and_strip_spaces(string: str) -> str:
 	return string.lower().strip()
 
 
-def merge_adjacent_entities(tokens:list[dict]):
+def merge_adjacent_entities(tokens: list[dict]):
 	"""
 	Cette fonction fusionne les entités adjacentes de même classe, qui ne sont qu'une entité.
 	:param entities: une liste d'entité produite par une pipeline.
@@ -531,7 +558,7 @@ def merge_adjacent_entities(tokens:list[dict]):
 	return entites
 
 
-def entities_to_dict(entities:list) -> dict:
+def entities_to_dict(entities: list) -> dict:
 	result = {}
 	for entity in entities:
 		label = entity["entity_group"]
@@ -539,11 +566,12 @@ def entities_to_dict(entities:list) -> dict:
 		spans = [entity["start"], entity["end"]]
 		try:
 			result[label].append({"string": word,
-									"spans": spans})
+								  "spans": spans})
 		except KeyError:
 			result[label] = [{"string": word, "spans": spans}]
 
 	return result
+
 
 def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 	"""
@@ -859,7 +887,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 				visage = "UNK"
 			try:
 				renseignements_complementaires = \
-				page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
+					page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
 			except KeyError:
 				renseignements_complementaires = "UNK"
 			try:
@@ -1009,6 +1037,8 @@ def test_number_of_zones(annotations: YOLORecord, label: str, number: int) -> bo
 
 
 def similarite_ratcliff(string_a, string_b):
+	string_a = nfc_normalize(string_a)
+	string_b = nfc_normalize(string_b)
 	return SequenceMatcher(None, string_a, string_b).ratio()
 
 
@@ -1037,11 +1067,14 @@ def clean_small_string(input_string):
 	return re.sub(regexp, "", input_string)
 
 
-def approximate_word_split(sentence: str, word: str, sensibility: float = 0.5, return_word: bool = False) -> list | \
-																											 tuple[
-																												 list, str] | None | \
-																											 tuple[
-																												 None, None]:
+def approximate_word_split(sentence: str,
+						   word: str,
+						   sensibility: float = 0.5,
+						   return_word: bool = False) -> list | \
+														 tuple[
+															 list, str] | None | \
+														 tuple[
+															 None, None]:
 	"""
 	Cette fonction découpe une phrase selon un mot qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
@@ -1064,7 +1097,8 @@ def approximate_word_split(sentence: str, word: str, sensibility: float = 0.5, r
 			return None
 
 
-def approximate_sentence_split(sentence: str, substring: str, max_dist:int=1, return_match:bool=False) -> list | None:
+def approximate_sentence_split(sentence: str, substring: str, max_dist: int = 1,
+							   return_match: bool = False) -> list | None:
 	"""
 	Cette fonction découpe une phrase selon un groupe de mots qui peut être approximatif. Le mot n'est pas retourné.
 	:param sentence: la phrase à découper
@@ -1115,7 +1149,7 @@ def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (b
 def check_substring_in_sentence(sentence: str,
 								target_substring: str,
 								return_subtring: bool = False,
-								max_distance:int=1) -> bool:
+								max_distance: int = 1) -> bool:
 	search = fuzzysearch.find_near_matches(target_substring,
 										   sentence,
 										   max_l_dist=max_distance)
@@ -1169,12 +1203,12 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 		return True, matching_word[0]
 
 
-def recursive_search(corresponding_lines:OCRRecord, string_to_match:str, n_gram:int):
+def recursive_search(corresponding_lines: OCRRecord, string_to_match: str, n_gram: int):
 	print(f"Recursion with {n_gram}grams.")
 	print(f"Searching for {string_to_match}")
 	string_to_match = nfc_normalize(string_to_match)
 	lines = [line.prediction for line in corresponding_lines]
-	n_gram_lines = [((n,n+n_gram), nfc_normalize(" ".join(lines[n:n+n_gram]))) for n in range(len(lines))]
+	n_gram_lines = [((n, n + n_gram), nfc_normalize(" ".join(lines[n:n + n_gram]))) for n in range(len(lines))]
 	print(f"Current ngram: {n_gram_lines}")
 	inclusion_test = [string_to_match in line_group[1] for line_group in n_gram_lines]
 	print(inclusion_test)
@@ -1190,11 +1224,12 @@ def recursive_search(corresponding_lines:OCRRecord, string_to_match:str, n_gram:
 		result = recursive_search(corresponding_lines, string_to_match, n_gram + 1)
 	return result
 
+
 def match_line_by_substring(corresponding_lines: OCRRecord,
 							string_to_match: str | list,
 							return_index: bool = False,
 							exact_match: bool = False) -> \
-tuple[OCRLine, list, int] | tuple[OCRLine, list] | OCRLine:
+		tuple[OCRLine, list, int] | tuple[OCRLine, list] | OCRLine:
 	"""
 	Cette fonction extrait la ou les lignes qui contiennent une sous-chaîne la plus proche de la chaîne cible
 	:param corresponding_lines: l'ensemble des lignes dans lesquelles chercher. Objet OCRRecord
@@ -1208,8 +1243,8 @@ tuple[OCRLine, list, int] | tuple[OCRLine, list] | OCRLine:
 		# On va travailler avec des n-grams de ligne
 		# Pour l'instant ne fonctionne que sur du exact matching
 		return recursive_search(corresponding_lines=corresponding_lines,
-						 string_to_match=string_to_match,
-						 n_gram=1)
+								string_to_match=string_to_match,
+								n_gram=1)
 	else:
 		distances = []
 		for idx, ligne in enumerate(corresponding_lines):
@@ -1250,11 +1285,13 @@ def levensthein_distance(string_a, string_b):
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
-def retrieve_substring_span(string:str, substring:str) -> list[int, int]:
+
+def retrieve_substring_span(string: str, substring: str) -> list[int, int]:
 	"""
 	Cette fonction récupère la position d'un sous-chaîne étant donnée une chaîne de caractères
 	"""
 	return [string.find(substring), string.find(substring) + len(substring)]
+
 
 def check_if_line_in_box(box_coord: list[list[int]], baseline: list[int], intersect_ratio=.5) -> bool:
 	"""
@@ -1365,9 +1402,9 @@ def longest_common_substring(string1, string2):
 	return answer
 
 
-def get_baseline_from_string(line: list[OCRLine]|OCRLine,
+def get_baseline_from_string(line: list[OCRLine] | OCRLine,
 							 target_string: str,
-							 loaded_image: Image.Image=None,
+							 loaded_image: Image.Image = None,
 							 show_image: bool = False) -> tuple[tuple[int, int], tuple[int, int]] | None:
 	"""
 	Cette fonction récupère les coordonnées du fragment de baseline qui contient une chaîne de caractère donnée.
@@ -1378,7 +1415,7 @@ def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 
 	# Dans le cas où on a une liste de lignes, on boucle sur chacune d'entre elles, on récupère la portion de string
 	# qui correspond et la baseline correspondant.
-	if isinstance(line, OCRRecord):
+	if isinstance(line, OCRRecord) or isinstance(line, list):
 		baselines = []
 		for item in line:
 			a, b = nfc_normalize(item.prediction), nfc_normalize(target_string)
@@ -1412,6 +1449,7 @@ def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 				cropped.show()
 		return baselines
 	else:
+		print(type(line))
 		cuts = line.cuts
 		baseline = line.baseline
 		prediction = line.prediction
@@ -1445,8 +1483,9 @@ def get_baseline_from_string(line: list[OCRLine]|OCRLine,
 		return target_baseline
 
 
-def draw_lines_on_image(image: PIL.Image.Image, baseline: list, return_image=False):
+def draw_lines_on_image(image_path, baseline: list, return_image=False):
 	print("Attempting to show image")
+	image = Image.open(image_path)
 	draw = PIL.ImageDraw.Draw(image)
 	for line in baseline:
 		draw.line(line, width=5, fill="green", joint="curve")
@@ -1454,3 +1493,29 @@ def draw_lines_on_image(image: PIL.Image.Image, baseline: list, return_image=Fal
 		image.show()
 	else:
 		return image
+
+
+def get_string_between_two_words(target_string: str, word_a: str, word_b: str) -> str:
+	"""
+	Cette fonction extrait une sous-chaîne de caractères bornée par 2 mots.
+	:param target_string: La chaîne cible
+	:param word_a: mot a
+	:param word_b: mot b
+	:return: la sous-chaîne visée
+	"""
+	print(f"Trying to identify the string between {word_a} and {word_b} in {target_string}")
+	try:
+		after_first_delimiter = approximate_sentence_split(sentence=target_string,
+														   substring=word_a,
+														   max_dist=4,
+														   return_match=False)[-1]
+	except:
+		return None
+	try:
+		before_second_delimiter = approximate_word_split(sentence=after_first_delimiter,
+														 word=word_b,
+														 sensibility=0.9,
+														 return_word=False)[0]
+	except TypeError:
+		return None
+	return before_second_delimiter

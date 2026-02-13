@@ -237,10 +237,10 @@ class LinesClassifier():
 
 if __name__ == '__main__':
 	classifier = LinesClassifier(build_vocab=True,
-								 corpus_path="data/*",
+								 corpus_path="data/raw/*",
 								 binary_corpus_path="data/corpus.data",
 								 max_size=(1735,161),
-								 model_path="models/LinesClassifierRF.joblib",
-								vocab_path="models/LinesClassifierVocabRF.joblib")
+								 model_path="models/LinesClassifierRF_3classes.joblib",
+								vocab_path="models/LinesClassifierRF_3classes.voc")
 	classifier.train()
 	# classifier.predict_to_dir()
