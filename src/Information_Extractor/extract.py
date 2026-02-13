@@ -13,6 +13,7 @@ from src.utils.utils import YOLORecord
 import src.utils.utils as utils
 import copy
 import PIL.Image as Image
+import src.Information_Extractor.semantic_search as search
 import PIL
 from collections import namedtuple
 # import src.Vision.PARTY as PARTY
@@ -50,6 +51,16 @@ class Extractor:
 							aggregation_strategy="simple",
 							device="cpu")
 
+		entity_spotting_model = ("/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Information_Extractor/models/model_NER")
+
+		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/BERTNER/results_test_v3/best_model")
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base")
+		self.entity_spotting_pipeline = pipeline('ner',
+												 model=entity_spotting_model,
+												 tokenizer=tokenizer,
+												 aggregation_strategy="simple",
+												 device="cuda:0")
+
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
 		self.conversion_dict = {item.replace("(", "-").replace(")", "").split("/")[-1].replace(".jpg", ""): item for
@@ -79,6 +90,8 @@ class Extractor:
 		:return: La même liste avec la zone ciblée
 		"""
 		return [annotation for annotation in annotations if annotation.label == category]
+
+
 
 	def extract_lines_from_zone(self,
 								annotations,
@@ -216,8 +229,8 @@ class Extractor:
 
 		try:
 			avant_seant_kraken = \
-			utils.approximate_word_split(sentence=kraken_prediction, word=chaine_seant, sensibility=0.75)[
-				0]
+				utils.approximate_word_split(sentence=kraken_prediction, word=chaine_seant, sensibility=0.75)[
+					0]
 			institution_kraken = \
 				utils.approximate_word_split(sentence=avant_seant_kraken, word=chaine_permanent)[1]
 			institution_kraken = re.sub(clean_regexp_institution, "", institution_kraken)
@@ -237,8 +250,8 @@ class Extractor:
 
 		try:
 			avant_seant_party = \
-			utils.approximate_word_split(sentence=party_prediction, word=chaine_seant, sensibility=0.75)[
-				0]
+				utils.approximate_word_split(sentence=party_prediction, word=chaine_seant, sensibility=0.75)[
+					0]
 			institution_party = \
 				utils.approximate_word_split(sentence=avant_seant_party, word=chaine_permanent)[1]
 			institution_party = re.sub(clean_regexp_institution, "", institution_party)
@@ -465,6 +478,7 @@ class Extractor:
 				"baseline": baseline_nom_complet
 				}
 
+
 	def extraire_identite_soldat_p2(self,
 									ocr_prediction: OCRRecord,
 									annotations: YOLORecord,
@@ -625,6 +639,155 @@ class Extractor:
 
 		return dictionnary
 
+	def extraire_description_soldat_p2_NER(self,
+										   ocr_prediction: OCRRecord,
+										   annotations: YOLORecord,
+										   image: str = None,
+										   loaded_image: PIL.Image.Image = None,
+										   show_images: bool = True):
+		"""
+		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
+		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
+		:param ocr_prediction: Une liste de dictionnaires de la forme:
+		'''
+		[
+			{
+				'baseline': [[231, 5467], [2329, 5450]],
+				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
+			},
+			...,
+			{
+				'baseline': [[241, 5612], [731, 5619]],
+				'prediction': 'FORMULE N^o 16.'
+			}
+		]
+		'''
+		:param image: [Debug] le chemin vers l'image à afficher
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		:param show_images: [Debug] afficher l'image?
+		:return: Un dictionnaire de la forme:
+			{
+		  "extracted": "501",
+		  "baseline": [
+			[2611, 555],
+			[3203, 555]
+		  ],
+		  "bbox": [
+			[2553, 178],
+			[3249, 634]
+		  ],
+		  "certitude": 0.8,
+		  "predictions": {
+			"party": "N^o 501 D'ORDRE.",
+			"kraken": "N^o 501 D'ORDRE."
+		  }
+		},
+		"""
+
+		description_du_soldat = {}
+		lignes_description_du_soldat, zone_identite_soldat = self.extract_lines_from_zone(annotations=annotations,
+																					target_zone=["identite_soldat"],
+																					show_images=False,
+																					loaded_image=loaded_image,
+																					ocr_prediction=ocr_prediction,
+																					intersect_ratio=[.8])
+		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
+		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
+		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
+		entities_as_dictionnary = utils.entities_to_dict(result_spotting)
+		print(lignes_description_soldat_raw)
+		print(entities_as_dictionnary)
+		plusieurs_soldats = False
+		if len(soldat) == 1:
+			bbox_nom_soldat = soldat[0].coordinates
+			entite_et_baseline = extractions.extraire_entite_baseline(
+				dictionnaire=entities_as_dictionnary,
+				nom_entite="nom_du_soldat",
+				target_lines=lignes_description_du_soldat
+			)
+			if entite_et_baseline is None:
+				description_du_soldat["identite"] = {
+					"nom": {"extracted": None,
+							"bbox": bbox_nom_soldat,
+							"baseline": None}
+				}
+			elif len(entite_et_baseline) == 1:
+				nom_du_soldat, baseline_nom_du_soldat = (entite_et_baseline[0]["extracted"],
+														 entite_et_baseline[0]["baseline"])
+				description_du_soldat["identite"] = {
+					"nom": {"extracted": nom_du_soldat,
+							"bbox": bbox_nom_soldat,
+							"baseline": baseline_nom_du_soldat}
+				}
+
+		elif len(soldat) > 1:
+			plusieurs_soldats = True
+			bbox_nom_soldat = None
+			print("Plusieurs soldats.")
+		else:
+			bbox_nom_soldat = None
+			print("Aucun soldat identifié par YOLO.")
+
+		description_du_soldat["prediction"] = lignes_description_soldat_raw
+
+		description_du_soldat["identite"] = \
+			{
+				"prenom": extractions.extraire_feature(entities_as_dictionnary,
+													   lignes_description_du_soldat,
+													   "prénom_du_soldat"),
+				"nom": extractions.extraire_feature(entities_as_dictionnary,
+													lignes_description_du_soldat,
+													"nom_du_soldat")
+			}
+
+		description_du_soldat["identite"]["date_naissance"] = (
+			extractions.extraire_date_naissance(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["lieu_naissance"] = (
+			extractions.extraire_lieu_naissance(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["lieu_residence"] = (
+			extractions.extraire_lieu_residence(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["situation_maritale"] = (
+			extractions.extraire_sit_maritale(entity_dict=entities_as_dictionnary,
+											  lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["age"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										 lignes=lignes_description_du_soldat,
+										 feature="âge")
+		)
+		print(entities_as_dictionnary)
+		print(lignes_description_du_soldat)
+		description_du_soldat["identite"]["affectation"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										 lignes=lignes_description_du_soldat,
+										 feature="affectation_soldat")
+		)
+
+		description_du_soldat["identite"]["rang"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										 lignes=lignes_description_du_soldat,
+										 feature="rang_actuel")
+		)
+
+		# Profession
+		description_du_soldat["profession"] = extractions.extraire_feature(
+			entities_as_dictionnary,
+			lignes_description_du_soldat,
+			"profession"
+		)
+
+		return description_du_soldat
+
 	def extraire_identite_defenseur(self,
 									ocr_prediction: OCRRecord,
 									annotations: YOLORecord,
@@ -690,6 +853,7 @@ class Extractor:
 		matching_line_defenseur = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
 																string_to_match=nom_defenseur,
 																exact_match=True)
+		print(matching_line_defenseur)
 		baseline_nom_defenseur = utils.get_baseline_from_string(line=matching_line_defenseur,
 																target_string=nom_defenseur,
 																loaded_image=loaded_image,
@@ -752,8 +916,8 @@ class Extractor:
 		else:
 			try:
 				precisions_jugement_temoins_defense = \
-				utils.approximate_sentence_split(sentence=lignes_formalites_as_string,
-												 substring="et 319 du Code d'instruction criminelle")[-1]
+					utils.approximate_sentence_split(sentence=lignes_formalites_as_string,
+													 substring="et 319 du Code d'instruction criminelle")[-1]
 			except TypeError:
 				precisions_jugement_temoins_defense = None
 		print(precisions_jugement_temoins_defense)
@@ -762,12 +926,11 @@ class Extractor:
 				"extracted": precisions_jugement_temoins_defense,
 				"bbox": zone_formalites}
 
-		return dictionnary
 
-	def extraire_questions(self,
-						   ocr_prediction: OCRRecord,
-						   annotations: YOLORecord,
-						   loaded_image: PIL.Image.Image = None) -> dict:
+	def extraire_questions_p2(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
 		"""
 		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
 		:param ocr_prediction: un objet OCRRecord
@@ -817,7 +980,8 @@ class Extractor:
 		else:
 			try:
 				questions = \
-				utils.approximate_sentence_split(sentence=lignes_questions_as_string, substring="ainsi qu'il suit:")[-1]
+					utils.approximate_sentence_split(sentence=lignes_questions_as_string,
+													 substring="ainsi qu'il suit:")[-1]
 			except TypeError:
 				questions = None
 		print(questions)
@@ -826,7 +990,157 @@ class Extractor:
 				"extracted": questions,
 				"bbox": zone_questions}
 
+
+
+
+	def extraire_questions_p3(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+
+		lignes_questions, zone_questions = self.extract_lines_from_zone(annotations=annotations,
+																		target_zone=["questions"],
+																		show_images=False,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=[.8],
+																		select_highest_prob_zone=True)
+		lignes_questions_as_string = lignes_questions.join_transcription()
+
+
+		return {"prediction": lignes_questions_as_string,
+				"extracted": lignes_questions_as_string,
+				"bbox": zone_questions}
+
+
+
+
+	def extraire_tableau_p4(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+
+		lignes_tableau, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
+																		target_zone=["tableau_frais"],
+																		show_images=False,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=[.5],
+																		select_highest_prob_zone=True)
+
+		lignes_tableau_as_string = lignes_tableau.join_transcription(merge_newlines=False)
+
+
+		return {"prediction": lignes_tableau_as_string,
+				"extracted": lignes_tableau_as_string,
+				"bbox": zone_tableau}
+
+
+	def extraire_paragraphe_final_p4(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+
+		lignes_tableau, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
+																		target_zone=["recapitulatif_somme"],
+																		show_images=False,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=[.5],
+																		select_highest_prob_zone=True)
+
+		lignes_tableau_as_string = lignes_tableau.join_transcription()
+
+
+		return {"prediction": lignes_tableau_as_string,
+				"extracted": lignes_tableau_as_string,
+				"bbox": zone_tableau}
+
+
+
+	def extraire_decision_tribunal_p3(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+
+		lignes_decision, zone_decision = self.extract_lines_from_zone(annotations=annotations,
+																		target_zone=["decision_tribunal"],
+																		show_images=False,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=[.8],
+																		select_highest_prob_zone=True)
+		try:
+			lignes_decision_as_string = lignes_decision.join_transcription()
+		except AttributeError:
+			return {"prediction": None,
+					"extracted": None,
+					"bbox": zone_decision}
+
+
+		return {"prediction": lignes_decision_as_string,
+				"extracted": lignes_decision_as_string,
+				"bbox": zone_decision}
+
+
+
+
+	def extraire_reponses_p3(self,
+							  ocr_prediction: OCRRecord,
+							  annotations: YOLORecord,
+							  loaded_image: PIL.Image.Image = None) -> dict:
+		"""
+		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
+		:param loaded_image: l'image chargée (objet PIL.Image.Image)
+		"""
+
+		lignes_reponses, zone_reponses = self.extract_lines_from_zone(annotations=annotations,
+																		target_zone=["reponse_questions"],
+																		show_images=False,
+																		loaded_image=loaded_image,
+																		ocr_prediction=ocr_prediction,
+																		intersect_ratio=[.8],
+																		select_highest_prob_zone=True)
+		try:
+			lignes_reponses_as_string = lignes_reponses.join_transcription()
+		except AttributeError:
+			return {"prediction": None,
+					"extracted": None,
+					"bbox": zone_reponses}
+
+
+		return {"prediction": lignes_reponses_as_string,
+				"extracted": lignes_reponses_as_string,
+				"bbox": zone_reponses}
+
 		return dictionnary
+
 
 	def extraire_requisitoire(self,
 							  ocr_prediction: OCRRecord,
@@ -998,6 +1312,69 @@ class Extractor:
 				"certitude": certitude,
 				"predictions": {"party": date_crime_party,
 								"kraken": date_crime_kraken}}
+
+	def extraire_informations_ajouts_posterieurs(self,
+												 ocr_prediction: OCRRecord,
+												 annotations: YOLORecord):
+		"""
+		Cette fonction extrait la date et classe le type d'information d'un ajout du greffier. Il y a en effet toujours une date !
+		:param ocr_prediction:
+		:param annotations:
+		:return:
+		"""
+		list_of_results = []
+		for annotation in annotations:
+			# On va commencer par filtrer les lignes dans la zone.
+			zones_filtrees_as_rectangle = self.rectangle(annotation.coordinates[0][0],
+														 annotation.coordinates[0][1],
+														 annotation.coordinates[1][0],
+														 annotation.coordinates[1][1])
+			filtered_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
+									   zone_as_rectangle=zones_filtrees_as_rectangle,
+									   intersect_ratio=0.3)
+			as_record = OCRRecord()
+			as_record.recreate_record(filtered_lines)
+			print(f"La glose fait {len(as_record)} lignes.")
+			lignes_fusionnees = as_record.join_transcription()
+			print(lignes_fusionnees)
+			resultat = self.ner(lignes_fusionnees)
+			try:
+				extracted_date = next(item for item in resultat if item['entity_group'] == 'DATE')['word']
+			except StopIteration:
+				extracted_date = None
+			print(resultat)
+			print(extracted_date)
+			if extracted_date is not None:
+				try:
+					normalized_date = date.process_date(extracted_date, debug=False)
+				except TypeError:
+					normalized_date = None
+				print(normalized_date)
+			else:
+				normalized_date = None
+			list_of_informations = [
+				"Remise du restant de la peine",
+				"Décès du soldat",
+				"Amnistie",
+				"Peine effectuée",
+				"Jugement suspendu",
+				"Exécution de la peine suspendue",
+				"Peine commuée"
+			]
+			information_contenue = search.retrieve_most_similar_sentence(sentence=lignes_fusionnees,
+																		 queries=list_of_informations)
+			print(information_contenue)
+
+			# TODO: cas où il y a plusieurs annotations différentes
+			list_of_results.append({
+				"date": normalized_date,
+				"information": information_contenue,
+				"prediction": lignes_fusionnees,
+				"bbox": annotations[0].coordinates
+			})
+		return list_of_results
+
+
 
 	def extraire_inculpation_et_antecedents(self,
 											ocr_prediction: OCRRecord,
@@ -1397,7 +1774,7 @@ class Extractor:
 				"certainty": 0.5,
 				"predictions": {"kraken": nom_du_soldat_kraken,
 								"party": nom_soldat_party}
-				}
+			}
 
 		description_du_soldat["nom_du_soldat"] = nom_du_soldat
 
@@ -1672,10 +2049,9 @@ class Extractor:
 			  }
 		"""
 
-		description_du_soldat = {"description_physique": {
-
+		description_du_soldat = {
+			"description_physique": {}
 		}
-								 }
 		# On commence par ne récupérer que les lignes qui décrivent le soldat.
 		lignes_description_du_soldat, soldat_zone = self.extract_lines_from_zone(annotations=annotations,
 																				 target_zone="Description du Soldat",
@@ -1689,19 +2065,12 @@ class Extractor:
 			target_lines = utils.approximate_sentence_split(sentence=lignes_description_soldat_raw,
 															substring="A l'effet de juger")[-1]
 		except TypeError:
-			target_lines = lignes_description_du_soldat
+			target_lines = lignes_description_soldat_raw
 
-		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/scripts"
-								 "/BERTNER/results_test/best_model")
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base")
-		ner = pipeline('ner',
-					   model=entity_spotting_model,
-					   tokenizer=tokenizer,
-					   aggregation_strategy="simple",
-					   device="cuda:0")
-		result_spotting = ner(target_lines)
+
+		description_du_soldat["prediction"] = target_lines
+		result_spotting = self.entity_spotting_pipeline(target_lines)
 		entities_as_dictionnary = utils.entities_to_dict(result_spotting)
-		print(entities_as_dictionnary)
 
 		# On commence par le nom du soldat
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
@@ -1713,15 +2082,21 @@ class Extractor:
 				dictionnaire=entities_as_dictionnary,
 				nom_entite="nom_du_soldat",
 				target_lines=lignes_description_du_soldat
-				)
-			if len(entite_et_baseline) == 1:
+			)
+			if entite_et_baseline is None:
+				description_du_soldat["identite"] = {
+					"nom": {"extracted": None,
+							"bbox": bbox_nom_soldat,
+							"baseline": None}
+				}
+			elif len(entite_et_baseline) == 1:
 				nom_du_soldat, baseline_nom_du_soldat = (entite_et_baseline[0]["extracted"],
 														 entite_et_baseline[0]["baseline"])
-			description_du_soldat["identite_soldat"] = {
-				"nom": {"extracted": nom_du_soldat,
-						"bbox": bbox_nom_soldat,
-						"baseline": baseline_nom_du_soldat}
-			}
+				description_du_soldat["identite"] = {
+					"nom": {"extracted": nom_du_soldat,
+							"bbox": bbox_nom_soldat,
+							"baseline": baseline_nom_du_soldat}
+				}
 
 		elif len(soldat) > 1:
 			plusieurs_soldats = True
@@ -1731,104 +2106,115 @@ class Extractor:
 			bbox_nom_soldat = None
 			print("Aucun soldat identifié par YOLO.")
 
-		description_du_soldat["prediction"] = lignes_description_soldat_raw
-		# Puis le prénom
 
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="prénom_du_soldat",
-			target_lines=lignes_description_du_soldat
-		)
-		if len(entite_et_baseline) == 1:
-			prenom_soldat, baseline_prenom_du_soldat = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-		description_du_soldat["prediction"] = lignes_description_soldat_raw
-		description_du_soldat["identite_soldat"]["prenom"] = {"extracted": prenom_soldat,
-					   "baseline": baseline_prenom_du_soldat}
-
-
-		# Les parents
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="prenom_pere",
-			target_lines=lignes_description_du_soldat
-		)
-
-		if len(entite_et_baseline) == 1:
-			prenom_pere, target_baseline_prenom_pere = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="prenom_mere",
-			target_lines=lignes_description_du_soldat
-		)
-		if len(entite_et_baseline) == 1:
-			prenom_mere, target_baseline_prenom_mere = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="nom_mere",
-			target_lines=lignes_description_du_soldat
-		)
-		if len(entite_et_baseline) == 1:
-			nom_mere, target_baseline_nom_mere = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-		else:
-			nom_mere, target_baseline_nom_mere = None, None
+		description_du_soldat["identite"] = \
+			{
+				"prenom": extractions.extraire_feature(entities_as_dictionnary,
+													   lignes_description_du_soldat,
+													   "prénom_du_soldat"),
+				"nom": extractions.extraire_feature(entities_as_dictionnary,
+													lignes_description_du_soldat,
+													"nom_du_soldat")
+			}
 
 		description_du_soldat["parents"] = {
 			"pere": {
-				"prenom": {"extracted": prenom_pere,
-						   "baseline": target_baseline_prenom_pere}
+				"prenom": extractions.extraire_feature(
+					entities_as_dictionnary,
+					lignes_description_du_soldat,
+					"prenom_pere"
+				)
 			},
 			"mere": {
-				"prenom": {"extracted": prenom_mere,
-						   "baseline": target_baseline_prenom_mere},
-				"nom": {"extracted": nom_mere,
-						"baseline": target_baseline_nom_mere},
+				"prenom": extractions.extraire_feature(
+					entities_as_dictionnary,
+					lignes_description_du_soldat,
+					"prenom_mere"
+				),
+				"nom": extractions.extraire_feature(
+					entities_as_dictionnary,
+					lignes_description_du_soldat,
+					"nom_mere"
+				),
 			}
 		}
 
+		description_du_soldat["identite"]["date_naissance"] = (
+			extractions.extraire_date_naissance(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["lieu_naissance"] = (
+			extractions.extraire_lieu_naissance(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+
+		description_du_soldat["identite"]["lieu_residence"] = (
+			extractions.extraire_lieu_residence(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+
+		description_du_soldat["identite"]["situation_maritale"] = (
+			extractions.extraire_sit_maritale(entity_dict=entities_as_dictionnary,
+												lignes=lignes_description_du_soldat)
+		)
+
+		description_du_soldat["identite"]["matricule"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										lignes=lignes_description_du_soldat,
+										 feature="matricule")
+		)
+
+
+		description_du_soldat["identite"]["affectation"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										lignes=lignes_description_du_soldat,
+										 feature="affectation_soldat")
+		)
+
+		description_du_soldat["identite"]["rang"] = (
+			extractions.extraire_feature(entities_as_dictionnary=entities_as_dictionnary,
+										lignes=lignes_description_du_soldat,
+										 feature="rang_actuel")
+		)
+
+		# Profession
+		description_du_soldat["profession"] = extractions.extraire_feature(
+			entities_as_dictionnary,
+			lignes_description_du_soldat,
+			"profession"
+		)
+
 
 		# Description physique
-		# Visage
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="visage",
-			target_lines=lignes_description_du_soldat
+		description_du_soldat["description_physique"]["marques_particulières"] = extractions.extraire_feature(
+			entities_as_dictionnary,
+			lignes_description_du_soldat,
+			feature="marques_particulières"
 		)
-		if len(entite_et_baseline) == 1:
-			visage, target_baseline_visage = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-		else:
-			visage, target_baseline_visage = None, None
 
 
-		description_du_soldat["description_physique"]["visage"] = {
-			"extracted": visage,
-			"baseline": target_baseline_visage
-		}
-
-
-		# Nez
-		entite_et_baseline = extractions.extraire_entite_baseline(
-			dictionnaire=entities_as_dictionnary,
-			nom_entite="nez",
-			target_lines=lignes_description_du_soldat
+		description_du_soldat["description_physique"]["renseignements_complementaires"] = extractions.extraire_feature(
+			entities_as_dictionnary,
+			lignes_description_du_soldat,
+			feature="renseignements_complementaires"
 		)
-		if len(entite_et_baseline) == 1:
-			nez, target_baseline_nez = (entite_et_baseline[0]["extracted"],
-													 entite_et_baseline[0]["baseline"])
-		else:
-			nez, target_baseline_nez = None, None
 
-
-		description_du_soldat["description_physique"]["nez"] = {
-			"extracted": nez,
-			"baseline": target_baseline_nez
-		}
+		# Items courants
+		for item in ["nez", "visage", "yeux", "front", "taille", "cheveux", "bouche", "menton"]:
+			description_du_soldat["description_physique"][item] = extractions.extraire_feature(
+				entities_as_dictionnary,
+				lignes_description_du_soldat,
+				feature=item
+			)
+			if item == "taille":
+				taille_courante = description_du_soldat["description_physique"][item]["extracted"]
+				if taille_courante:
+					description_du_soldat["description_physique"][item]["identified"] = taille_courante
+					description_du_soldat["description_physique"][item]["extracted"] = extractions.traiter_taille(
+						taille_courante)
 
 		return description_du_soldat
 
@@ -1882,7 +2268,7 @@ class Extractor:
 		"""
 		corresponding_lines, zone_magistrats = self.extract_lines_from_zone(annotations=annotations,
 																			target_zone="Magistrats",
-																			show_images=show_images,
+																			show_images=False,
 																			loaded_image=loaded_image,
 																			ocr_prediction=ocr_prediction,
 																			intersect_ratio=0.1)
