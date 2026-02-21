@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 import os
 import pickle
 import random
@@ -8,6 +9,8 @@ import unicodedata
 import PIL.ImageDraw
 import PIL.Image as Image
 import re
+
+import numpy as np
 from thefuzz import fuzz
 from Levenshtein import distance
 from difflib import SequenceMatcher
@@ -17,6 +20,9 @@ import pandas as pd
 from dataclasses import dataclass
 import collections
 import fuzzysearch
+
+import src.Vision.KRAKEN as KRAKEN
+import kraken.containers as containers
 
 
 @dataclass
@@ -440,6 +446,170 @@ def point_in_box(coord, box_coord):
 # 			self.annotation.append(self.baseline,
 # 								   self.prediction,
 # 								   self.cuts)
+
+
+
+def find_best_transcription(lines:OCRRecord, image_path:str, step:int, ranges:tuple) -> OCRRecord:
+	'''
+	Cette fonction va prendre un ensemble de lignes et les déplacer de quelques pixels jusqu'à trouver la meilleure transcription
+	:return: la meilleure transcription
+	'''
+	all_records = []
+	lexicality_indices = []
+	print(f"Before shift: {lines.join_transcription()}")
+	print(f"La glose fait {len(lines)} lignes.")
+	orig_transcription = lines.join_transcription()
+	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if not word.isupper()])
+	lexicality = compute_lexicality(orig_transcription, words)
+	print(lexicality)
+	all_records.append(lines)
+	lexicality_indices.append(lexicality)
+
+	# On essaie d'améliorer l'OCR en déplaçant de quelques pixels chaque ligne dans la direction orthogonale.
+	# En faire une fonction
+	# utils.draw_lines_on_image(image_path, baseline=[item.baseline for item in as_record])
+
+	# D'abord on va faire les transcriptions en déplacant les baselines peu à peu, puis recalculant les polygones
+
+	image = Image.open(image_path)
+	for shift in range(ranges[0], ranges[1], step):
+		shifted_lines = shift_lines(lines, shift)
+		# draw_lines_on_image(image_path, baseline=shifted_lines)
+		polygons = KRAKEN.blla.calculate_polygonal_environment(im=image, baselines=shifted_lines)
+		baselinelines = []
+		for baseline, polygon in zip(shifted_lines, polygons):
+			bll = containers.BaselineLine(id="test",
+										  baseline=baseline,
+										  boundary=polygon)
+			baselinelines.append(bll)
+
+		mysegmentation = containers.Segmentation(imagename="test",
+												 script_detection=False,
+												 lines=baselinelines,
+												 regions=None,
+												 text_direction='horizontal-lr',
+												 type='baselines')
+
+		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=None,
+								   ocr_model="~/Téléchargements/modele_28000_lignes_v2_best.mlmodel")
+		transcription = kraken_ocr.predict_with_kraken(im=image, segments=mysegmentation)
+		print("---")
+		print(f"Current shift: {shift}")
+		print(f"Current transcription: {transcription.join_transcription()}")
+		all_records.append(transcription)
+		transcription = transcription.join_transcription()
+		lexicality = compute_lexicality(transcription, words)
+		print(f"Transcription: {transcription}")
+		print(f"Lexicalité: {lexicality}")
+		lexicality_indices.append(lexicality)
+
+
+	best_transcription = all_records[lexicality_indices.index(min(lexicality_indices))]
+	print(f"Best transcription: {best_transcription.join_transcription()}")
+
+	return best_transcription
+
+
+def txt_to_list(path) -> list:
+	with open(path, 'r') as f:
+		as_string = f.read().split("\n")
+	normalized = [nfc_normalize(item) for item in as_string]
+	normalized = [item.lower() for item in normalized]
+	return normalized
+
+def remove_accents(string):
+	string = nfc_normalize(string)
+	string = string.replace("é", "e").replace("à", "a").replace("è", "e").replace("â", "a").replace("ê", "e").replace("ô", "o")
+	return string
+
+def compute_lexicality(string:str, words:set) -> float:
+	"""
+	Cette fonction va appliquer à chaque fichier un indice de lexicalité, et trier par ordre ascendant la liste produite.
+	:return: le taux de lexicalité de la phrase
+	"""
+
+	split_regexp = re.compile("[.«?!:()–⟦⟧\[\]+,;\-\s+\d+\"'»]")
+	normalized_string = nfc_normalize(string)
+	normalized_string = remove_accents(normalized_string).lower()
+	# nerd = ner(all_lines_as_string)
+	# for entity in reversed(nerd):
+	# 	if entity['entity_group'] != "PER":
+	# 		continue
+	# 	start = entity['start']
+	# 	end = entity["end"]
+	# 	as_list = [char for char in all_lines_as_string]
+	# 	del as_list[start:end]
+	# 	all_lines_as_string = "".join(as_list)
+
+	splitted = [item for item in re.split(split_regexp, normalized_string) if item not in ["", None]]
+	filtered_split = [item.lower() for item in splitted if "^" not in item]
+	filtered_split = [item for item in filtered_split if len(item) > 3]
+	vocab = set(filtered_split)
+
+	# On identifie tous les mots qui ne sont pas dans le vocabulaire
+	comparison = vocab - words
+	print(comparison)
+	print(vocab.intersection(words))
+	try:
+		error_rate = len(comparison)
+	except ZeroDivisionError:
+		return 0
+	return error_rate
+
+
+def shift_lines(lines_as_record:OCRRecord, pixels_shift:int):
+	"""
+	Cette fonction vise à déplacer un ensemble de lignes d'un certain nombre de pixels dans une direction donnée, représentée sous la forme d'un angle
+	par rapport à l'axe des abcisses.
+	:param lines_as_record:
+	:param pixels_shift: de combien de pixels il faut déplacer les lignes
+	:param angle: la direction du déplacement
+	:return: une liste de lignes de base qu'il faudra re-transformer en polygones.
+	"""
+
+	new_lines = []
+	for line in lines_as_record:
+		baseline = line.baseline
+		new_baseline = []
+		current_angle = get_angle(line)
+		for x1, y1 in baseline:
+			# On cherche la direction opposée
+			target_angle = current_angle + math.radians(90)
+			# https://stackoverflow.com/a/48525695
+			x2, y2 = (x1 + pixels_shift * math.cos(target_angle), y1 + pixels_shift * math.sin(target_angle))
+			if x2 < 0:
+				x2 = 0
+			if y2 < 0:
+				y2 = 0
+			new_baseline.append([round(x2), round(y2)])
+			# print("---")
+			# print(f"Current point: {x1, y1}")
+			# print(f"Shifted point: {x2, y2}")
+		new_lines.append(new_baseline)
+
+	return new_lines
+
+def sort_lines_with_rotation(lines_as_record:OCRRecord, zone:namedtuple):
+	"""
+	Cette fonction réordonne les lignes d'un ajout en les redressant selon un angle calculé par moyenne des angles de toutes les lignes
+	et un centre de rotation qui est le centre de la zone identifiée.
+	:param lines_as_record:
+	:param zone:
+	:return:
+	"""
+	angle = get_average_angle(lines_as_record)
+	rectangle_center = get_center_of_rectangle(zone)
+	rotated_lines = []
+	for line in lines_as_record:
+		# On va redresser la ligne en prenant le centre de la zone comme point de référence et l'angle moyen identifié.
+		rotated_point_a = rotate(rectangle_center, line.baseline[0], - angle)
+		rotated_point_b = rotate(rectangle_center, line.baseline[-1], - angle)
+		rotated_lines.append({"original_line": line, "rotated": [rotated_point_a, rotated_point_b]})
+	sorted_lines = sorted(rotated_lines, key=lambda x: x['rotated'][0][1])
+	sorted_lines = [item["original_line"] for item in sorted_lines]
+	new_record = OCRRecord()
+	new_record.recreate_record(sorted_lines)
+	return new_record
 
 def vertical_order_lines(lines: OCRRecord) -> OCRRecord:
 	"""
@@ -1285,6 +1455,59 @@ def levensthein_distance(string_a, string_b):
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]
 
+
+def rotate(origin, point, angle):
+	"""
+	Rotate a point counterclockwise by a given angle around a given origin.
+	Source: https://stackoverflow.com/a/75256388
+
+	The angle should be given in degrees.
+	"""
+	ox, oy = origin
+	px, py = point
+
+	converted_angle = math.radians(angle)
+	qx = ox + math.cos(converted_angle) * (px - ox) - math.sin(converted_angle) * (py - oy)
+	qy = oy + math.sin(converted_angle) * (px - ox) + math.cos(converted_angle) * (py - oy)
+	return [qx, qy]
+
+
+def get_center_of_rectangle(rectangle):
+	"""
+	Cette fonction retourne la position du point central d'un rectangle
+	:param rectangle:
+	:return:
+	"""
+	center = (rectangle.xmin + ((rectangle.xmax - rectangle.xmin) / 2), rectangle.ymin + ((rectangle.ymax - rectangle.ymin) / 2))
+	return center
+
+
+def get_angle(line:OCRLine):
+	"""
+	Cette fonction calcule l'angle moyen d'une lignes par rapport aux abcisses, en radians.
+	:param lines:
+	:return:
+	"""
+	current_bl = [line.baseline[0], line.baseline[-1]]
+	((aX, aY), (bX, bY))  = current_bl
+	myradians = math.atan2(bY - aY, bX - aX)
+	return myradians
+
+def get_average_angle(lines:OCRRecord):
+	"""
+	Cette fonction calcule l'angle moyen d'un ensemble de lignes, en degrés.
+	:param lines:
+	:return:
+	"""
+	all_baselines = [[line.baseline[0], line.baseline[-1]] for line in lines]
+	all_angles = []
+	for current_bl in all_baselines:
+		((aX, aY), (bX, bY))  = current_bl
+		myradians = math.atan2(bY - aY, bX - aX)
+		mydegrees = math.degrees(myradians)
+		all_angles.append(mydegrees)
+	average_angle = np.average(all_angles)
+	return average_angle
 
 def retrieve_substring_span(string: str, substring: str) -> list[int, int]:
 	"""

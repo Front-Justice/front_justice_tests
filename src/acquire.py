@@ -391,7 +391,7 @@ class Pipeline():
 
 		zones_ajouts, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=["MarginTextZone-ajout"],
-																		   confidence=0.5,
+																		   confidence=0.1,
 																		   model=self.yolo_models["ajouts"],
 																		   show_image=False)
 
@@ -423,7 +423,8 @@ class Pipeline():
 			return None, None
 
 		informations_ajouts = self.extractor.extraire_informations_ajouts_posterieurs(ocr_prediction=lignes_glosees,
-																annotations=zones_ajouts)
+																					  annotations=zones_ajouts,
+																					  image_path=page["image_path"])
 
 		informations_ajouts = {"annotations_ajouts": informations_ajouts}
 		return zone_dict, informations_ajouts
