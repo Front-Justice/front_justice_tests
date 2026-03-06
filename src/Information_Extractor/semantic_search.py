@@ -1,12 +1,11 @@
 import torch
-from sentence_transformers import SentenceTransformer
-
-embedder = SentenceTransformer("dangvantuan/sentence-camembert-large")
 
 
-def retrieve_most_similar_sentence(sentence:str, queries:list):
+
+def retrieve_most_similar_sentence(sentence:str, queries:list, embedder):
 	"""
 	Cette fonction renvoie la phrase la plus proche sémantiquement d'une liste de phrases.
+    Elle utilise une méthode de classification 0-shot (topk closest sentences)
 	:param sentence:
 	:param queries:
 	:return: La phrase la plus proche

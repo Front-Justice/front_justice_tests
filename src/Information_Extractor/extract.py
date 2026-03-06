@@ -5,6 +5,7 @@
 ###############
 import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+from sentence_transformers import SentenceTransformer
 import glob
 import re
 from src.utils.utils import OCRRecord, YOLOZone
@@ -17,6 +18,8 @@ import src.Information_Extractor.semantic_search as search
 import PIL
 from collections import namedtuple
 # import src.Vision.PARTY as PARTY
+import src.Vision.KRAKEN as KRAKEN
+import kraken.containers as containers
 import src.date.parse_date as date
 import fuzzysearch
 import src.Information_Extractor.extraction_functions as extractions
@@ -45,6 +48,7 @@ class Extractor:
 		self.date_proces = ""
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large")
 		self.ner = pipeline('ner',
 							model=self.ner_model,
 							tokenizer=self.tokenizer,
@@ -1042,11 +1046,37 @@ class Extractor:
 
 		lignes_tableau_as_string = lignes_tableau.join_transcription(merge_newlines=False)
 
+		liste_des_frais = utils.approximate_sentence_split(sentence=lignes_tableau_as_string,
+														   substring="dont le détail suit:\n")[-1]
+		regexp_lignes_frais = re.compile(r"\n?\d{1,2}\^[oO0]\s?")
+		liste_des_frais = re.split(regexp_lignes_frais, liste_des_frais)
+		liste_des_frais = [item for item in liste_des_frais if item != ""]
+		split_regexp = re.compile(r"\.{3,}\s?(\d)")
+
+		# On s'occupe des frais par ligne
+		frais_engages = []
+		for frais in liste_des_frais[:-1]:
+			split_total = re.split(split_regexp, frais)
+			if len(split_total) != 1:
+				joint = "".join(split_total[-2:])
+				extracted = utils.extraire_frais(joint)
+				clean_line = re.split(re.compile(r"\.{3,}"), frais)[0]
+				frais_engages.append({"ligne": clean_line,
+									  "frais": extracted,
+									  "as_string": joint})
+
+		# On s'occupe des frais totaux
+		total = liste_des_frais[-1]
+		split_total = "".join(re.split(split_regexp, total)[-2:])
+		frais_totaux = utils.extraire_frais(split_total)
+		somme = sum([item["frais"] for item in frais_engages if item["frais"]])
+		print(frais_totaux)
 
 		return {"prediction": lignes_tableau_as_string,
-				"extracted": lignes_tableau_as_string,
+				"extracted": {"frais_totaux": {"somme": somme,
+											   "totaux_transcrits": frais_totaux},
+							  "liste_de_frais": frais_engages},
 				"bbox": zone_tableau}
-
 
 	def extraire_paragraphe_final_p4(self,
 							  ocr_prediction: OCRRecord,
@@ -1068,10 +1098,14 @@ class Extractor:
 																		select_highest_prob_zone=True)
 
 		lignes_tableau_as_string = lignes_tableau.join_transcription()
+		after_somme = utils.approximate_sentence_split(sentence=lignes_tableau_as_string, substring="à la somme de ")[-1]
+		somme_toutes_lettres = utils.approximate_sentence_split(sentence=after_somme, substring=" du montant de laquelle")[0]
+		somme_toutes_lettres = somme_toutes_lettres.strip()
+		total = utils.sum_to_float(somme_toutes_lettres)
 
 
 		return {"prediction": lignes_tableau_as_string,
-				"extracted": lignes_tableau_as_string,
+				"extracted": total,
 				"bbox": zone_tableau}
 
 
@@ -1315,7 +1349,8 @@ class Extractor:
 
 	def extraire_informations_ajouts_posterieurs(self,
 												 ocr_prediction: OCRRecord,
-												 annotations: YOLORecord):
+												 annotations: YOLORecord,
+												 image_path:str):
 		"""
 		Cette fonction extrait la date et classe le type d'information d'un ajout du greffier. Il y a en effet toujours une date !
 		:param ocr_prediction:
@@ -1334,10 +1369,20 @@ class Extractor:
 									   intersect_ratio=0.3)
 			as_record = OCRRecord()
 			as_record.recreate_record(filtered_lines)
+			print(f"Before shift: {as_record.join_transcription()}")
 			print(f"La glose fait {len(as_record)} lignes.")
-			lignes_fusionnees = as_record.join_transcription()
+
+			# On essaie d'améliorer l'OCR en déplaçant de quelques pixels chaque ligne dans la direction orthogonale.
+			# as_record = utils.find_best_transcription(lines=as_record,
+			# 							  image_path=image_path,
+			# 							  step=3,
+			# 							  ranges=(0, 3))
+
+			sorted_lines = utils.sort_lines_with_rotation(as_record, zones_filtrees_as_rectangle)
+			lignes_fusionnees = sorted_lines.join_transcription()
+
 			print(lignes_fusionnees)
-			resultat = self.ner(lignes_fusionnees)
+			resultat = self.ner(lignes_fusionnees.lower())
 			try:
 				extracted_date = next(item for item in resultat if item['entity_group'] == 'DATE')['word']
 			except StopIteration:
@@ -1354,15 +1399,22 @@ class Extractor:
 				normalized_date = None
 			list_of_informations = [
 				"Remise du restant de la peine",
+				"Remise partielle de peine",
 				"Décès du soldat",
+				"Détention préventive",
 				"Amnistie",
+				"Réhabilitation du soldat",
 				"Peine effectuée",
+				"Exécution du jugement",
 				"Jugement suspendu",
+				"Annulation de la suspension d'exécution",
 				"Exécution de la peine suspendue",
-				"Peine commuée"
+				"Peine commuée",
+				"Sursis révoqué"
 			]
 			information_contenue = search.retrieve_most_similar_sentence(sentence=lignes_fusionnees,
-																		 queries=list_of_informations)
+																		 queries=list_of_informations,
+																		 embedder=self.sentence_camembert)
 			print(information_contenue)
 
 			# TODO: cas où il y a plusieurs annotations différentes

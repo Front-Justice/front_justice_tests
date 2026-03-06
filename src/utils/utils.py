@@ -11,6 +11,7 @@ import PIL.Image as Image
 import re
 
 import numpy as np
+import spellchecker
 from thefuzz import fuzz
 from Levenshtein import distance
 from difflib import SequenceMatcher
@@ -18,8 +19,9 @@ from shapely.geometry import Polygon
 from collections import namedtuple
 import pandas as pd
 from dataclasses import dataclass
-import collections
+import text_to_num
 import fuzzysearch
+from spellchecker import SpellChecker
 
 import src.Vision.KRAKEN as KRAKEN
 import kraken.containers as containers
@@ -1004,10 +1006,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 			# Nom et prénom du soldat
 			try:
-				prenoms_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['forename'][
-					'persName']
-				nom_soldat = page['extractions']['description_soldat']['nom_du_soldat']['extracted']['surname'][
-					'persName']
+				prenoms_soldat = page['extractions']['soldat']['identite']['prenom']['extracted']
+				nom_soldat = page['extractions']['soldat']['identite']['nom']['extracted']
 			except TypeError:
 				nom_soldat = "Plusieurs soldats"
 				prenoms_soldat = "Plusieurs soldats"
@@ -1020,48 +1020,48 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 			# Date de naissance et âge du soldat
 			try:
-				date_naissance = page['extractions']['description_soldat']['date_de_naissance']['date_normalisee'][
+				date_naissance = page['extractions']['soldat']['identite']['date_naissance']['extracted'][
 					'when']
 			except TypeError:
 				date_naissance = "UNK"
 			try:
-				age = page['extractions']['description_soldat']["Âge"]
+				age = page['extractions']['soldat']["identite"]["Âge"]
 			except KeyError:
 				age = "UNK"
 			interm.append(date_naissance)
 			interm.append(age)
 
 			try:
-				taille = page['extractions']['description_soldat']["physique"]["taille"]["extracted"]
+				taille = page['extractions']['soldat']["description_physique"]["taille"]["extracted"]
 			except KeyError:
 				taille = "UNK"
 			try:
-				cheveux = page['extractions']['description_soldat']["physique"]["cheveux"]["extracted"]
+				cheveux = page['extractions']['soldat']["description_physique"]["cheveux"]["extracted"]
 			except KeyError:
 				cheveux = "UNK"
 			try:
-				front = page['extractions']['description_soldat']["physique"]["front"]["extracted"]
+				front = page['extractions']['soldat']["description_physique"]["front"]["extracted"]
 			except KeyError:
 				front = "UNK"
 			try:
-				yeux = page['extractions']['description_soldat']["physique"]["yeux"]["extracted"]
+				yeux = page['extractions']['soldat']["description_physique"]["yeux"]["extracted"]
 			except KeyError:
 				yeux = "UNK"
 			try:
-				nez = page['extractions']['description_soldat']["physique"]["nez"]["extracted"]
+				nez = page['extractions']['soldat']["description_physique"]["nez"]["extracted"]
 			except KeyError:
 				nez = "UNK"
 			try:
-				visage = page['extractions']['description_soldat']["physique"]["visage"]["extracted"]
+				visage = page['extractions']['soldat']["description_physique"]["visage"]["extracted"]
 			except KeyError:
 				visage = "UNK"
 			try:
 				renseignements_complementaires = \
-					page['extractions']['description_soldat']["physique"]["renseignements_complementaires"]["extracted"]
+					page['extractions']['soldat']["description_physique"]["renseignements_complementaires"]["extracted"]
 			except KeyError:
 				renseignements_complementaires = "UNK"
 			try:
-				marques_particulieres = page['extractions']['description_soldat']["physique"]["marques_particulieres"][
+				marques_particulieres = page['extractions']['soldat']["description_physique"]["marques_particulieres"][
 					"extracted"]
 			except KeyError:
 				marques_particulieres = "UNK"
@@ -1075,53 +1075,60 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(marques_particulieres)
 
 			# Lieu de naissance
-			ville_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted']['ville']
-			arrondissement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted'][
-				'arrondissement']
-			departement_naissance = page['extractions']['description_soldat']['lieu_naissance']['extracted'][
-				'departement']
+			ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['extracted']
+			arrondissement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
+				'arrondissement']['extracted']
+			departement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
+				'departement']['extracted']
 			interm.append(ville_naissance)
 			interm.append(arrondissement_naissance)
 			interm.append(departement_naissance)
 
 			# Lieu de résidence
-			ville_residence = page['extractions']['description_soldat']['lieu_residence']['extracted']['ville']
-			arrondissement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted'][
-				'arrondissement']
-			departement_residence = page['extractions']['description_soldat']['lieu_residence']['extracted'][
-				'departement']
+			ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+			arrondissement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
+				'arrondissement']['extracted']
+			departement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
+				'departement']['extracted']
 			interm.append(ville_residence)
 			interm.append(arrondissement_residence)
 			interm.append(departement_residence)
 
 			# Femme et enfants
-			situation_maritale = page['extractions']['description_soldat']['situation_maritale']
-			if situation_maritale['célibataire'] == True:
+			situation_maritale = page['extractions']['soldat']["identite"]['situation_maritale']
+			if "situation" in situation_maritale:
+				if situation_maritale['situation']['extracted'] == "célibataire":
+					situation_maritale = "célibataire"
+				elif situation_maritale['situation']['extracted'] == "marié":
+					situation_maritale = "marié"
+				elif situation_maritale['situation']['extracted'] == "veuf":
+					situation_maritale = "veuf"
+			else:
 				situation_maritale = "célibataire"
-			elif situation_maritale["marié"] == True:
-				situation_maritale = "marié"
-			elif situation_maritale["veuf"] == True:
-				situation_maritale = "veuf"
 			interm.append(situation_maritale)
-
-			enfants = page['extractions']['description_soldat']['situation_maritale']['nombre_enfants']
-			interm.append(enfants)
+			try:
+				enfants = page['extractions']['soldat']["identite"]['situation_maritale']['enfants']['extracted']
+				interm.append(enfants)
+			except KeyError:
+				interm.append(0)
 
 			# Profession
-			profession = page['extractions']['description_soldat']['profession']['extracted']
-			interm.append(profession)
-
+			try:
+				profession = page['extractions']['soldat']["identite"]['profession']['extracted']
+				interm.append(profession)
+			except KeyError:
+				interm.append(None)
 			# Rang du soldat
-			rang = page['extractions']['description_soldat']['rang']['extracted']
+			rang = page['extractions']['soldat']["identite"]['rang']['extracted']
 			interm.append(rang)
 
 			# Affectation du soldat
-			affectation = page['extractions']['description_soldat']['affectation']['extracted']
+			affectation = page['extractions']['soldat']["identite"]['affectation']['extracted']
 			interm.append(affectation)
 
 			# Numéro de matricule
 			try:
-				matricule = page['extractions']['description_soldat']['matricule']['extracted']
+				matricule = page['extractions']['soldat']["identite"]['matricule']['extracted']
 			except:
 				matricule = None
 			interm.append(matricule)
@@ -1579,6 +1586,71 @@ def list_depth(lst: list) -> int:
 	:return: un entier
 	"""
 	return isinstance(lst, list) and max(map(list_depth, lst)) + 1
+
+def extraire_frais(chaine_caractere):
+	print(chaine_caractere)
+	regexp = re.compile("\^f\s?|[.,]\s?")
+	split = re.split(regexp, chaine_caractere)
+	if isinstance(split, str):
+		split = chaine_caractere.split("^f ")
+		split = [item.strip() for item in split]
+	reconstructed = ".".join(split)
+	try:
+		as_float = float(reconstructed)
+	except ValueError:
+		return None
+	return as_float
+
+def correct_numbers_in_string(input_string):
+	all_french_numbers = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "vingt", "trente", "quarante", "cinquante", "soixante", "cent", "mille"]
+	corrected_string = []
+	split = re.split(re.compile(r"\s+|-"), input_string)
+	for word in split:
+		if word in all_french_numbers:
+			corrected_string.append(word)
+		else:
+			all_distances = []
+			for correct_number in all_french_numbers:
+				distance = levensthein_distance(word, correct_number)
+				all_distances.append(distance)
+			closest_match = all_french_numbers[all_distances.index(min(all_distances))]
+			corrected_string.append(closest_match)
+
+	print(corrected_string)
+	return " ".join(corrected_string)
+
+def sum_to_float(input:string) -> float:
+	"""
+	Cette fonction prend une somme (de frais par exemple) en toutes lettres et la convertit en flottant
+	:return: le flottant correspondant
+	"""
+	print(input)
+	split_francs = approximate_sentence_split(sentence=input, substring="francs")
+	try:
+		entiers = split_francs[0].strip()
+	except TypeError:
+		return None
+	entiers = correct_numbers_in_string(entiers)
+	centimes = approximate_sentence_split(split_francs[-1], substring="centimes")[0].strip()
+	centimes = correct_numbers_in_string(centimes)
+	print(entiers)
+	print(centimes)
+	try:
+		entiers = text_to_num.text2num(entiers, "fr")
+	except ValueError:
+		return None
+	try:
+		centimes = text_to_num.text2num(centimes, "fr")
+	except ValueError:
+		return {"value": entiers,
+				"certainty": "low"}
+
+	concat = f"{entiers}.{centimes}"
+	as_float = float(concat)
+	return {
+		"value": as_float,
+		"certainty": "high"
+	}
 
 
 def load_json_to_dict(path):

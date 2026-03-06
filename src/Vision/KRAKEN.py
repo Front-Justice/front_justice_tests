@@ -4,9 +4,7 @@ from kraken import blla
 from kraken.lib import models
 from kraken import rpred
 import kraken
-import PIL.Image as Image
 from src.utils.utils import OCRRecord
-from src.utils.utils import YOLORecord
 
 
 class KRAKEN():

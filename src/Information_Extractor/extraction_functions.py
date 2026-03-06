@@ -3,7 +3,7 @@ import re
 from text_to_num import text2num
 import src.date.parse_date as date
 import regex
-
+import pyo3_runtime
 from src.utils.utils import OCRLine, OCRRecord
 
 
@@ -840,8 +840,13 @@ def extraire_sit_maritale(entity_dict, lignes):
 					nombre_enfants = int(nombre_enfants)
 				except ValueError:
 					try:
+						print(nombre_enfants)
 						nombre_enfants = text2num(nombre_enfants, lang="fr")
 					except ValueError:
+						nombre_enfants = None
+					# except PanicException:
+					# 	nombre_enfants = None
+					except:
 						nombre_enfants = None
 			enfants["extracted"] = nombre_enfants
 		except TypeError:
