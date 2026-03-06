@@ -3,8 +3,10 @@ venv/
 data/
 *.jpg
 *.pickle
-*.json
 __pycache__/
 __init__.py
 *.png
 *.json
+*.model
+*.bin
+*.pt
