@@ -619,9 +619,9 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
-		# utils.convert_to_csv(minutes, "results/database.csv")
-		# exit(0)
+		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		utils.convert_to_csv(minutes, "results/database.csv")
+		exit(0)
 		image_index = 0
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
