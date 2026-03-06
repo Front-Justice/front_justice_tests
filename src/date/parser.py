@@ -178,6 +178,7 @@ class Parser(lexer.Lexer):
         '''
         date_complete : plage ANNEE
                      | jour_mois ANNEE
+                     | jour_toutes_lettres_mois ANNEE
                      | groupe_annee
                      | courant_de_groupe
                      | JOUR mois ANNEE

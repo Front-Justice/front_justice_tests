@@ -731,7 +731,7 @@ def extraire_date_naissance(entity_dict, lignes):
 	return date_naissance
 
 
-def extraire_lieu_naissance(entity_dict, lignes):
+def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 	"""
 	Cette fonction extrait le lieu de naissance et les baselines
 	:param entity_dict:
@@ -752,6 +752,11 @@ def extraire_lieu_naissance(entity_dict, lignes):
 		"ville_naissance"
 	)
 
+	print(lieu_naissance["ville"])
+	result = geoextractor.retrieve_coordinates(input_data=lieu_naissance["ville"]["extracted"])
+	print(result)
+	exit(0)
+
 	lieu_naissance["arrondissement"] = extraire_feature(
 		entity_dict,
 		lignes,
@@ -761,7 +766,7 @@ def extraire_lieu_naissance(entity_dict, lignes):
 	return lieu_naissance
 
 
-def extraire_lieu_residence(entity_dict, lignes):
+def extraire_lieu_residence(entity_dict, lignes, geoextractor):
 	"""
 	Cette fonction extrait le lieu de naissance et les baselines
 	:param entity_dict:
@@ -782,6 +787,7 @@ def extraire_lieu_residence(entity_dict, lignes):
 		lignes,
 		"ville_residence"
 	)
+
 
 	lieu_residence["arrondissement"] = extraire_feature(
 		entity_dict,

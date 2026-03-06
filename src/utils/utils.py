@@ -297,6 +297,8 @@ def correct_date(date: str) -> str:
 	date = date.lower().strip()
 	clean_regexp = re.compile(r"(\d+)\^?er?")
 	date = re.sub(clean_regexp, r'\g<1>', date)
+	le_regexp = re.compile(r"^[Ll]e ")
+	date = re.sub(le_regexp, r"", date)
 	date = strip_punctuation(date)
 
 	# On corrige les erreurs fŕequentes
@@ -1300,6 +1302,28 @@ def approximate_sentence_split(sentence: str, substring: str, max_dist: int = 1,
 	else:
 		return None
 
+def find_closest_word_in_list(word_list: list, target_word: str) -> list:
+	"""
+	Cette fonction cherche le mot le plus proche dans une liste de mots
+	:param sentence: la phrase cible
+	:param target_word: le mot à chercher
+	:return: la liste du mot ou des mots les plus proches
+	"""
+	distances = []
+	matching_words = []
+	target_word = target_word.lower()
+	for word in word_list:
+		if word is None:
+			distances.append(99)
+			continue
+		word_lower = word.lower()
+		dist = levensthein_distance(word_lower, target_word)
+		distances.append(dist)
+	min_dist_index = distances.index(min(distances))
+	print(word_list[min_dist_index])
+	print(min(distances))
+	print(target_word)
+	return word_list[min_dist_index]
 
 def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):
 	"""

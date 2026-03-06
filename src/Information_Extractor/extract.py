@@ -15,6 +15,7 @@ import src.utils.utils as utils
 import copy
 import PIL.Image as Image
 import src.Information_Extractor.semantic_search as search
+import src.Information_Extractor.geoextractor as geoextractor
 import PIL
 from collections import namedtuple
 # import src.Vision.PARTY as PARTY
@@ -36,7 +37,8 @@ class Extractor:
 	def __init__(self, party_engine,
 				 resize_factor: int = 1,
 				 debug: bool = False,
-				 use_party=True):
+				 use_party=True,
+				 device="cuda:0"):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
@@ -55,6 +57,8 @@ class Extractor:
 							aggregation_strategy="simple",
 							device="cpu")
 
+		self.GeoExtractor = geoextractor.GeoExtractor()
+
 		entity_spotting_model = ("/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Information_Extractor/models/model_NER")
 
 		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/BERTNER/results_test_v3/best_model")
@@ -63,7 +67,7 @@ class Extractor:
 												 model=entity_spotting_model,
 												 tokenizer=tokenizer,
 												 aggregation_strategy="simple",
-												 device="cuda:0")
+												 device=device)
 
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
@@ -1044,9 +1048,9 @@ class Extractor:
 																		intersect_ratio=[.5],
 																		select_highest_prob_zone=True)
 
-		lignes_tableau_as_string = lignes_tableau.join_transcription(merge_newlines=False)
+		lignes_recapitulatif_as_string = lignes_tableau.join_transcription(merge_newlines=False)
 
-		liste_des_frais = utils.approximate_sentence_split(sentence=lignes_tableau_as_string,
+		liste_des_frais = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string,
 														   substring="dont le détail suit:\n")[-1]
 		regexp_lignes_frais = re.compile(r"\n?\d{1,2}\^[oO0]\s?")
 		liste_des_frais = re.split(regexp_lignes_frais, liste_des_frais)
@@ -1072,7 +1076,7 @@ class Extractor:
 		somme = sum([item["frais"] for item in frais_engages if item["frais"]])
 		print(frais_totaux)
 
-		return {"prediction": lignes_tableau_as_string,
+		return {"prediction": lignes_recapitulatif_as_string,
 				"extracted": {"frais_totaux": {"somme": somme,
 											   "totaux_transcrits": frais_totaux},
 							  "liste_de_frais": frais_engages},
@@ -1089,7 +1093,7 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_tableau, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
+		lignes_recapitulatif, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
 																		target_zone=["recapitulatif_somme"],
 																		show_images=False,
 																		loaded_image=loaded_image,
@@ -1097,15 +1101,32 @@ class Extractor:
 																		intersect_ratio=[.5],
 																		select_highest_prob_zone=True)
 
-		lignes_tableau_as_string = lignes_tableau.join_transcription()
-		after_somme = utils.approximate_sentence_split(sentence=lignes_tableau_as_string, substring="à la somme de ")[-1]
+		lignes_recapitulatif_as_string = lignes_recapitulatif.join_transcription()
+		after_somme = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="à la somme de ")[-1]
 		somme_toutes_lettres = utils.approximate_sentence_split(sentence=after_somme, substring=" du montant de laquelle")[0]
 		somme_toutes_lettres = somme_toutes_lettres.strip()
 		total = utils.sum_to_float(somme_toutes_lettres)
+		
+		# On cherche la date du jugement, dans la dernière phrase du dernier paragraphe
+		derniere_phrase = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
+		ner = self.ner(derniere_phrase.lower())
+		identified_date = [item for item in ner if item['entity_group'] == "DATE"]
+		corrected = utils.correct_date(identified_date[0]['word'])
+		try:
+			parsed = date.process_date(corrected)
+		except TypeError:
+			parsed = None
+
+		date_du_proces = {
+			"predicted": identified_date[0]['word'],
+			"date_normalisee": parsed
+		}
 
 
-		return {"prediction": lignes_tableau_as_string,
-				"extracted": total,
+
+		return {"prediction": lignes_recapitulatif_as_string,
+				"frais": total,
+				"date_proces": date_du_proces,
 				"bbox": zone_tableau}
 
 
@@ -2198,13 +2219,15 @@ class Extractor:
 
 		description_du_soldat["identite"]["lieu_naissance"] = (
 			extractions.extraire_lieu_naissance(entity_dict=entities_as_dictionnary,
-												lignes=lignes_description_du_soldat)
+												lignes=lignes_description_du_soldat,
+												geoextractor=self.GeoExtractor)
 		)
 
 
 		description_du_soldat["identite"]["lieu_residence"] = (
 			extractions.extraire_lieu_residence(entity_dict=entities_as_dictionnary,
-												lignes=lignes_description_du_soldat)
+												lignes=lignes_description_du_soldat,
+												geoextractor=self.GeoExtractor)
 		)
 
 

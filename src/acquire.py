@@ -1,5 +1,8 @@
 import argparse
 import os
+
+import torch.cuda
+
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
@@ -60,10 +63,12 @@ class Pipeline():
 			party_engine = None
 		else:
 			party_engine = PARTY.PartyPredict()
+		device = "cuda:0" if torch.cuda.is_available() else "cpu"
 		self.extractor = extract.Extractor(party_engine=party_engine,
 										   resize_factor=self.resize_factor,
 										   debug=debug,
-										   use_party=use_party)
+										   use_party=use_party,
+										   device=device)
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -619,9 +624,9 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
-		utils.convert_to_csv(minutes, "results/database.csv")
-		exit(0)
+		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		# utils.convert_to_csv(minutes, "results/database.csv")
+		# exit(0)
 		image_index = 0
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
