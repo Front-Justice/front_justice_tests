@@ -746,23 +746,32 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 		"departement_naissance"
 	)
 
+	lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(lieu_naissance["departement"]["extracted"])
+
+
 	lieu_naissance["ville"] = extraire_feature(
 		entity_dict,
 		lignes,
 		"ville_naissance"
 	)
 
-	print(lieu_naissance["ville"])
-	result = geoextractor.retrieve_coordinates(input_data=lieu_naissance["ville"]["extracted"])
-	print(result)
-	exit(0)
 
 	lieu_naissance["arrondissement"] = extraire_feature(
 		entity_dict,
 		lignes,
 		"arrondissement_naissance"
 	)
-
+	ville = lieu_naissance["ville"]["extracted"]
+	arrondissement = lieu_naissance["arrondissement"]["extracted"]
+	departement = lieu_naissance["departement"]["extracted"]
+	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
+	print(result)
+	try:
+		lieu_naissance["ville"]["extracted"] = result["nom_actuel"]
+	except KeyError:
+		pass
+	lieu_naissance["ville"]["lon"] = result["lon"]
+	lieu_naissance["ville"]["lat"] = result["lat"]
 	return lieu_naissance
 
 

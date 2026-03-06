@@ -1323,7 +1323,7 @@ def find_closest_word_in_list(word_list: list, target_word: str) -> list:
 	print(word_list[min_dist_index])
 	print(min(distances))
 	print(target_word)
-	return word_list[min_dist_index]
+	return word_list[min_dist_index], min(distances)
 
 def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):
 	"""

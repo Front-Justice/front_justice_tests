@@ -755,12 +755,14 @@ class Extractor:
 
 		description_du_soldat["identite"]["lieu_naissance"] = (
 			extractions.extraire_lieu_naissance(entity_dict=entities_as_dictionnary,
-												lignes=lignes_description_du_soldat)
+												lignes=lignes_description_du_soldat,
+												geoextractor=self.GeoExtractor)
 		)
 
 		description_du_soldat["identite"]["lieu_residence"] = (
 			extractions.extraire_lieu_residence(entity_dict=entities_as_dictionnary,
-												lignes=lignes_description_du_soldat)
+												lignes=lignes_description_du_soldat,
+												geoextractor=self.GeoExtractor)
 		)
 
 		description_du_soldat["identite"]["situation_maritale"] = (
