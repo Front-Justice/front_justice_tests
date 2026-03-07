@@ -283,7 +283,7 @@ def extraire_cheveux(lignes_description_physique,
 
 def extraire_feature(entities_as_dictionnary, lignes: OCRRecord, feature) -> dict:
 	"""
-	Cette fonction extrait une feature précise d'un dictionnaire, et retrouve la ligne de base
+	Cette fonction extrait une feature précise d'un résultat de NER, et retrouve la ligne de base
 	qui contient
 	:param entities_as_dictionnary:
 	:param lignes:
@@ -761,21 +761,28 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 		lignes,
 		"arrondissement_naissance"
 	)
+
 	ville = lieu_naissance["ville"]["extracted"]
 	arrondissement = lieu_naissance["arrondissement"]["extracted"]
 	departement = lieu_naissance["departement"]["extracted"]
 	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
 	print(result)
 	try:
-		lieu_naissance["ville"]["extracted"] = result["nom_actuel"]
+		lieu_naissance["ville"]["extracted"] = lieu_naissance["ville"]["extracted"]
+		lieu_naissance["ville"]["corrected"] = result["nom_actuel"]
 	except KeyError:
 		pass
-	lieu_naissance["ville"]["lon"] = result["lon"]
-	lieu_naissance["ville"]["lat"] = result["lat"]
+	except TypeError:
+		lieu_naissance["ville"] = None
+		return  lieu_naissance
+	lieu_naissance["coordonnées"] = {
+		"lon": result["lon"],
+		"lat": result["lat"]
+	}
 	return lieu_naissance
 
 
-def extraire_lieu_residence(entity_dict, lignes, geoextractor):
+def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
 	"""
 	Cette fonction extrait le lieu de naissance et les baselines
 	:param entity_dict:
@@ -810,6 +817,27 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor):
 		"adresse_residence"
 	)
 
+	ville = lieu_residence["ville"]["extracted"]
+	arrondissement = lieu_residence["arrondissement"]["extracted"]
+	departement = lieu_residence["departement"]["extracted"]
+
+	# On considère que les cas où le département n'est pas indiqué correspondent aux cas où il est le même que
+	# le département de naissance.
+	if departement is None:
+		departement = lieu_naissance["departement"]["extracted"]
+	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
+	print(result)
+	try:
+		lieu_residence["ville"]["extracted"] = lieu_residence["ville"]["extracted"]
+		lieu_residence["ville"]["corrected"] = result["nom_actuel"]
+	except KeyError:
+		pass
+	except TypeError:
+		return lieu_naissance
+	lieu_residence["coordonnées"] = {
+		"lon": result["lon"],
+		"lat": result["lat"]
+	}
 	if adresse["extracted"]:
 		lieu_residence["adresse"] = adresse
 
