@@ -149,12 +149,11 @@ class OCRRecord():
 			if show_cuts is True:
 				out_dict.append({"baseline": line.baseline,
 								 "cuts": line.cuts,
-								"prediction": line.prediction})
+								 "prediction": line.prediction})
 			else:
 				out_dict.append({"baseline": line.baseline,
-								"prediction": line.prediction})
+								 "prediction": line.prediction})
 		return json.dumps(out_dict)
-
 
 	def to_json(self):
 		"""
@@ -215,9 +214,11 @@ number_dict = {"un": 1,
 def load(path):
 	return Image.open(path)
 
+
 def show_image(path):
 	loaded_image = Image.open(path)
 	loaded_image.show()
+
 
 def calcule_age(date_naissance: str, date_proces: str) -> int | None:
 	"""
@@ -459,11 +460,10 @@ def point_in_box(coord, box_coord):
 # 								   self.cuts)
 
 
-
-def find_best_transcription(lines:OCRRecord,
-							image_path:str,
-							step:int,
-							ranges:tuple,
+def find_best_transcription(lines: OCRRecord,
+							image_path: str,
+							step: int,
+							ranges: tuple,
 							ocr_model) -> OCRRecord:
 	'''
 	Cette fonction va prendre un ensemble de lignes et les déplacer de quelques pixels jusqu'à trouver la meilleure transcription
@@ -474,7 +474,8 @@ def find_best_transcription(lines:OCRRecord,
 	print(f"Before shift: {lines.join_transcription()}")
 	print(f"La glose fait {len(lines)} lignes.")
 	orig_transcription = lines.join_transcription()
-	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if not word.isupper()])
+	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if
+				 not word.isupper()])
 	lexicality = compute_lexicality(orig_transcription, words)
 	all_records.append(lines)
 	lexicality_indices.append(lexicality)
@@ -517,7 +518,6 @@ def find_best_transcription(lines:OCRRecord,
 		print(f"Lexicalité: {lexicality}")
 		lexicality_indices.append(lexicality)
 
-
 	best_transcription = all_records[lexicality_indices.index(min(lexicality_indices))]
 	print(f"Best transcription: {best_transcription.join_transcription()}")
 
@@ -531,12 +531,15 @@ def txt_to_list(path) -> list:
 	normalized = [item.lower() for item in normalized]
 	return normalized
 
+
 def remove_accents(string):
 	string = nfc_normalize(string)
-	string = string.replace("é", "e").replace("à", "a").replace("è", "e").replace("â", "a").replace("ê", "e").replace("ô", "o")
+	string = string.replace("é", "e").replace("à", "a").replace("è", "e").replace("â", "a").replace("ê", "e").replace(
+		"ô", "o")
 	return string
 
-def compute_lexicality(string:str, words:set) -> float:
+
+def compute_lexicality(string: str, words: set) -> float:
 	"""
 	Cette fonction va appliquer à chaque fichier un indice de lexicalité, et trier par ordre ascendant la liste produite.
 	:return: le taux de lexicalité de la phrase
@@ -569,7 +572,7 @@ def compute_lexicality(string:str, words:set) -> float:
 	return error_rate
 
 
-def shift_lines(lines_as_record:OCRRecord, pixels_shift:int):
+def shift_lines(lines_as_record: OCRRecord, pixels_shift: int):
 	"""
 	Cette fonction vise à déplacer un ensemble de lignes d'un certain nombre de pixels dans une direction donnée, représentée sous la forme d'un angle
 	par rapport à l'axe des abcisses.
@@ -594,14 +597,15 @@ def shift_lines(lines_as_record:OCRRecord, pixels_shift:int):
 			if y2 < 0:
 				y2 = 0
 			new_baseline.append([round(x2), round(y2)])
-			# print("---")
-			# print(f"Current point: {x1, y1}")
-			# print(f"Shifted point: {x2, y2}")
+		# print("---")
+		# print(f"Current point: {x1, y1}")
+		# print(f"Shifted point: {x2, y2}")
 		new_lines.append(new_baseline)
 
 	return new_lines
 
-def sort_lines_with_rotation(lines_as_record:OCRRecord, zone:namedtuple):
+
+def sort_lines_with_rotation(lines_as_record: OCRRecord, zone: namedtuple):
 	"""
 	Cette fonction réordonne les lignes d'un ajout en les redressant selon un angle calculé par moyenne des angles de toutes les lignes
 	et un centre de rotation qui est le centre de la zone identifiée.
@@ -622,6 +626,7 @@ def sort_lines_with_rotation(lines_as_record:OCRRecord, zone:namedtuple):
 	new_record = OCRRecord()
 	new_record.recreate_record(sorted_lines)
 	return new_record
+
 
 def vertical_order_lines(lines: OCRRecord) -> OCRRecord:
 	"""
@@ -1011,7 +1016,6 @@ def convert_to_csv(extractions: dict, outpath: str):
 			except KeyError:
 				interm.extend(["UNK" for _ in range(4)])
 
-
 			# Greffier (on n'extrait pas les rôles)
 			try:
 				greffier = page['extractions']['magistrats']['greffier']['extracted']['persName']
@@ -1118,8 +1122,9 @@ def convert_to_csv(extractions: dict, outpath: str):
 			# Lieu de naissance
 			try:
 				ville_naissance_transcrite = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
-				'extracted']
-				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_actuel']
+					'extracted']
+				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
+					'nom_actuel']
 				ville_naissance_1999 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1999']
 				ville_naissance_1801 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1801']
 			except TypeError:
@@ -1127,12 +1132,15 @@ def convert_to_csv(extractions: dict, outpath: str):
 					ville_naissance_actuelle = "UNK"
 					ville_naissance_transcrite = "UNK"
 			except KeyError:
-				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['extracted']
+				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
+					'extracted']
 				ville_naissance_1999 = "UNK"
 				ville_naissance_1801 = "UNK"
 			try:
-				latitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"]["lat"]
-				longitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"]["lon"]
+				latitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"][
+					"lat"]
+				longitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"][
+					"lon"]
 			except KeyError:
 				latitude_ville_naissance, longitude_ville_naissance = "UNK", "UNK"
 			arrondissement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
@@ -1152,9 +1160,11 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(departement_naissance_transcrit)
 
 			# Lieu de résidence
-			ville_residence_transcrite = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+			ville_residence_transcrite = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
+				'extracted']
 			try:
-				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_actuel']
+				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
+					'nom_actuel']
 				ville_residence_1999 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1999']
 				ville_residence_1801 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1801']
 			except TypeError:
@@ -1163,13 +1173,16 @@ def convert_to_csv(extractions: dict, outpath: str):
 					ville_residence_1999 = "UNK"
 					ville_residence_1801 = "UNK"
 			except KeyError:
-				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
+					'extracted']
 				ville_residence_1999 = ville_residence_actuelle
 				ville_residence_1801 = ville_residence_actuelle
 
 			try:
-				latitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"]["lat"]
-				longitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"]["lon"]
+				latitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"][
+					"lat"]
+				longitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"][
+					"lon"]
 			except (KeyError, TypeError):
 				latitude_ville_residence, longitude_ville_residence = "UNK", "UNK"
 			arrondissement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
@@ -1400,7 +1413,24 @@ def approximate_sentence_split(sentence: str, substring: str, max_dist: int = 1,
 	else:
 		return None
 
-def find_closest_word_in_list(word_list: list, target_word: str, replacement_mapping:dict=None) -> list:
+
+def delete_key(k, dic):
+	"""
+	Fonction qui supprime une clé récursivement dans un dictionnaire.
+	Copié de https://stackoverflow.com/a/64815158
+	:param k: la clé
+	:param dic: le dictionnaire
+	:return: le dictionnaire mis à jour
+	"""
+	if k in dic:
+		del dic[k]
+	for val in dic.values():
+		if isinstance(val, dict):
+			delete_key(k, val)
+	return dic
+
+
+def find_closest_word_in_list(word_list: list, target_word: str, replacement_mapping: dict = None) -> list:
 	"""
 	Cette fonction cherche le mot le plus proche dans une liste de mots
 	:param sentence: la phrase cible
@@ -1431,6 +1461,7 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 	print(min(distances))
 	print(target_word)
 	return word_list[min_dist_index], min(distances)
+
 
 def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):
 	"""
@@ -1512,12 +1543,9 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 
 
 def recursive_search(corresponding_lines: OCRRecord, string_to_match: str, n_gram: int):
-	print(f"Recursion with {n_gram}grams.")
-	print(f"Searching for {string_to_match}")
 	string_to_match = nfc_normalize(string_to_match)
 	lines = [line.prediction for line in corresponding_lines]
 	n_gram_lines = [((n, n + n_gram), nfc_normalize(" ".join(lines[n:n + n_gram]))) for n in range(len(lines))]
-	print(f"Current ngram: {n_gram_lines}")
 	inclusion_test = [string_to_match in line_group[1] for line_group in n_gram_lines]
 	print(inclusion_test)
 	if any(inclusion_test):
@@ -1616,8 +1644,10 @@ def get_center_of_rectangle(rectangle):
 	:param rectangle:
 	:return:
 	"""
-	center = (rectangle.xmin + ((rectangle.xmax - rectangle.xmin) / 2), rectangle.ymin + ((rectangle.ymax - rectangle.ymin) / 2))
+	center = (rectangle.xmin + ((rectangle.xmax - rectangle.xmin) / 2),
+			  rectangle.ymin + ((rectangle.ymax - rectangle.ymin) / 2))
 	return center
+
 
 def expand_placename_abreviations(abbr_name):
 	"""
@@ -1633,18 +1663,20 @@ def expand_placename_abreviations(abbr_name):
 
 	return expanded
 
-def get_angle(line:OCRLine):
+
+def get_angle(line: OCRLine):
 	"""
 	Cette fonction calcule l'angle moyen d'une lignes par rapport aux abcisses, en radians.
 	:param lines:
 	:return:
 	"""
 	current_bl = [line.baseline[0], line.baseline[-1]]
-	((aX, aY), (bX, bY))  = current_bl
+	((aX, aY), (bX, bY)) = current_bl
 	myradians = math.atan2(bY - aY, bX - aX)
 	return myradians
 
-def get_average_angle(lines:OCRRecord):
+
+def get_average_angle(lines: OCRRecord):
 	"""
 	Cette fonction calcule l'angle moyen d'un ensemble de lignes, en degrés.
 	:param lines:
@@ -1653,12 +1685,13 @@ def get_average_angle(lines:OCRRecord):
 	all_baselines = [[line.baseline[0], line.baseline[-1]] for line in lines]
 	all_angles = []
 	for current_bl in all_baselines:
-		((aX, aY), (bX, bY))  = current_bl
+		((aX, aY), (bX, bY)) = current_bl
 		myradians = math.atan2(bY - aY, bX - aX)
 		mydegrees = math.degrees(myradians)
 		all_angles.append(mydegrees)
 	average_angle = np.average(all_angles)
 	return average_angle
+
 
 def retrieve_substring_span(string: str, substring: str) -> list[int, int]:
 	"""
@@ -1731,6 +1764,7 @@ def list_depth(lst: list) -> int:
 	"""
 	return isinstance(lst, list) and max(map(list_depth, lst)) + 1
 
+
 def extraire_frais(chaine_caractere):
 	print(chaine_caractere)
 	regexp = re.compile("\^f\s?|[.,]\s?")
@@ -1745,8 +1779,11 @@ def extraire_frais(chaine_caractere):
 		return None
 	return as_float
 
+
 def correct_numbers_in_string(input_string):
-	all_french_numbers = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "vingt", "trente", "quarante", "cinquante", "soixante", "cent", "mille"]
+	all_french_numbers = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze",
+						  "douze", "treize", "quatorze", "quinze", "seize", "vingt", "trente", "quarante", "cinquante",
+						  "soixante", "cent", "mille"]
 	corrected_string = []
 	split = re.split(re.compile(r"\s+|-"), input_string)
 	for word in split:
@@ -1763,7 +1800,8 @@ def correct_numbers_in_string(input_string):
 	print(corrected_string)
 	return " ".join(corrected_string)
 
-def sum_to_float(input:string) -> float:
+
+def sum_to_float(input: string) -> float:
 	"""
 	Cette fonction prend une somme (de frais par exemple) en toutes lettres et la convertit en flottant
 	:return: le flottant correspondant

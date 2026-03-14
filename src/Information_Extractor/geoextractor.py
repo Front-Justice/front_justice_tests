@@ -113,6 +113,7 @@ class GeoExtractor():
 			search = re.search(arrondissement_regexp, arrondissement)
 		except TypeError:
 			return {
+				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
 				"lon": "2.44162"
@@ -124,6 +125,7 @@ class GeoExtractor():
 		# comme un point sur un des arrondissement, mais un point dans Paris sans + de précision
 		except AttributeError:
 			return {
+				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
 				"lon": "2.44162"
@@ -132,12 +134,14 @@ class GeoExtractor():
 			corresponding_entry = next(item for item in self.arrondissement_dict if int(item["numero_arrondissement"]) == int(arrondissement_extrait))
 		except StopIteration:
 			return {
+				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
 				"lon": "2.44162"
 			}
 		coordinates = corresponding_entry['geo_point_2d']
 		return {
+			"departement": "Seine",
 			"arrondissement": arrondissement_extrait,
 			"lon": coordinates["lon"],
 			"lat": coordinates["lat"]
@@ -195,7 +199,15 @@ class GeoExtractor():
 				liste_des_communes_1801 = [item["nom_1801"] for key, item in self.filtered_geodict.items()]
 				liste_des_communes_1999 = [item["nom_1999"] for key, item in self.filtered_geodict.items()]
 				liste_des_communes_actuelles = [item["nom_actuel"] for key, item in self.filtered_geodict.items()]
-				closest_1999, distance_1999 = utils.find_closest_word_in_list(liste_des_communes_1999, ville)
+				if ville:
+					closest_1999, distance_1999 = utils.find_closest_word_in_list(liste_des_communes_1999, ville)
+				else:
+					return {
+						"lat": None,
+						"lon": None,
+						"nom_actuel": ville,
+						"departement": departement_extrait
+					}
 				print(closest_1999)
 				print(distance_1999)
 				print("---")

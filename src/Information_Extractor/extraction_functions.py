@@ -835,13 +835,11 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
 	# On considère que les cas où le département n'est pas indiqué correspondent aux cas où il est le même que
 	# le département de naissance.
 	if departement is None:
-		departement = lieu_residence["departement"]["extracted"]
+		departement = lieu_naissance["departement"]["extracted"]
 	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
 	try:
 		lieu_residence["departement"]["corrected"] = result["departement"]
-	except TypeError:
-		lieu_residence["departement"]["corrected"] = None
-	except KeyError:
+	except (TypeError, KeyError):
 		lieu_residence["departement"]["corrected"] = None
 	if result is None:
 		lieu_residence["coordonnées"] = None

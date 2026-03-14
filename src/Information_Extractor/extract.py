@@ -40,7 +40,8 @@ class Extractor:
 				 resize_factor: int = 1,
 				 debug: bool = False,
 				 use_party=True,
-				 device="cuda:0"):
+				 device="cuda:0",
+				 minutier=None):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
@@ -60,7 +61,7 @@ class Extractor:
 							device="cpu")
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
-
+		self.minute_courante = minutier
 		entity_spotting_model = ("/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Information_Extractor/models/model_NER")
 
 		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/BERTNER/results_test_v3/best_model")
@@ -103,6 +104,21 @@ class Extractor:
 		return [annotation for annotation in annotations if annotation.label == category]
 
 
+	def extract_signature_greffier(self,
+								   ocr_prediction:OCRRecord):
+		"""
+		On extrait la ligne contenant la signature du greffier, pour clustering.
+		:param ocr_prediction:
+		:return:
+		"""
+		ligne_greffier = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
+													   string_to_match="Le Greffier,",
+													    exact_match=True)
+
+		corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
+		print(ligne_greffier)
+		print(corresponding_idx)
+		print(ocr_prediction[corresponding_idx[0] + 1])
 
 	def extract_lines_from_zone(self,
 								annotations,
@@ -647,12 +663,13 @@ class Extractor:
 
 		return dictionnary
 
-	def extraire_description_soldat_p2_NER(self,
+	def update_dict(self, nouveau_dictionnaire):
+		self.minute_courante = nouveau_dictionnaire
+
+	def extraire_description_soldat_NER_p2(self,
 										   ocr_prediction: OCRRecord,
 										   annotations: YOLORecord,
-										   image: str = None,
-										   loaded_image: PIL.Image.Image = None,
-										   show_images: bool = True):
+										   loaded_image: PIL.Image.Image = None):
 		"""
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -691,7 +708,6 @@ class Extractor:
 		  }
 		},
 		"""
-
 		description_du_soldat = {}
 		lignes_description_du_soldat, zone_identite_soldat = self.extract_lines_from_zone(annotations=annotations,
 																					target_zone=["identite_soldat"],
@@ -762,6 +778,7 @@ class Extractor:
 												geoextractor=self.GeoExtractor,
 												lieu_naissance = description_du_soldat["identite"]["lieu_naissance"])
 		)
+
 
 		description_du_soldat["identite"]["situation_maritale"] = (
 			extractions.extraire_sit_maritale(entity_dict=result_spotting,
@@ -1943,7 +1960,7 @@ class Extractor:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
 			print(f"Error with date {date_naissance_ner}")
-			date_naissance = {"date_normalisee": "Échec",
+			date_naissance = {"date_normalisee": None,
 							  "Date naissance extraite": date_naissance_extraite,
 							  "Date corrigée": date_naissance_corrigee,
 							  "prediction": lignes_description_as_string}
@@ -2138,12 +2155,10 @@ class Extractor:
 
 		return description_du_soldat
 
-	def extraire_description_soldat_NER(self,
-										ocr_prediction: OCRRecord,
-										annotations: YOLORecord,
-										image: str = None,
-										loaded_image: PIL.Image.Image = None,
-										show_images: bool = False):
+	def extraire_description_soldat_NER_p1(self,
+										   ocr_prediction: OCRRecord,
+										   annotations: YOLORecord,
+										   loaded_image: PIL.Image.Image = None):
 		"""
 		Cette fonction extrait la description du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -2193,8 +2208,8 @@ class Extractor:
 		# On commence par ne récupérer que les lignes qui décrivent le soldat.
 		lignes_description_du_soldat, soldat_zone = self.extract_lines_from_zone(annotations=annotations,
 																				 target_zone="Description du Soldat",
-																				 show_images=show_images,
-																				 loaded_image=loaded_image,
+																				 show_images=False,
+																				 loaded_image=None,
 																				 ocr_prediction=ocr_prediction,
 																				 intersect_ratio=0.1)
 		try:
@@ -2437,7 +2452,7 @@ class Extractor:
 		try:
 			extracted = date.process_date(corrected_date)
 		except TypeError:
-			extracted = "Échec"
+			extracted = None
 		self.date_proces = extracted
 		return {
 			"bbox": zone_magistrats,

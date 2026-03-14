@@ -1,6 +1,6 @@
 import json
 import re
-
+import src.utils.utils as utils
 import pandas as pd
 
 
@@ -20,12 +20,34 @@ class Reconciliator:
 		self.nom_du_soldat = None
 		self.certitude_nom_du_soldat = None
 		self.description_physique = None
+		self.ville_residence = None
+		self.ville_naissance = None
+		self.magistrats = None
+		self.numero_ordre = None
+		self.numero_jugement = None
+		self.lieu_jugement = None
+		self.date_proces = None
+		self.images_path = None
 
 	def reconciliate_minute(self):
+		self._add_images_path()
 		self._reconciliate_nom_soldat()
 		self._reconciliate_prenom_soldat()
-		# self._copy_unici()
+		self._reconciliate_lieu_residence()
+		self._reconciliate_lieu_naissance()
+		self._reconciliate_date_proces()
+		self._copy_unici()
 		self._produce_dict()
+		self._remove_baseline_and_bbox()
+		print("---")
+
+	def _add_images_path(self):
+		self.images_path = [item["image_path"] for item in self.minute_list]
+
+
+	def _remove_baseline_and_bbox(self):
+		self.reconciliated_minute = utils.delete_key("baseline", self.reconciliated_minute)
+		self.reconciliated_minute = utils.delete_key("bbox", self.reconciliated_minute)
 
 	def _copy_unici(self):
 		"""
@@ -33,6 +55,135 @@ class Reconciliator:
 		:return:
 		"""
 		self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
+		self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
+		self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
+		self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
+		self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
+		self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["date_normalisee"]
+
+	def _reconciliate_date_proces(self):
+		# Une date de la page 4 n'as pas été extraire, à faire.
+		date_proces_p1 = self.minute_list[0]["extractions"]["date_proces"]
+		try:
+			if self.minute_list[3]["classe"] != "page_4":
+				self.date_proces = date_proces_p1
+				return
+		except IndexError:
+			self.date_proces = date_proces_p1
+			return
+		date_proces_p4 = self.minute_list[3]["extractions"]["dernier_paragraphe"]["date_proces"]
+
+		if date_proces_p1["date_normalisee"] is None:
+			self.date_proces = date_proces_p4["date_normalisee"]
+		elif date_proces_p4["date_normalisee"] is None:
+			self.date_proces = date_proces_p1["date_normalisee"]
+		print(date_proces_p1)
+		print(date_proces_p4)
+		if date_proces_p1["date_normalisee"] == date_proces_p4["date_normalisee"]:
+			self.date_proces = date_proces_p1["date_normalisee"]
+
+	def _reconciliate_lieu_residence(self):
+		try:
+			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
+		except KeyError:
+			nom_ville_transcrit_p1 = None
+		try:
+			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
+		except KeyError:
+			try:
+				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
+			except KeyError:
+				nom_ville_identifie_p1 = None
+		try:
+			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
+		except TypeError:
+			print("Page 1 sans annotations")
+			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			return
+
+
+		try:
+			nom_ville_transcrit_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
+		except (KeyError, IndexError, TypeError):
+			nom_ville_transcrit_p2 = None
+		try:
+			nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
+		except (KeyError, IndexError, TypeError):
+			try:
+				nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
+			except (KeyError, IndexError, TypeError):
+				nom_ville_identifie_p2 = None
+		try:
+			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
+		except TypeError:
+			self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			print("Page 2 sans annotations")
+			return
+		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
+		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
+		if distance_p1 < distance_p2:
+			print("Page 1 choisie.")
+			self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+		else:
+			print("Page 2 choisie.")
+			try:
+				self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			except KeyError:
+				self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+		print(f'Page 1: {self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]}')
+		print(f'Page 2: {self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]}')
+
+
+	def _reconciliate_lieu_naissance(self):
+		try:
+			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
+		except KeyError:
+			nom_ville_transcrit_p1 = None
+		try:
+			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
+		except KeyError:
+			try:
+				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
+			except KeyError:
+				nom_ville_identifie_p1 = None
+		try:
+			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
+		except TypeError:
+			print("Page 1 sans annotations")
+			self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			return
+
+
+		try:
+			nom_ville_transcrit_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
+		except (KeyError, IndexError, TypeError):
+			nom_ville_transcrit_p2 = None
+		try:
+			nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
+		except (KeyError, IndexError, TypeError):
+			try:
+				nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
+			except (KeyError, IndexError, TypeError):
+				nom_ville_identifie_p2 = None
+		try:
+			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
+		except TypeError:
+			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			print("Page 2 sans annotations")
+			return
+		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
+		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
+		if distance_p1 < distance_p2:
+			print("Page 1 choisie.")
+			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+		else:
+			print("Page 2 choisie.")
+			try:
+				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			except KeyError:
+				self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+		print(f'Page 1: {self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
+		print(f'Page 2: {self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
 
 
 	def _reconciliate_prenom_soldat(self):
@@ -47,8 +198,15 @@ class Reconciliator:
 		"""
 		if len(self.minute_list) == 1:
 			self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
-		prenoms_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
-		prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
+			return
+		try:
+			prenoms_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
+		except KeyError:
+			prenoms_page_1 = None
+		try:
+			prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
+		except KeyError:
+			prenoms_page_2 = None
 		delimiter = re.compile(r"[.;\s\-]+")
 		try:
 			liste_prenoms_page_1 = re.split(delimiter, prenoms_page_1)
@@ -124,7 +282,10 @@ class Reconciliator:
 		"""
 		# Attention, ne fonctionnera pas s'il y a plus ou moins de 4 pages dans la minute. Passer
 		# Par la classification de la page.
-		nom_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['nom']['extracted'].upper()
+		try:
+			nom_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['nom']['extracted'].upper()
+		except (TypeError, AttributeError, KeyError, IndexError):
+			nom_page_1 = None
 		try:
 			nom_page_2_a = self.minute_list[1]['extractions']['soldat']['identite']['nom_1']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
@@ -215,6 +376,16 @@ class Reconciliator:
 
 	def _produce_dict(self):
 		self.reconciliated_minute = {
+			"metadata":
+				{
+				"images": self.images_path,
+				"greffier": self.magistrats["greffier"]["extracted"]["persName"]
+			},
+			"magistrats": self.magistrats,
+			"informations_proces": {"numero_ordre": self.numero_ordre,
+									"numero_jugement": self.numero_jugement,
+									"lieu_jugement": self.lieu_jugement,
+									"date_du_proces": self.date_proces},
 			"soldat":
 				{
 					"identite": {
@@ -225,6 +396,11 @@ class Reconciliator:
 							{"prenom": self.prenom_du_soldat,
 							 "certitude": self.certitude_prenom_du_soldat}
 						},
+					"lieu_residence": self.lieu_residence,
+					"lieu_naissance": self.lieu_naissance,
 					"description_physique": self.description_physique
-				}
+				},
+			"accusation": {
+				"date_du_crime_ou_delit": self.date_crime_ou_delit
+			}
 		}

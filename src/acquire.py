@@ -72,7 +72,15 @@ class Pipeline():
 										   resize_factor=self.resize_factor,
 										   debug=debug,
 										   use_party=use_party,
-										   device=device)
+										   device=device,
+										   minutier=self.minutes)
+
+	def reaffecter_dictionnaire(self, minute_courante):
+		"""
+		Cette fonction met à jour le dictionnaire dans la classe extractor.
+		:return:
+		"""
+		self.extractor.update_dict(minute_courante)  # Met à jour B
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -186,7 +194,6 @@ class Pipeline():
 		# On segmente la page 2: boxes générales
 		# On s'occupe d'abord de la transcription des lignes
 
-
 		classes_page_2 = ["avertissement",
 						  "defense",
 						  "formalites",
@@ -208,11 +215,9 @@ class Pipeline():
 																		   model=self.yolo_models["page_2"],
 																		   show_image=False)
 
-		current_dict["soldat"] = self.extractor.extraire_description_soldat_p2_NER(
+		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
-			image=page["image_path"],
-			show_images=False,
 			loaded_image=loaded_image)
 
 
@@ -326,12 +331,18 @@ class Pipeline():
 		# 2 à 3s sur 30 pour un facteur de 3 sur CPU.
 		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
 		loaded_image = loaded_image.resize(new_size)
+
+		if show_image == True:
+			print("Show image")
+			utils.draw_lines_on_image(image_path=page["image_path"],
+									  baseline=[line.baseline for line in self.current_page_transcription])
+		self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription)
+
 		zones_page_4, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=classes_page_4,
 																		   confidence=0.5,
 																		   model=self.yolo_models["page_4"],
-																		   show_image=False)
-
+																		   show_image=show_image)
 
 		current_dict["identite"] = self.extractor.extraire_noms_p4(ocr_prediction=self.current_page_transcription)
 
@@ -499,11 +510,9 @@ class Pipeline():
 		if "Description du Soldat" in zones_manquantes:
 			current_dict['soldat'] = None
 		else:
-			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER(
+			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
-				image=page["image_path"],
-				show_images=False,
 				loaded_image=loaded_image)
 			# Production de corpus, à supprimer
 
@@ -641,9 +650,8 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
-		# utils.convert_to_csv(minutes, "results/database.csv")
-		# minrec = []
+		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		utils.convert_to_csv(minutes, "results/database.csv")
 		# for key, pages in minutes.items():
 		# 	reconciliator = reconciliation.Reconciliator(minute_list=pages)
 		# 	reconciliator.reconciliate_minute()
@@ -683,10 +691,12 @@ class Pipeline():
 					continue
 				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
+				self.reaffecter_dictionnaire(pages)
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
-			reconciliator = reconciliation.Reconciliator(minute_list=pages)
-			reconciliator.reconciliate_minute()
-			self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
+			if not target:
+				reconciliator = reconciliation.Reconciliator(minute_list=pages)
+				reconciliator.reconciliate_minute()
+				self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
 			utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
 		utils.convert_to_csv(self.minutes, "results/database.csv")
 		exit(0)
