@@ -55,7 +55,7 @@ def extraction_geographique(lieu: str, dictionnaire_informations: dict, ner_pipe
 	return dictionnaire_informations
 
 
-def extraire_entite_baseline(dictionnaire: dict, nom_entite: str, target_lines: list):
+def extraire_entite_baseline(entities_list: list, nom_entite: str, target_lines: list):
 	"""
 	Cette fonction extrait d'un dictionnaire contenant les entités reconnues par le NER
 	une entité en particulier.
@@ -64,6 +64,7 @@ def extraire_entite_baseline(dictionnaire: dict, nom_entite: str, target_lines: 
 	:return: une liste de dictionnaire de la forme: [{"extracted": "entite",
 														"baseline": baseline}]
 	"""
+	dictionnaire = utils.entities_to_dict(entities_list)
 	try:
 		entites_extraites = dictionnaire[nom_entite]
 	except KeyError:
@@ -206,7 +207,6 @@ def extraire_matricule(lignes_description_physique,
 def extraire_age_soldat(lignes_identite_soldat: OCRRecord) -> dict:
 	out_dict = {}
 	lines_as_text = " ".join([line.prediction for line in lignes_identite_soldat])
-	print(lines_as_text)
 	regexp_age = re.compile("(\d+) ans")
 	age = re.search(regexp_age, lines_as_text)
 	# Si on trouve déjà quelque chose
@@ -281,11 +281,11 @@ def extraire_cheveux(lignes_description_physique,
 			"prediction": ligne_cheveux.prediction}
 
 
-def extraire_feature(entities_as_dictionnary, lignes: OCRRecord, feature) -> dict:
+def extraire_feature(entities_list, lignes: OCRRecord, feature) -> dict:
 	"""
 	Cette fonction extrait une feature précise d'un résultat de NER, et retrouve la ligne de base
 	qui contient
-	:param entities_as_dictionnary:
+	:param entities_list:
 	:param lignes:
 	:param feature:
 	:return: Un dictionnaire de la forme:
@@ -298,7 +298,7 @@ def extraire_feature(entities_as_dictionnary, lignes: OCRRecord, feature) -> dic
 	'''
 	"""
 	entite_et_baseline = extraire_entite_baseline(
-		dictionnaire=entities_as_dictionnary,
+		entities_list=entities_list,
 		nom_entite=feature,
 		target_lines=lignes
 	)
@@ -762,14 +762,23 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 		"arrondissement_naissance"
 	)
 
+
 	ville = lieu_naissance["ville"]["extracted"]
 	arrondissement = lieu_naissance["arrondissement"]["extracted"]
+	if arrondissement and "dudit" in arrondissement:
+		lieu_naissance["arrondissement"]["extracted"] = ville
 	departement = lieu_naissance["departement"]["extracted"]
 	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
-	print(result)
 	try:
-		lieu_naissance["ville"]["extracted"] = lieu_naissance["ville"]["extracted"]
-		lieu_naissance["ville"]["corrected"] = result["nom_actuel"]
+		lieu_naissance["departement"]["corrected"] = result["departement"]
+	except KeyError:
+		lieu_naissance["departement"]["corrected"] = None
+	except TypeError:
+		lieu_naissance["departement"]["corrected"] = None
+	try:
+		lieu_naissance["ville"]["nom_actuel"] = result["nom_actuel"]
+		lieu_naissance["ville"]["nom_1999"] = result["nom_1999"]
+		lieu_naissance["ville"]["nom_1801"] = result["nom_1801"]
 	except KeyError:
 		pass
 	except TypeError:
@@ -819,25 +828,37 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
 
 	ville = lieu_residence["ville"]["extracted"]
 	arrondissement = lieu_residence["arrondissement"]["extracted"]
+	if arrondissement and "dudit" in arrondissement:
+		lieu_residence["arrondissement"]["extracted"] = ville
 	departement = lieu_residence["departement"]["extracted"]
 
 	# On considère que les cas où le département n'est pas indiqué correspondent aux cas où il est le même que
 	# le département de naissance.
 	if departement is None:
-		departement = lieu_naissance["departement"]["extracted"]
+		departement = lieu_residence["departement"]["extracted"]
 	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
-	print(result)
 	try:
-		lieu_residence["ville"]["extracted"] = lieu_residence["ville"]["extracted"]
-		lieu_residence["ville"]["corrected"] = result["nom_actuel"]
-	except KeyError:
-		pass
+		lieu_residence["departement"]["corrected"] = result["departement"]
 	except TypeError:
-		return lieu_naissance
-	lieu_residence["coordonnées"] = {
-		"lon": result["lon"],
-		"lat": result["lat"]
-	}
+		lieu_residence["departement"]["corrected"] = None
+	except KeyError:
+		lieu_residence["departement"]["corrected"] = None
+	if result is None:
+		lieu_residence["coordonnées"] = None
+	else:
+		try:
+			lieu_residence["ville"]["nom_actuel"] = result["nom_actuel"]
+			lieu_residence["ville"]["nom_1999"] = result["nom_1999"]
+			lieu_residence["ville"]["nom_1801"] = result["nom_1801"]
+		except KeyError:
+			lieu_residence["coordonnées"] = None
+		except TypeError:
+			lieu_residence["coordonnées"] = None
+
+		lieu_residence["coordonnées"] = {
+			"lon": result["lon"],
+			"lat": result["lat"]
+		}
 	if adresse["extracted"]:
 		lieu_residence["adresse"] = adresse
 
@@ -865,7 +886,6 @@ def extraire_sit_maritale(entity_dict, lignes):
 		"enfants"
 	)
 	if enfants["extracted"] is not None:
-		print(enfants["extracted"])
 		try:
 			nombre_enfants = utils.approximate_word_split(
 				sentence=enfants["extracted"],
@@ -883,7 +903,6 @@ def extraire_sit_maritale(entity_dict, lignes):
 					nombre_enfants = int(nombre_enfants)
 				except ValueError:
 					try:
-						print(nombre_enfants)
 						nombre_enfants = text2num(nombre_enfants, lang="fr")
 					except ValueError:
 						nombre_enfants = None

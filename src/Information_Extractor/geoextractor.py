@@ -6,13 +6,15 @@ import src.utils.utils as utils
 
 class GeoExtractor():
 	def __init__(self):
-		with open("src/Information_Extractor/databases/referentiel_communes.json", "r") as input_json:
+		with open("/home/mgl/Bureau/Travail/projets/Front_Justice/scripts_divers/georef/referentiel_communes.json", "r") as input_json:
 			self.geodict = json.load(input_json)
 		with open("src/Information_Extractor/databases/correspondance_departements.json", "r") as input_json:
 			self.departments_dict = json.load(input_json)
 		with open("src/Information_Extractor/databases/arrondissements_paris.json", "r") as input_json:
 			self.arrondissement_dict = json.load(input_json)
-		self.filtered_dict = {}
+		self.filtered_geodict = {}
+
+
 
 	def correct_department(self, departement):
 		"""
@@ -42,11 +44,11 @@ class GeoExtractor():
 		:param arrondissement: l'arrondissement identifié
 		:return:
 		"""
-		self.filtered_dict = copy.deepcopy(self.geodict)
+		self.filtered_geodict = copy.deepcopy(self.geodict)
 		if arrondissement is None:
 			return
 		match = False
-		for key, row in self.filtered_dict.items():
+		for key, row in self.filtered_geodict.items():
 			if arrondissement == row["nom_1801"]:
 				departement_correspondant = row["nom_actuel"]
 				match = True
@@ -78,24 +80,32 @@ class GeoExtractor():
 		:param departement: le département tel qu'il apparaît dans le minutier
 		:return:
 		"""
-		self.filtered_dict = copy.deepcopy(self.geodict)
+		self.filtered_geodict = copy.deepcopy(self.geodict)
 		if departement is None:
+			print("None")
 			return
 		if departement in self.departments_dict:
 			corresponding_departments = self.departments_dict[departement]
+			matching_department = departement
 		else:
 			print(departement)
 			liste_des_departements = list(self.departments_dict.keys())
-			matching_department, distance = utils.find_closest_word_in_list(liste_des_departements, departement)
+			matching_department, distance = utils.find_closest_word_in_list(liste_des_departements,
+																			departement,
+																			replacement_mapping={"-": " "})
+			print(matching_department)
 			corresponding_departments = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
-			if distance > 4:
+			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
+			if distance > 5:
 				return
 
+		print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
 		for key, value in self.geodict.items():
 			# Si la clé actuelle ne correspond pas aux départements correspondants, on supprime du dictionnaire.
 			if value["département"] and value["département"] not in corresponding_departments:
-				del self.filtered_dict[key]
+				del self.filtered_geodict[key]
+		return matching_department
 
 	def paris(self, arrondissement):
 		arrondissement_regexp = re.compile(r"\d{1,2}")
@@ -118,8 +128,14 @@ class GeoExtractor():
 				"lat": "48.829839",
 				"lon": "2.44162"
 			}
-
-		corresponding_entry = next(item for item in self.arrondissement_dict if int(item["numero_arrondissement"]) == int(arrondissement_extrait))
+		try:
+			corresponding_entry = next(item for item in self.arrondissement_dict if int(item["numero_arrondissement"]) == int(arrondissement_extrait))
+		except StopIteration:
+			return {
+				"arrondissement": None,
+				"lat": "48.829839",
+				"lon": "2.44162"
+			}
 		coordinates = corresponding_entry['geo_point_2d']
 		return {
 			"arrondissement": arrondissement_extrait,
@@ -144,42 +160,84 @@ class GeoExtractor():
 		match = False
 		if ville == "Paris":
 			return self.paris(arrondissement)
+		if ville:
+			ville = utils.expand_placename_abreviations(ville)
 		# On va réduire la taille du dictionnaire pour rendre la recherche + efficace et plus précise
 		if departement is None:
 			return None
 		else:
-			self.filter_geodict_by_department(departement)
+			print("Filtrons")
+			# On va nettoyer le département
+			departement = departement.replace("l'", "")
+			departement_extrait = self.filter_geodict_by_department(departement)
 
 			# On regarde la liste des villes
-			for key, row in self.filtered_dict.items():
+			for key, row in self.filtered_geodict.items():
 				if ville == row["nom_1801"]:
 					latitude = row["latitude"]
 					longitude = row["longitude"]
 					current_name = row["nom_actuel"]
+					commune_correspondante = row
 					match = True
 				elif ville == row["nom_1999"]:
 					latitude = row["latitude"]
 					longitude = row["longitude"]
 					current_name = row["nom_actuel"]
+					commune_correspondante = row
+					match = True
+				elif ville == row["nom_actuel"]:
+					latitude = row["latitude"]
+					longitude = row["longitude"]
+					current_name = row["nom_actuel"]
+					commune_correspondante = row
 					match = True
 			if match == False:
-				liste_des_communes_1801 = [item["nom_1801"] for key, item in self.geodict.items()]
-				liste_des_communes_1999 = [item["nom_1999"] for key, item in self.geodict.items()]
+				liste_des_communes_1801 = [item["nom_1801"] for key, item in self.filtered_geodict.items()]
+				liste_des_communes_1999 = [item["nom_1999"] for key, item in self.filtered_geodict.items()]
+				liste_des_communes_actuelles = [item["nom_actuel"] for key, item in self.filtered_geodict.items()]
 				closest_1999, distance_1999 = utils.find_closest_word_in_list(liste_des_communes_1999, ville)
+				print(closest_1999)
+				print(distance_1999)
+				print("---")
 				closest_1801, distance_1801 = utils.find_closest_word_in_list(liste_des_communes_1801, ville)
-				if distance_1801 < distance_1999:
-					closest_match = closest_1801
-					commune_correspondante = next((item for item in self.geodict.values() if item["nom_1801"] == closest_match))
-				else:
-					closest_match = closest_1999
-					commune_correspondante = next((item for item in self.geodict.values() if item["nom_1999"] == closest_match))
+				print(closest_1801)
+				print(distance_1801)
+				print("---")
+				closest_actuel, distance_actuel = utils.find_closest_word_in_list(liste_des_communes_actuelles, ville)
+				print(closest_1801)
+				print(distance_1801)
+				try:
+					distances = [distance_actuel, distance_1999, distance_1801]
+					min_distance = min(distances)
+					if distances.index(min_distance) == 0:
+						current_feature = "nom_actuel"
+					elif distances.index(min_distance) == 1:
+						current_feature = "nom_1999"
+					else:
+						current_feature = "nom_1801"
+					closest_match = [closest_actuel, closest_1999, closest_1801][distances.index(min_distance)]
+					commune_correspondante = next((item for item in self.filtered_geodict.values() if item[current_feature] == closest_match))
+					# if distance_1801 < distance_1999:
+					# 	closest_match = closest_1801
+					# 	commune_correspondante = next((item for item in self.filtered_geodict.values() if item["nom_1801"] == closest_match))
+					# else:
+					# 	closest_match = closest_1999
+					# 	commune_correspondante = next((item for item in self.filtered_geodict.values() if item["nom_1999"] == closest_match))
+				except TypeError:
+					return {
+						"lat": None,
+						"lon": None,
+						"nom_actuel": ville,
+						"departement": departement_extrait
+					}
 				current_name = closest_match
 				longitude = commune_correspondante["longitude"]
 				latitude = commune_correspondante["latitude"]
-
-			result = {
+		return {
 				"lat": latitude,
 				"lon": longitude,
-				"nom_actuel": current_name
+				"nom_actuel": current_name,
+				"nom_1999": commune_correspondante["nom_1999"],
+				"nom_1801": commune_correspondante["nom_1801"],
+				"departement": departement_extrait
 			}
-		return result
