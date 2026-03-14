@@ -1,5 +1,6 @@
 import argparse
 import os
+import tqdm
 
 import torch.cuda
 
@@ -7,6 +8,7 @@ import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
+import Information_Extractor.reconciliation as reconciliation
 import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
@@ -54,7 +56,8 @@ class Pipeline():
 			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
 			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel"
 			 }
-		self.kraken_ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_638p.mlmodel"
+		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
+		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
 		self.party_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
@@ -65,6 +68,7 @@ class Pipeline():
 			party_engine = PARTY.PartyPredict()
 		device = "cuda:0" if torch.cuda.is_available() else "cpu"
 		self.extractor = extract.Extractor(party_engine=party_engine,
+										   kraken_model=self.kraken_gloses_model,
 										   resize_factor=self.resize_factor,
 										   debug=debug,
 										   use_party=use_party,
@@ -84,7 +88,7 @@ class Pipeline():
 		"""
 		# On commence par classer toutes les images du dossier
 		print("Classification des images")
-		for image in images:
+		for image in tqdm.tqdm(images):
 			dossier, ident = utils.get_name_from_path(image)
 			# On vérifie s'il n'y a pas de problème de disparition d'image
 			self.check_image_consistency(ident)
@@ -147,19 +151,21 @@ class Pipeline():
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
-	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int, suffix="") -> OCRRecord:
+	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int, suffix="", model=None) -> OCRRecord:
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
 		:param transcription_only: faut-il lancer la transcription uniquement ?
 		:return:
 		"""
-		assert os.path.isfile(self.kraken_ocr_model), f"No model named {self.kraken_ocr_model}"
+		if not model:
+			model = self.kraken_ocr_model
+		assert os.path.isfile(model), f"No model named '{model}'"
 		# assert os.path.isfile(self.kraken_lines_model), f"No model named {self.kraken_lines_model}"
 		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(f"{suffix}.jpg", "_segments.pickle")}'
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
-								   ocr_model=self.kraken_ocr_model)
+								   ocr_model=model)
 		if transcription_only:
 			baseline = utils.unpickle_object(path=segmentation_json)
 		else:
@@ -232,11 +238,12 @@ class Pipeline():
 
 
 
-		current_dict["questions"] = self.extractor.extraire_questions_p2(
+		current_dict["questions"], identite = self.extractor.extraire_questions_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
 			loaded_image=loaded_image)
-
+		if identite:
+			current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
 		zone_dict = {}
 		zone_dict["zones_identifiees"] = zones_page_2.to_json()
 		zone_dict["zones_manquantes"] = zones_manquantes
@@ -287,7 +294,7 @@ class Pipeline():
 			loaded_image=loaded_image)
 
 
-		current_dict["decision_tribunal"] = self.extractor.extraire_decision_tribunal_p3(
+		current_dict["decision_tribunal"], current_dict["identite"] = self.extractor.extraire_decision_tribunal_p3(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_3,
 			loaded_image=loaded_image)
@@ -326,12 +333,18 @@ class Pipeline():
 																		   show_image=False)
 
 
+		current_dict["identite"] = self.extractor.extraire_noms_p4(ocr_prediction=self.current_page_transcription)
 
 		if "tableau_frais" not in zones_manquantes:
-			current_dict["tableau_frais"] = self.extractor.extraire_tableau_p4(
+			current_dict["tableau_frais"], nom_2 = self.extractor.extraire_tableau_p4(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_4,
 				loaded_image=loaded_image)
+
+		try:
+			current_dict["identite"] = {**current_dict["identite"], **nom_2}
+		except TypeError:
+			pass
 
 		if "recapitulatif_somme" not in zones_manquantes:
 			current_dict["dernier_paragraphe"] = self.extractor.extraire_paragraphe_final_p4(
@@ -411,7 +424,8 @@ class Pipeline():
 					image=page["image_path"],
 					transcription_only=False,
 					current_page=0,
-					suffix=".ajouts"
+					suffix=".ajouts",
+					model=self.kraken_gloses_model
 				)
 				utils.serialize_dict(lignes_glosees.to_json(), target_transcription)
 			else:
@@ -420,11 +434,9 @@ class Pipeline():
 				lignes_glosees = OCRRecord()
 				lignes_glosees.from_json(path=target_transcription)
 
-			print(lignes_glosees)
 			# baselines = [line.baseline for line in lignes_glosees]
 			# utils.draw_lines_on_image(image_path=page["image_path"], baseline=baselines)
 		else:
-			print("Oh no !")
 			return None, None
 
 		informations_ajouts = self.extractor.extraire_informations_ajouts_posterieurs(ocr_prediction=lignes_glosees,
@@ -511,14 +523,17 @@ class Pipeline():
 		if "Inculpation_antecedents" in zones_manquantes:
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
 		else:
-			accusation_antecedants =  self.extractor.extraire_inculpation_et_antecedents(
+			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-			current_dict["chef_accusation"] = accusation_antecedants["inculpation"]
-			current_dict["antécédents"] = accusation_antecedants["antécédents"]
+			try:
+				current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
+				current_dict["antécédents"] = accusation_antecedents["antécédents"]
+			except TypeError:
+				pass
 
 		# return zone_dict, current_dict
 
@@ -618,6 +633,8 @@ class Pipeline():
 		# Il faudra supprimer ça pour la mise en production
 		self.images_basedir = "_".join(images[0].split("/")[:-1])
 		self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations.json"
+		self.minutes_reconciliees_file = f"results/{self.images_basedir}_minutes_annotations_reconcilie.json"
+		self.minutes_reconciliees = []
 		if os.path.isfile(f"results/{self.images_basedir}_minutes.json"):
 			self.minutes = utils.load_json_to_dict(f"results/{self.images_basedir}_minutes.json")
 		else:
@@ -626,6 +643,12 @@ class Pipeline():
 		print("Pages classées, minutes regroupées")
 		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
 		# utils.convert_to_csv(minutes, "results/database.csv")
+		# minrec = []
+		# for key, pages in minutes.items():
+		# 	reconciliator = reconciliation.Reconciliator(minute_list=pages)
+		# 	reconciliator.reconciliate_minute()
+		# 	self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
+		# 	utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
 		# exit(0)
 		image_index = 0
 		for minute_id, pages in self.minutes.items():
@@ -661,6 +684,10 @@ class Pipeline():
 				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
+			reconciliator = reconciliation.Reconciliator(minute_list=pages)
+			reconciliator.reconciliate_minute()
+			self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
+			utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
 		utils.convert_to_csv(self.minutes, "results/database.csv")
 		exit(0)
 
@@ -690,8 +717,8 @@ def main(images_dir:str,
 		"page_4": "src/Vision/models/yolov11_page_4.pt",
 		"ajouts": "src/Vision/models/yolo26_ajouts.pt"
 	}
-	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
-						page_classifier_vocab="src/Page_Classifier/models/vocab_SVC.joblib",
+	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
+						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
 						yolo_models=yolo_models,
 						debug=debug,
 						use_party=use_party,
