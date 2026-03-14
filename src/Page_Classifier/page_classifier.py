@@ -129,6 +129,12 @@ class PageClassifier():
 			inputs, labels = pickle.load(corpus_file)
 		return inputs, labels
 
+	def test(self):
+		inputs, labels = self.load_corpus()
+		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
+		y_pred = self.model.predict(X_test)
+		print(classification_report(y_pred, y_test))
+
 	def train(self,
 			  show_features=False):
 		if not os.path.isfile(self.corpus_path):
@@ -139,7 +145,7 @@ class PageClassifier():
 		assert inputs != [], "Inputs empty"
 		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
 		self.model = RandomForestClassifier(n_estimators=100, random_state=0)
-		self.model = svm.SVC()
+		# self.model = svm.SVC()
 		# fit the model to the training set
 		self.model.fit(X_train, y_train)
 		accuracy = self.model.score(X_test, y_test)
@@ -185,19 +191,26 @@ class PageClassifier():
 
 
 if __name__ == '__main__':
-	classifier = PageClassifier(build_vocab=False,
+	SVC_classifier = PageClassifier(build_vocab=False,
 								corpus_path="src/Page_Classifier/data/corpus.data",
 								model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
 								vocab="src/Page_Classifier/models/vocab_SVC.joblib")
-	print(classifier.vocab)
+	RF_classifier = PageClassifier(build_vocab=False,
+								corpus_path="src/Page_Classifier/data/corpus.data",
+								model="src/Page_Classifier/models/PageClassifier_RF.joblib",
+								vocab="src/Page_Classifier/models/vocab_RF.joblib")
+	print(SVC_classifier.vocab)
 	if len(sys.argv) > 1:
 		images = glob.glob(f"{sys.argv[1]}*.jpg")
 		assert images != [], "No images found."
 		out_dir = sys.argv[2]
 	else:
 		out_dir = "src/Page_Classifier/data/predictions/"
-	# classifier.train()
-	# exit(0)
+	print("Random Forest:")
+	RF_classifier.test()
+	print("---\nSVC test:")
+	SVC_classifier.test()
+	exit(0)
 	for image in tqdm.tqdm(images):
 		if len(glob.glob(f"{out_dir}/*/{image.split('/')[-1]}")) > 0:
 			print("Already treated.")
