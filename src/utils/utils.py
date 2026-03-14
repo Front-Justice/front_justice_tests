@@ -9,6 +9,7 @@ import unicodedata
 import PIL.ImageDraw
 import PIL.Image as Image
 import re
+from typing import Union, Self
 
 import numpy as np
 import spellchecker
@@ -133,8 +134,14 @@ class OCRRecord():
 	def __len__(self) -> int:
 		return len(self.record)
 
-	def __getitem__(self, index: int) -> OCRLine:
-		return self.record[index]
+	def __getitem__(self, index: int) -> Union["OCRLine", Self]:
+		current_slice = self.record[index]
+		if isinstance(current_slice, list):
+			new_record = OCRRecord()
+			new_record.recreate_record(list_of_lines=current_slice)
+		else:
+			new_record = current_slice
+		return new_record
 
 	def __str__(self, show_cuts=False):
 		out_dict = []
@@ -453,7 +460,11 @@ def point_in_box(coord, box_coord):
 
 
 
-def find_best_transcription(lines:OCRRecord, image_path:str, step:int, ranges:tuple) -> OCRRecord:
+def find_best_transcription(lines:OCRRecord,
+							image_path:str,
+							step:int,
+							ranges:tuple,
+							ocr_model) -> OCRRecord:
 	'''
 	Cette fonction va prendre un ensemble de lignes et les déplacer de quelques pixels jusqu'à trouver la meilleure transcription
 	:return: la meilleure transcription
@@ -465,7 +476,6 @@ def find_best_transcription(lines:OCRRecord, image_path:str, step:int, ranges:tu
 	orig_transcription = lines.join_transcription()
 	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if not word.isupper()])
 	lexicality = compute_lexicality(orig_transcription, words)
-	print(lexicality)
 	all_records.append(lines)
 	lexicality_indices.append(lexicality)
 
@@ -495,7 +505,7 @@ def find_best_transcription(lines:OCRRecord, image_path:str, step:int, ranges:tu
 												 type='baselines')
 
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=None,
-								   ocr_model="~/Téléchargements/modele_28000_lignes_v2_best.mlmodel")
+								   ocr_model=ocr_model)
 		transcription = kraken_ocr.predict_with_kraken(im=image, segments=mysegmentation)
 		print("---")
 		print(f"Current shift: {shift}")
@@ -552,8 +562,6 @@ def compute_lexicality(string:str, words:set) -> float:
 
 	# On identifie tous les mots qui ne sont pas dans le vocabulaire
 	comparison = vocab - words
-	print(comparison)
-	print(vocab.intersection(words))
 	try:
 		error_rate = len(comparison)
 	except ZeroDivisionError:
@@ -902,11 +910,23 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Visage",
 			  "Renseignements complémentaires",
 			  "Marques particulières",
-			  "Ville de naissance",
+			  "Ville de naissance transcrite",
+			  "Ville de naissance - nom actuel",
+			  "Ville de naissance - nom 1999",
+			  "Ville de naissance - nom 1801",
+			  "Latitude ville naissance",
+			  "Longitude ville naissance",
 			  "Arrondissement de naissance",
+			  "Département de naissance transcrit",
 			  "Département de naissance",
-			  "Ville de résidence",
+			  "Ville de résidence transcrite",
+			  "Ville de résidence - nom actuel",
+			  "Ville de résidence - nom 1999",
+			  "Ville de résidence - nom 1801",
+			  "Latitude ville résidence",
+			  "Longitude ville résidence",
 			  "Arrondissement de résidence",
+			  "Département de résidence transcrit",
 			  "Département de résidence",
 			  "Situation maritale",
 			  "Enfants",
@@ -942,12 +962,16 @@ def convert_to_csv(extractions: dict, outpath: str):
 				institution = page['extractions']['lieu_jugement']['institution']
 			except TypeError:
 				institution = "UNK"
+			except KeyError:
+				institution = "UNK"
 			interm.append(institution)
 
 			try:
 				lieu_proces = page['extractions']['lieu_jugement']['siège']
 			except TypeError:
 				lieu_proces = "UNK"
+			except KeyError:
+				institution = "UNK"
 			interm.append(lieu_proces)
 
 			# Numéro de jugement
@@ -964,28 +988,42 @@ def convert_to_csv(extractions: dict, outpath: str):
 				numero_ordre = page['extractions']['numero_ordre']['extracted']
 			except TypeError:
 				numero_ordre = "UNK"
+			except KeyError:
+				numero_ordre = "UNK"
 			interm.append(numero_ordre)
 
 			# Président du jury (rôle non extrait)
-			president = page['extractions']['magistrats']['president']['extracted']['persName']
+			try:
+				president = page['extractions']['magistrats']['president']['extracted']['persName']
+			except KeyError:
+				president = "UNK"
 			interm.append(president)
 
 			# Jurés (on n'extrait pas les rôles)
+			try:
+				jures = page['extractions']['magistrats']['jures']
+				for i in range(4):
+					try:
+						extracted_jure = jures[i]['extracted']['persName']
+					except (TypeError, IndexError):
+						extracted_jure = "UNK"
+					interm.append(extracted_jure)
+			except KeyError:
+				interm.extend(["UNK" for _ in range(4)])
 
-			jures = page['extractions']['magistrats']['jures']
-			for jure in jures[:4]:
-				try:
-					extracted_jure = jure['extracted']['persName']
-				except TypeError:
-					extracted_jure = "UNK"
-				interm.append(extracted_jure)
 
 			# Greffier (on n'extrait pas les rôles)
-			greffier = page['extractions']['magistrats']['greffier']['extracted']['persName']
+			try:
+				greffier = page['extractions']['magistrats']['greffier']['extracted']['persName']
+			except KeyError:
+				greffier = "UNK"
 			interm.append(greffier)
 
 			# Commissaire du gouvernement (on n'extrait pas les rôles)
-			commissaire = page['extractions']['magistrats']['commissaire']['extracted']['persName']
+			try:
+				commissaire = page['extractions']['magistrats']['commissaire']['extracted']['persName']
+			except KeyError:
+				commissaire = "UNK"
 			interm.append(commissaire)
 
 			# Général
@@ -1024,10 +1062,11 @@ def convert_to_csv(extractions: dict, outpath: str):
 			try:
 				date_naissance = page['extractions']['soldat']['identite']['date_naissance']['extracted'][
 					'when']
-			except TypeError:
+			except (TypeError, KeyError):
 				date_naissance = "UNK"
 			try:
-				age = page['extractions']['soldat']["identite"]["Âge"]
+				age = page['extractions']['soldat']["identite"]["age"]
+				age = age if age else "UNK"
 			except KeyError:
 				age = "UNK"
 			interm.append(date_naissance)
@@ -1077,24 +1116,77 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(marques_particulieres)
 
 			# Lieu de naissance
-			ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['extracted']
+			try:
+				ville_naissance_transcrite = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
+				'extracted']
+				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_actuel']
+				ville_naissance_1999 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1999']
+				ville_naissance_1801 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1801']
+			except TypeError:
+				if page['extractions']['soldat']["identite"]['lieu_naissance']['ville'] is None:
+					ville_naissance_actuelle = "UNK"
+					ville_naissance_transcrite = "UNK"
+			except KeyError:
+				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['extracted']
+				ville_naissance_1999 = "UNK"
+				ville_naissance_1801 = "UNK"
+			try:
+				latitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"]["lat"]
+				longitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"]["lon"]
+			except KeyError:
+				latitude_ville_naissance, longitude_ville_naissance = "UNK", "UNK"
 			arrondissement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
 				'arrondissement']['extracted']
 			departement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
 				'departement']['extracted']
-			interm.append(ville_naissance)
+			departement_naissance_transcrit = page['extractions']['soldat']["identite"]['lieu_naissance'][
+				'departement']['corrected']
+			interm.append(ville_naissance_transcrite)
+			interm.append(ville_naissance_actuelle)
+			interm.append(ville_naissance_1999)
+			interm.append(ville_naissance_1801)
+			interm.append(latitude_ville_naissance)
+			interm.append(longitude_ville_naissance)
 			interm.append(arrondissement_naissance)
 			interm.append(departement_naissance)
+			interm.append(departement_naissance_transcrit)
 
 			# Lieu de résidence
-			ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+			ville_residence_transcrite = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+			try:
+				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_actuel']
+				ville_residence_1999 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1999']
+				ville_residence_1801 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1801']
+			except TypeError:
+				if page['extractions']['soldat']["identite"]['lieu_residence']['ville'] is None:
+					ville_residence_actuelle = "UNK"
+					ville_residence_1999 = "UNK"
+					ville_residence_1801 = "UNK"
+			except KeyError:
+				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['extracted']
+				ville_residence_1999 = ville_residence_actuelle
+				ville_residence_1801 = ville_residence_actuelle
+
+			try:
+				latitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"]["lat"]
+				longitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"]["lon"]
+			except (KeyError, TypeError):
+				latitude_ville_residence, longitude_ville_residence = "UNK", "UNK"
 			arrondissement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
 				'arrondissement']['extracted']
-			departement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
+			departement_residence_transcrit = page['extractions']['soldat']["identite"]['lieu_residence'][
 				'departement']['extracted']
-			interm.append(ville_residence)
+			departement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
+				'departement']['corrected']
+			interm.append(ville_residence_transcrite)
+			interm.append(ville_residence_actuelle)
+			interm.append(ville_residence_1999)
+			interm.append(ville_residence_1801)
+			interm.append(latitude_ville_residence)
+			interm.append(longitude_ville_residence)
 			interm.append(arrondissement_residence)
 			interm.append(departement_residence)
+			interm.append(departement_residence_transcrit)
 
 			# Femme et enfants
 			situation_maritale = page['extractions']['soldat']["identite"]['situation_maritale']
@@ -1136,11 +1228,17 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(matricule)
 
 			# Chef d'accusation
-			chef_accusation = page['extractions']['chef_accusation']['extracted']
+			try:
+				chef_accusation = page['extractions']['chef_accusation']['extracted']
+			except KeyError:
+				chef_accusation = "UNK"
 			interm.append(chef_accusation)
 
 			# Antécédent (juste le nombre)
-			antecedents = page['extractions']['antécédents']['extracted']
+			try:
+				antecedents = page['extractions']['antécédents']['extracted']
+			except KeyError:
+				antecedents = "UNK"
 			if antecedents != "Néant":
 				antecedents = len(antecedents)
 			interm.append(antecedents)
@@ -1156,7 +1254,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		ratios.append(round(missing_value / examples_number, 2))
 	df.loc[-1] = counts
 	df.loc[-1] = ratios
-	df.to_csv(outpath, sep='$')
+	df.to_csv(outpath, sep='$', index=False)
 
 
 def random_string():
@@ -1302,24 +1400,33 @@ def approximate_sentence_split(sentence: str, substring: str, max_dist: int = 1,
 	else:
 		return None
 
-def find_closest_word_in_list(word_list: list, target_word: str) -> list:
+def find_closest_word_in_list(word_list: list, target_word: str, replacement_mapping:dict=None) -> list:
 	"""
 	Cette fonction cherche le mot le plus proche dans une liste de mots
 	:param sentence: la phrase cible
 	:param target_word: le mot à chercher
+	:param replacement_mapping: un mapping des caractères à modifier {"orig": "reg"}
 	:return: la liste du mot ou des mots les plus proches
 	"""
 	distances = []
-	matching_words = []
 	target_word = target_word.lower()
+	if replacement_mapping:
+		for key, value in replacement_mapping.items():
+			word_lower = target_word.replace(key, value)
 	for word in word_list:
 		if word is None:
 			distances.append(99)
 			continue
 		word_lower = word.lower()
+		if replacement_mapping:
+			for key, value in replacement_mapping.items():
+				word_lower = word_lower.replace(key, value)
 		dist = levensthein_distance(word_lower, target_word)
 		distances.append(dist)
-	min_dist_index = distances.index(min(distances))
+	try:
+		min_dist_index = distances.index(min(distances))
+	except ValueError:
+		return None, None
 	print(word_list[min_dist_index])
 	print(min(distances))
 	print(target_word)
@@ -1512,6 +1619,19 @@ def get_center_of_rectangle(rectangle):
 	center = (rectangle.xmin + ((rectangle.xmax - rectangle.xmin) / 2), rectangle.ymin + ((rectangle.ymax - rectangle.ymin) / 2))
 	return center
 
+def expand_placename_abreviations(abbr_name):
+	"""
+	Cette fonction résoud les abréviations (sous/sur/saint)
+	:return: l'abréviation résolue
+	"""
+	saint_regexp = re.compile(r"[Ss]\^t")
+
+	# On résoud tout à "sur"
+	sous_sur_regexp = re.compile(r"[sS]/")
+	expanded = re.sub(saint_regexp, "Saint", abbr_name)
+	expanded = re.sub(sous_sur_regexp, "sur", expanded)
+
+	return expanded
 
 def get_angle(line:OCRLine):
 	"""
@@ -1655,7 +1775,11 @@ def sum_to_float(input:string) -> float:
 	except TypeError:
 		return None
 	entiers = correct_numbers_in_string(entiers)
-	centimes = approximate_sentence_split(split_francs[-1], substring="centimes")[0].strip()
+	try:
+		centimes = approximate_sentence_split(split_francs[-1], substring="centimes")[0].strip()
+	except TypeError:
+		return {"value": entiers,
+				"certainty": "low"}
 	centimes = correct_numbers_in_string(centimes)
 	print(entiers)
 	print(centimes)

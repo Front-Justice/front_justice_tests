@@ -39,7 +39,6 @@ class KRAKEN():
 			}
 		]
 		"""
-
 		model = models.load_any(self.ocr_model, device="cuda:0")
 		pred_it = rpred.rpred(model, im, segments)
 		prediction = []
