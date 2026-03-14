@@ -36,7 +36,8 @@ class Extractor:
 
 	def __init__(self,
 				 party_engine,
-				 kraken_model: str,
+				 kraken_model_annotations: str,
+				 kraken_model_transcription: str,
 				 resize_factor: int = 1,
 				 debug: bool = False,
 				 use_party=True,
@@ -65,7 +66,8 @@ class Extractor:
 		entity_spotting_model = ("/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Information_Extractor/models/model_NER")
 
 		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/BERTNER/results_test_v3/best_model")
-		self.kraken_model = kraken_model
+		self.kraken_model_annotations = kraken_model_annotations
+		self.kraken_model_transcription = kraken_model_transcription
 		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base")
 		self.entity_spotting_pipeline = pipeline('ner',
 												 model=entity_spotting_model,
@@ -116,9 +118,22 @@ class Extractor:
 													    exact_match=True)
 
 		corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
-		print(ligne_greffier)
-		print(corresponding_idx)
-		print(ocr_prediction[corresponding_idx[0] + 1])
+		#
+		ligne_signature = ocr_prediction[corresponding_idx[0] + 1]
+		print(ligne_signature.prediction)
+		if ligne_signature.prediction == "+":
+			"Signature trouvée"
+			# image = Image.open(self.minute_courante[3]["image_path"]).convert("RGBA")
+			image = Image.open("data/minute_test_3/0316.jpg").convert("RGBA")
+			shifted_lines = utils.extend_line(ligne_signature, 150)
+			polygon = KRAKEN.blla.calculate_polygonal_environment(im=image, baselines=[shifted_lines])
+			utils.polygon_extraction(polygon, image)
+		else:
+			new_transcription = utils.extend_baseline_and_retranscribe(line=ligne_signature,
+												   image_path=self.minute_courante[3]["image_path"],
+												   ocr_model=self.kraken_model_transcription)
+			print(new_transcription)
+		print("\n\n\nHERE\n\n\n")
 
 	def extract_lines_from_zone(self,
 								annotations,
@@ -1504,6 +1519,7 @@ class Extractor:
 				"Réhabilitation du soldat",
 				"Peine effectuée",
 				"Exécution du jugement",
+				"Exécution du jugement suspendue",
 				"Jugement suspendu",
 				"Annulation de la suspension d'exécution",
 				"Exécution de la peine suspendue",

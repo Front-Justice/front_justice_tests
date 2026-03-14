@@ -15,6 +15,9 @@ class Reconciliator:
 		self.list_of_names = [name.lower() if isinstance(name, str) else name for name in pd.read_csv("src/Information_Extractor/databases/french_names.csv",
 																	  delimiter=";")["prenom"].tolist()]
 
+		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
+				 not word.isupper()])
+
 		self.certitude_prenom_du_soldat = []
 		self.prenom_du_soldat = []
 		self.nom_du_soldat = None
@@ -28,6 +31,8 @@ class Reconciliator:
 		self.lieu_jugement = None
 		self.date_proces = None
 		self.images_path = None
+		self.annotations = None
+		self.profession = None
 
 	def reconciliate_minute(self):
 		self._add_images_path()
@@ -36,10 +41,44 @@ class Reconciliator:
 		self._reconciliate_lieu_residence()
 		self._reconciliate_lieu_naissance()
 		self._reconciliate_date_proces()
+		self._retrieve_annotations()
+		self._retrieve_profession()
 		self._copy_unici()
 		self._produce_dict()
 		self._remove_baseline_and_bbox()
 		print("---")
+
+	def _retrieve_profession(self):
+		try:
+			profession_page_1 = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
+		except AttributeError:
+			self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			return
+		try:
+			profession_page_2 = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+		except (AttributeError, IndexError):
+			self.profession = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			return
+
+		if profession_page_1 == profession_page_2:
+			self.profession = profession_page_1
+			return
+		else:
+			lexicality_1 = utils.compute_lexicality(profession_page_1, words=self.french_lexicon)
+			lexicality_2 = utils.compute_lexicality(profession_page_2, words=self.french_lexicon)
+
+		if lexicality_1 > lexicality_2:
+			self.profession = profession_page_1
+		elif lexicality_1 < lexicality_2:
+			self.profession = profession_page_2
+		else:
+			self.profession = [profession_page_1, profession_page_2]
+
+	def _retrieve_annotations(self):
+		self.annotations = []
+		for page in self.minute_list:
+			if "extractions" in page and "annotations_ajouts" in page["extractions"]:
+				self.annotations.append(page["extractions"]["annotations_ajouts"])
 
 	def _add_images_path(self):
 		self.images_path = [item["image_path"] for item in self.minute_list]
@@ -59,7 +98,10 @@ class Reconciliator:
 		self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
 		self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
 		self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
-		self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["date_normalisee"]
+		try:
+			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["date_normalisee"]
+		except TypeError:
+			self.date_crime_ou_delit = None
 
 	def _reconciliate_date_proces(self):
 		# Une date de la page 4 n'as pas été extraire, à faire.
@@ -71,8 +113,11 @@ class Reconciliator:
 		except IndexError:
 			self.date_proces = date_proces_p1
 			return
-		date_proces_p4 = self.minute_list[3]["extractions"]["dernier_paragraphe"]["date_proces"]
-
+		try:
+			date_proces_p4 = self.minute_list[3]["extractions"]["dernier_paragraphe"]["date_proces"]
+		except KeyError:
+			self.date_proces = date_proces_p1
+			return
 		if date_proces_p1["date_normalisee"] is None:
 			self.date_proces = date_proces_p4["date_normalisee"]
 		elif date_proces_p4["date_normalisee"] is None:
@@ -398,9 +443,11 @@ class Reconciliator:
 						},
 					"lieu_residence": self.lieu_residence,
 					"lieu_naissance": self.lieu_naissance,
-					"description_physique": self.description_physique
+					"description_physique": self.description_physique,
+					"profession": self.profession
 				},
 			"accusation": {
 				"date_du_crime_ou_delit": self.date_crime_ou_delit
-			}
+			},
+			"mise_a_jour": self.annotations
 		}

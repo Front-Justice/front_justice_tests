@@ -459,6 +459,69 @@ def point_in_box(coord, box_coord):
 # 								   self.prediction,
 # 								   self.cuts)
 
+def polygon_extraction(polygon, image:Image.Image):
+	"""
+	Cette fonction extrait un polygone d'une image et la montre
+	https://stackoverflow.com/a/22650239
+	:return:
+	"""
+	# read image as RGB and add alpha (transparency)
+	# convert to numpy (for convenience)
+	imArray = np.asarray(image)
+
+	# create mask
+	maskIm = Image.new('L', (imArray.shape[1], imArray.shape[0]), 0)
+	polygon = polygon[0].tolist()
+
+	min_x = min([item[0] for item in polygon])
+	min_y = min([item[1] for item in polygon])
+	max_x = max([item[0] for item in polygon])
+	max_y = max([item[1] for item in polygon])
+	PIL.ImageDraw.Draw(maskIm).polygon(polygon, outline=1, fill=1)
+	mask = np.array(maskIm)
+
+	# assemble new image (uint8: 0-255)
+	newImArray = np.empty(imArray.shape, dtype='uint8')
+
+	# colors (three first columns, RGB)
+	newImArray[:, :, :3] = imArray[:, :, :3]
+
+	# transparency (4th column)
+	newImArray[:, :, 3] = mask * 255
+
+	# back to Image from numpy
+	x_max = max([i[0] for i in polygon])
+	x_min = min([i[0] for i in polygon])
+	y_max = max([i[1] for i in polygon])
+	y_min = min([i[1] for i in polygon])
+	rectangle_coordinates = (x_min, y_min, x_max, y_max)
+
+	# On enregistre
+	newIm = Image.fromarray(newImArray, "RGBA")
+	cropped_img = newIm.crop(rectangle_coordinates)
+	cropped_img.show()
+
+
+def extend_baseline_and_retranscribe(line: OCRLine,
+									 image_path: str,
+									 ocr_model) -> OCRLine:
+	image = Image.open(image_path)
+	draw_lines_on_image(image_path=image_path, baseline=[line.baseline])
+	shifted_lines = extend_line(line, 150)
+	polygons = KRAKEN.blla.calculate_polygonal_environment(im=image, baselines=[shifted_lines])
+	draw_lines_on_image(image_path=image_path, baseline=[shifted_lines])
+	baselinelines = [containers.BaselineLine(id="test",
+								  baseline=shifted_lines,
+								  boundary=polygons[0])]
+	mysegmentation = containers.Segmentation(imagename="test",
+											 script_detection=False,
+											 lines=baselinelines,
+											 regions=None,
+											 text_direction='horizontal-lr',
+											 type='baselines')
+	kraken_ocr = KRAKEN.KRAKEN(segmentation_model=None,
+							   ocr_model=ocr_model)
+	return kraken_ocr.predict_with_kraken(im=image, segments=mysegmentation)
 
 def find_best_transcription(lines: OCRRecord,
 							image_path: str,
@@ -541,7 +604,7 @@ def remove_accents(string):
 
 def compute_lexicality(string: str, words: set) -> float:
 	"""
-	Cette fonction va appliquer à chaque fichier un indice de lexicalité, et trier par ordre ascendant la liste produite.
+	Cette fonction va appliquer à une chaîne de caractère un indice de lexicalité, et trier par ordre ascendant la liste produite.
 	:return: le taux de lexicalité de la phrase
 	"""
 
@@ -571,6 +634,22 @@ def compute_lexicality(string: str, words: set) -> float:
 		return 0
 	return error_rate
 
+def extend_line(line: OCRLine, pixels: int):
+	"""
+	Shift line right by n pixels
+	:param line:
+	:param pixels:
+	:return: la nouvelle baseline
+	"""
+	first_point, last_point = line.baseline[0], line.baseline[-1]
+	a, b = produce_line_function([first_point[0], first_point[1], last_point[0], last_point[1]])
+
+	# On adapte la taille du shift en fonction de la pente.
+	# pixels = pixels / (1 if a == 0 else a)
+	extented_point_x = last_point[0] + pixels
+	extended_point_y = a*(last_point[0] + pixels) + b
+	new_baseline = [first_point, [extented_point_x, extended_point_y]]
+	return new_baseline
 
 def shift_lines(lines_as_record: OCRRecord, pixels_shift: int):
 	"""

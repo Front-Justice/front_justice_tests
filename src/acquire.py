@@ -54,7 +54,7 @@ class Pipeline():
 			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
 			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
 			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
-			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_4.mlmodel"
+			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/modele_page_4_v2_best.mlmodel"
 			 }
 		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
@@ -68,7 +68,8 @@ class Pipeline():
 			party_engine = PARTY.PartyPredict()
 		device = "cuda:0" if torch.cuda.is_available() else "cpu"
 		self.extractor = extract.Extractor(party_engine=party_engine,
-										   kraken_model=self.kraken_gloses_model,
+										   kraken_model_annotations=self.kraken_gloses_model,
+										   kraken_model_transcription=self.kraken_ocr_model,
 										   resize_factor=self.resize_factor,
 										   debug=debug,
 										   use_party=use_party,
@@ -336,6 +337,7 @@ class Pipeline():
 			print("Show image")
 			utils.draw_lines_on_image(image_path=page["image_path"],
 									  baseline=[line.baseline for line in self.current_page_transcription])
+
 		self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription)
 
 		zones_page_4, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
@@ -373,7 +375,7 @@ class Pipeline():
 		return zone_dict, current_dict
 
 
-	def transcription_page(self, page:str, show_image:bool = False):
+	def transcription_page(self, page:str, show_image:bool = False, force_resegment = False):
 		"""
 		Fonction wrapper de transcription d'une page
 		:param page: La page à transcrire
@@ -381,7 +383,7 @@ class Pipeline():
 		:return:
 		"""
 		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
-		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe:
+		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
 			print("Cas 1")
 			print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = self.transcription_kraken(
@@ -674,7 +676,12 @@ class Pipeline():
 				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
 					print("---")
 					print(f"Treating {page}")
-					self.transcription_page(page=page, show_image=False)
+					if page["classe"] == "page_4":
+						force_resegment = True
+					else:
+						force_resegment = False
+					force_resegment = False
+					self.transcription_page(page=page, show_image=False, force_resegment=force_resegment)
 					zones_ajouts, ajouts = self.process_additions(page=page)
 					if ajouts is None:
 						ajouts = {"ajouts": None}
