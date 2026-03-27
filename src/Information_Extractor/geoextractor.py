@@ -6,7 +6,7 @@ import src.utils.utils as utils
 
 class GeoExtractor():
 	def __init__(self):
-		with open("/home/mgl/Bureau/Travail/projets/Front_Justice/scripts_divers/georef/referentiel_communes.json", "r") as input_json:
+		with open("src/Information_Extractor/databases/referentiel_communes.json", "r") as input_json:
 			self.geodict = json.load(input_json)
 		with open("src/Information_Extractor/databases/correspondance_departements.json", "r") as input_json:
 			self.departments_dict = json.load(input_json)
