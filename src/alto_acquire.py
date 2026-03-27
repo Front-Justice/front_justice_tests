@@ -29,6 +29,8 @@ class Pipeline():
 				 resegment=False,
 				 retranscribe=False):
 		self.debug = debug
+
+		self.alto_ns = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
 												 vocab=page_classifier_vocab)
@@ -51,15 +53,15 @@ class Pipeline():
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = {
-			 0: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/lignes_ajouts.mlmodel",
-			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
-			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
-			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
-			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/modele_page_4.mlmodel"
+			 0: "src/Vision/models/lignes_ajouts.mlmodel",
+			 1: "src/Vision/models/modele_ligne_page_1.mlmodel",
+			 2: "src/Vision/models/modele_ligne_page_2.mlmodel",
+			 3: "src/Vision/models/modele_ligne_page_3.mlmodel",
+			 4: "src/Vision/models/modele_page_4.mlmodel"
 			 }
 		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
-		self.party_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/model.safetensors"
+		self.party_model = "src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
@@ -228,6 +230,13 @@ class Pipeline():
 		else:
 			return None
 
+	def update_label(self, transcription):
+		default_line = transcription.xpath("//alto:Tags/alto:OtherTag[@LABEL = 'default']", namespaces=self.alto_ns)[
+			-1]
+		default_line.set('LABEL', "DefaultLine")
+		return transcription
+
+
 	def merge_transcriptions(self,
 									  transcription_1,
 									  transcription_2):
@@ -238,20 +247,19 @@ class Pipeline():
 		:param transcription_json:
 		:return:
 		"""
-		alto_ns = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		# On enlève la déclaration XML
 		transcription_1 = "\n".join([line for line in transcription_1.split("\n")[1:]])
 		transcription_2 = "\n".join([line for line in transcription_2.split("\n")[1:]])
 		transcription_finale = ET.fromstring(transcription_1)
-		default_line = transcription_finale.xpath("//alto:Tags/alto:OtherTag[@LABEL = 'default']", namespaces=alto_ns)[-1]
-		default_line.set('LABEL', "DefaultLine")
+		transcription_finale = self.update_label(transcription_finale)
 		added_lines = ET.Element("OtherTag")
 		added_lines.set("LABEL", "CustomLine:addition")
 		added_lines.set("ID", "TYPE_2")
+		default_line = transcription_finale.xpath("//alto:Tags/alto:OtherTag", namespaces=self.alto_ns)[0]
 		default_line.addnext(added_lines)
 		transcription_cible = ET.fromstring(transcription_2)
-		all_lines_cible = transcription_cible.xpath("//alto:TextLine", namespaces=alto_ns)
-		text_bloc_finale = transcription_finale.xpath("//alto:TextBlock", namespaces=alto_ns)[-1]
+		all_lines_cible = transcription_cible.xpath("//alto:TextLine", namespaces=self.alto_ns)
+		text_bloc_finale = transcription_finale.xpath("//alto:TextBlock", namespaces=self.alto_ns)[-1]
 		for line in all_lines_cible:
 			line.set("TAGREFS", "TYPE_2")
 			text_bloc_finale.insert(-1, line)
@@ -272,7 +280,11 @@ class Pipeline():
 		:return:
 		"""
 		print("Début du workflow")
-		# Il faudra supprimer ça pour la mise en production
+
+		try:
+			os.mkdir("results/alto_results")
+		except (IsADirectoryError, FileExistsError):
+			pass
 		self.images_basedir = "_".join(images[0].split("/")[:-1])
 		self.classification_images(images)
 		self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
@@ -290,10 +302,11 @@ class Pipeline():
 				else:
 					alto_transcription = "\n".join([line for line in alto_transcription.split("\n")[1:]])
 					alto_transcription = ET.fromstring(alto_transcription)
-				with open(f"results/alto_results/{self.images_basedir}.xml", "w") as output_xml:
+					alto_transcription = self.update_label(alto_transcription)
+				with open(f"results/alto_results/{page['image_path'].split('/')[-1].split('.')[0]}.xml", "w") as output_xml:
 					output_xml.write(ET.tostring(alto_transcription, pretty_print=True, encoding='utf-8').decode())
 				shutil.copy(page["image_path"], f"results/alto_results/")
-		with zipfile.ZipFile('files.zip', 'w') as myzip:
+		with zipfile.ZipFile('results/alto_results/files.zip', 'w') as myzip:
 			for file in glob.glob(f"results/alto_results/*"):
 				myzip.write(file)
 
