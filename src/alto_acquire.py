@@ -306,7 +306,7 @@ class Pipeline():
 				with open(f"results/alto_results/{page['image_path'].split('/')[-1].split('.')[0]}.xml", "w") as output_xml:
 					output_xml.write(ET.tostring(alto_transcription, pretty_print=True, encoding='utf-8').decode())
 				shutil.copy(page["image_path"], f"results/alto_results/")
-		with zipfile.ZipFile('results/alto_results/files.zip', 'w') as myzip:
+		with zipfile.ZipFile('results/files.zip', 'w') as myzip:
 			for file in glob.glob(f"results/alto_results/*"):
 				myzip.write(file)
 
