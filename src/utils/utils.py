@@ -2,6 +2,7 @@ import csv
 import json
 import math
 import os
+from datetime import datetime, timedelta
 import pickle
 import random
 import string
@@ -26,6 +27,25 @@ from spellchecker import SpellChecker
 
 import src.Vision.KRAKEN as KRAKEN
 import kraken.containers as containers
+
+@dataclass
+class DateRecord:
+	"""Classe principale pour la description d'une date"""
+	def __init__(self, extracted, predicted, normalized, bbox, baseline):
+		self.extracted: str = extracted
+		self.predicted: str = predicted
+		self.normalized: dict = normalized
+		self.bbox: list = bbox
+		self.baseline: list = baseline
+
+	def to_json(self):
+		return {
+			"normalized": self.normalized,
+			"predicted": self.predicted,
+			"extracted": self.extracted,
+			"bbox": self.bbox,
+			"baseline": self.baseline
+		}
 
 
 @dataclass
@@ -90,11 +110,12 @@ class YOLORecord():
 class OCRLine:
 	"""
 	Classe principale pour la description d'une ligne en sortie de Kraken ou Party. Contient la baseline, la prédiction,
-	les cuts (= les polygones individuels pour chaque caractère prédit)
+	les cuts (= les polygones individuels pour chaque caractère prédit) et le polygone le cas échéant
 	"""
 	baseline: list
 	prediction: str
 	cuts: list
+	polygon: list | None
 
 
 class OCRRecord():
@@ -106,7 +127,10 @@ class OCRRecord():
 	def __init__(self, record: list[dict] = []):
 		self.record: list = []
 		for item in record:
-			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
+			Line: OCRLine = OCRLine(baseline=item['baseline'],
+									prediction=item['prediction'],
+									cuts=item['cuts'],
+									polygon=item['polygon'])
 			self.record.append(Line)
 
 	def recreate_record(self, list_of_lines: list[OCRLine]):
@@ -171,7 +195,9 @@ class OCRRecord():
 		lines_as_dict = load_json_to_dict(path)
 		self.record = []
 		for item in lines_as_dict:
-			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'])
+			if "polygon" not in item:
+				item["polygon"] = None
+			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'], polygon=item['polygon'])
 			self.record.append(Line)
 
 
@@ -267,6 +293,12 @@ def tokenize_sent(sentence: str) -> list:
 
 
 def correct_date(date: str) -> str:
+	"""
+	Cette fonction vise à corriger une date extraite et où seraient présentes des erreurs
+	d'HTR:
+	:param date: la chaîne de caractères à corriger
+	:return: la date corrigée
+	"""
 	number_dict = {"un": 1,
 				   "deux": 2,
 				   "trois": 3,
@@ -327,7 +359,7 @@ def correct_date(date: str) -> str:
 		else:
 			matching, corrected = check_word_in_list(list(month_dict.keys()) + list(number_dict.keys()),
 													 token,
-													 sensibility=0.7 if len(token) > 4 else 0.6)
+													 sensibility=0.7 if len(token) > 4 else 0.57)
 			if matching:
 				result.append(corrected)
 			else:
@@ -459,6 +491,51 @@ def point_in_box(coord, box_coord):
 # 								   self.prediction,
 # 								   self.cuts)
 
+def split_date(date:str):
+	try:
+		day, month, year = date.split("/")
+	except ValueError:
+		month, year = date.split("/")
+		return 1, int(month), int(year)
+	return int(day), int(month), int(year)
+
+def is_anterior_or_equal(date_a:str, date_b:str) -> bool:
+	"""
+	Cette fonction vérifie si une date a est antérieure à une date b
+	:param date_a: une date formattée jj/mm/aaaa
+	:param date_b: une date formattée jj/mm/aaaa
+	:return:
+	"""
+	day_a, month_a, year_a = split_date(date_a)
+	day_b, month_b, year_b = split_date(date_b)
+	date_a_formatted = datetime(year_a, month_a, day_a)
+	date_b_formatted = datetime(year_b, month_b, day_b)
+	return date_a_formatted <= date_b_formatted
+
+def extract_bbox_from_baseline(target_line:OCRLine, image:Image.Image, height_rectangle:int=150):
+	"""
+	Cette fonction extrait une bounding box autour d'une baseline. Elle affiche l'image pour l'isntant.
+	:param target_line: La ligne, instance de classe OCRline
+	:param height_rectangle:
+	:param image:
+	:return:
+	"""
+	shifted_lines = extend_line(target_line, 50)
+	[[x1, y1], [x2, y2]] = [shifted_lines[0], shifted_lines[-1]]
+	angle_ligne = get_angle(target_line)
+	target_angle_pos = angle_ligne - math.radians(90)
+	target_angle_neg = angle_ligne + math.radians(90)
+	xa, ya = (x1 + height_rectangle * 0.5 * math.cos(target_angle_pos),
+			  y1 + height_rectangle * 0.5 * math.sin(target_angle_pos))
+	xb, yb = (x2 + height_rectangle * 0.5 * math.cos(target_angle_pos),
+			  y2 + height_rectangle * 0.5 * math.sin(target_angle_pos))
+	xd, yd = (x1 + height_rectangle * 0.5 * math.cos(target_angle_neg),
+			  y1 + height_rectangle * 0.5 * math.sin(target_angle_neg))
+	xc, yc = (x2 + height_rectangle * 0.5 * math.cos(target_angle_neg),
+			  y2 + height_rectangle * 0.5 * math.sin(target_angle_neg))
+	polygon = [[xa, ya], [xb, yb], [xc, yc], [xd, yd]]
+	polygon_extraction(polygon, image)
+
 def polygon_extraction(polygon, image:Image.Image):
 	"""
 	Cette fonction extrait un polygone d'une image et la montre
@@ -471,12 +548,9 @@ def polygon_extraction(polygon, image:Image.Image):
 
 	# create mask
 	maskIm = Image.new('L', (imArray.shape[1], imArray.shape[0]), 0)
-	polygon = polygon[0].tolist()
+	# if isinstance(polygon, np.array):
+	# 	polygon = polygon[0].tolist()
 
-	min_x = min([item[0] for item in polygon])
-	min_y = min([item[1] for item in polygon])
-	max_x = max([item[0] for item in polygon])
-	max_y = max([item[1] for item in polygon])
 	PIL.ImageDraw.Draw(maskIm).polygon(polygon, outline=1, fill=1)
 	mask = np.array(maskIm)
 
@@ -506,10 +580,10 @@ def extend_baseline_and_retranscribe(line: OCRLine,
 									 image_path: str,
 									 ocr_model) -> OCRLine:
 	image = Image.open(image_path)
-	draw_lines_on_image(image_path=image_path, baseline=[line.baseline])
-	shifted_lines = extend_line(line, 150)
+	# draw_lines_on_image(image_path=image_path, baseline=[line.baseline])
+	shifted_lines = extend_line(line, 50)
 	polygons = KRAKEN.blla.calculate_polygonal_environment(im=image, baselines=[shifted_lines])
-	draw_lines_on_image(image_path=image_path, baseline=[shifted_lines])
+	# draw_lines_on_image(image_path=image_path, baseline=[shifted_lines])
 	baselinelines = [containers.BaselineLine(id="test",
 								  baseline=shifted_lines,
 								  boundary=polygons[0])]
@@ -636,7 +710,7 @@ def compute_lexicality(string: str, words: set) -> float:
 
 def extend_line(line: OCRLine, pixels: int):
 	"""
-	Shift line right by n pixels
+	Shift line left and right by n pixels
 	:param line:
 	:param pixels:
 	:return: la nouvelle baseline
@@ -646,9 +720,11 @@ def extend_line(line: OCRLine, pixels: int):
 
 	# On adapte la taille du shift en fonction de la pente.
 	# pixels = pixels / (1 if a == 0 else a)
-	extented_point_x = last_point[0] + pixels
-	extended_point_y = a*(last_point[0] + pixels) + b
-	new_baseline = [first_point, [extented_point_x, extended_point_y]]
+	extended_point_left_x = first_point[0] - pixels
+	extended_point_right_x = last_point[0] + pixels
+	extended_point_right_y = a*(extended_point_right_x) + b
+	extended_point_left_y = a*(extended_point_left_x) + b
+	new_baseline = [[extended_point_left_x, extended_point_left_y], [extended_point_right_x, extended_point_right_y]]
 	return new_baseline
 
 def shift_lines(lines_as_record: OCRRecord, pixels_shift: int):
@@ -667,7 +743,7 @@ def shift_lines(lines_as_record: OCRRecord, pixels_shift: int):
 		new_baseline = []
 		current_angle = get_angle(line)
 		for x1, y1 in baseline:
-			# On cherche la direction opposée
+			# On cherche la direction orthogonale
 			target_angle = current_angle + math.radians(90)
 			# https://stackoverflow.com/a/48525695
 			x2, y2 = (x1 + pixels_shift * math.cos(target_angle), y1 + pixels_shift * math.sin(target_angle))

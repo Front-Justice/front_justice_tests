@@ -1,7 +1,7 @@
 import re
 import src.date.parser as parser
 import src.date.lexer as lexer
-import src.utils.utils as utils
+import src.date.utils as utils
 import json
 
 
@@ -214,6 +214,84 @@ def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915")
 	return MyParser.ast
 
 
+
+def correct_date(date: str) -> str:
+	"""
+	Cette fonction vise à corriger une date extraite et où seraient présentes des erreurs
+	d'HTR:
+	:param date: la chaîne de caractères à corriger
+	:return: la date corrigée
+	"""
+	number_dict = {"un": 1,
+				   "deux": 2,
+				   "trois": 3,
+				   "quatre": 4,
+				   "cinq": 5,
+				   "six": 6,
+				   "sept": 7,
+				   "huit": 8,
+				   "neuf": 9,
+				   "dix": 10,
+				   "onze": 11,
+				   "douze": 12,
+				   "treize": 13,
+				   "quatorze": 14,
+				   "quinze": 15,
+				   "seize": 16,
+				   "vingt": 20,
+				   "trente": 30,
+				   "mil": 1000,
+				   "cent": 100}
+
+	month_dict = {"janvier": "01",
+				  "février": "02",
+				  "mars": "03",
+				  "avril": "04",
+				  "mai": "05",
+				  "juin": "06",
+				  "juillet": "07",
+				  "août": "08",
+				  "septembre": "09",
+				  "octobre": "10",
+				  "novembre": "11",
+				  "décembre": "12",
+				  }
+	date = utils.nfc_normalize(date)
+	date = date.lower().strip()
+	clean_regexp = re.compile(r"(\d+)\^?er?")
+	date = re.sub(clean_regexp, r'\g<1>', date)
+	le_regexp = re.compile(r"^[Ll]e ")
+	date = re.sub(le_regexp, r"", date)
+	date = utils.strip_punctuation(date)
+
+	# On corrige les erreurs fŕequentes
+	common_mistakes = {"aout": "août",
+					   "dix": "dix ",
+					   "vingt": "vingt ",
+					   "trente": "trente "}
+	for orig, reg in common_mistakes.items():
+		date = date.replace(orig, reg)
+	splits = re.compile(r"[\s+\-]")
+	splitted = re.split(splits, date)
+	result = []
+	for token in splitted:
+		if token in common_mistakes:
+			result.append(common_mistakes[token])
+		elif token in month_dict or token in number_dict or token in ['de', 'du', 'an', 'et', 'en']:
+			result.append(token)
+		else:
+			matching, corrected = utils.check_word_in_list(list(month_dict.keys()) + list(number_dict.keys()),
+													 token,
+													 sensibility=0.7 if len(token) > 4 else 0.57)
+			if matching:
+				result.append(corrected)
+			else:
+				result.append(token)
+	normalized = " ".join([item for item in result if item != ""])
+	normalized = normalized.lower()
+	return normalized
+
+
 def test():
 	dates_examples = [
 		"17 septembre 1918",
@@ -240,13 +318,15 @@ def test():
 	"vingt septembre an mil neuf cent dix sept",
 	"sept avril de l'an mil neuf cent dix sept",
 	"trente et un octobre de l'an mil neuf cent dixsept",
-	"juin juillet 1917"]
-	dates_examples = [dates_examples[-1]]
+	"juin juillet 1917",
+	"an mil neuf cent dix sept le dix huit août",
+	"mai 1916 à mai 1917"]
+	# dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")
 		print(example)
 		example = example.lower()
-		corrected = utils.correct_date(example)
+		corrected = correct_date(example)
 		date = process_date(corrected, debug=True)
 		print(f"Date: {date}")
 		print(f"Corrected date: {corrected}")

@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 import src.utils.utils as utils
@@ -5,7 +6,7 @@ import pandas as pd
 
 
 class Reconciliator:
-	def __init__(self, minute_list):
+	def __init__(self, minute_list, previous_minute):
 		self.minute_list = minute_list
 		self.reconciliated_minute = {}
 		# Trouvé dans https://www.insee.fr/fr/statistiques/3536630 (fichier de l'INSEE)
@@ -14,6 +15,7 @@ class Reconciliator:
 		# Idem: https://www.insee.fr/fr/statistiques/8595130
 		self.list_of_names = [name.lower() if isinstance(name, str) else name for name in pd.read_csv("src/Information_Extractor/databases/french_names.csv",
 																	  delimiter=";")["prenom"].tolist()]
+		self.previous_minute  = previous_minute
 
 		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
 				 not word.isupper()])
@@ -33,6 +35,9 @@ class Reconciliator:
 		self.images_path = None
 		self.annotations = None
 		self.profession = None
+		self.date_proces_orig = None
+		self.date_naissance = None
+		self.age = None
 
 	def reconciliate_minute(self):
 		self._add_images_path()
@@ -40,13 +45,81 @@ class Reconciliator:
 		self._reconciliate_prenom_soldat()
 		self._reconciliate_lieu_residence()
 		self._reconciliate_lieu_naissance()
-		self._reconciliate_date_proces()
 		self._retrieve_annotations()
 		self._retrieve_profession()
+		self._reconciliate_trial_date()
+		self._reconciliate_date_naissance()
 		self._copy_unici()
 		self._produce_dict()
 		self._remove_baseline_and_bbox()
 		print("---")
+
+
+	def _reconciliate_date_naissance(self):
+		date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
+		if self.date_proces:
+			age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
+			print(age_theorique)
+			print(age_soldat)
+			if age_theorique == age_soldat:
+				self.age_soldat = age_soldat
+			else:
+				self.age_soldat = age_soldat
+		else:
+			self.age_soldat = age_soldat
+
+	def _reconciliate_trial_date(self):
+		try:
+			date_page_1 = self.minute_list[0]["extractions"]["date_proces"]["normalized"]["when"]
+		except (TypeError, KeyError):
+			date_page_1 = None
+		try:
+			date_a_page_4 = self.minute_list[3]["extractions"]["date_proces_1"]["normalized"]["when"]
+		except (TypeError, KeyError, IndexError):
+			date_a_page_4 = None
+		try:
+			date_b_page_4 = self.minute_list[3]["extractions"]["date_proces_2"]["normalized"]["when"]
+		except (TypeError, KeyError, IndexError):
+			date_b_page_4 = None
+		if date_page_1 == date_a_page_4 == date_b_page_4:
+			self.date_proces = date_page_1
+		else:
+			filtered_dates = [date for date in [date_page_1, date_a_page_4, date_b_page_4] if date]
+			orig_filtered_dates = copy.copy(filtered_dates)
+			self.date_proces_orig = orig_filtered_dates
+			try:
+				previous_date = self.previous_minute["informations_proces"]["date_du_proces"]
+				filtered_dates = [item for item in filtered_dates if utils.is_anterior_or_equal(previous_date, item)]
+			except (AttributeError, TypeError):
+				pass
+			print(filtered_dates)
+			# On va filtrer par précision: le / dit la précision du
+			# dates_by_Precision = [len(date.split("/")) for date in filtered_dates]
+			# filtered_dates_by_precision = [date for date in filtered_dates if len(date.split("/")) == max(dates_by_Precision)]
+			print(filtered_dates)
+			if filtered_dates == []:
+				self.date_proces = None
+				return
+			if all([item == filtered_dates[0] for item in filtered_dates[1:]]):
+				self.date_proces = filtered_dates[0]
+			else:
+				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
+				if len(filtered_dates) == 2:
+					self.date_proces = filtered_dates
+				else:
+					dictionnary = {}
+					for date in filtered_dates:
+						try:
+							dictionnary[date] += 1
+						except KeyError:
+							dictionnary[date] = 1
+					dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
+					print(dict_sorted_by_freq)
+					exit(0)
+					# self.date_proces =
+
 
 	def _retrieve_profession(self):
 		try:
@@ -99,33 +172,10 @@ class Reconciliator:
 		self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
 		self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
 		try:
-			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["date_normalisee"]
+			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
 		except TypeError:
 			self.date_crime_ou_delit = None
 
-	def _reconciliate_date_proces(self):
-		# Une date de la page 4 n'as pas été extraire, à faire.
-		date_proces_p1 = self.minute_list[0]["extractions"]["date_proces"]
-		try:
-			if self.minute_list[3]["classe"] != "page_4":
-				self.date_proces = date_proces_p1
-				return
-		except IndexError:
-			self.date_proces = date_proces_p1
-			return
-		try:
-			date_proces_p4 = self.minute_list[3]["extractions"]["dernier_paragraphe"]["date_proces"]
-		except KeyError:
-			self.date_proces = date_proces_p1
-			return
-		if date_proces_p1["date_normalisee"] is None:
-			self.date_proces = date_proces_p4["date_normalisee"]
-		elif date_proces_p4["date_normalisee"] is None:
-			self.date_proces = date_proces_p1["date_normalisee"]
-		print(date_proces_p1)
-		print(date_proces_p4)
-		if date_proces_p1["date_normalisee"] == date_proces_p4["date_normalisee"]:
-			self.date_proces = date_proces_p1["date_normalisee"]
 
 	def _reconciliate_lieu_residence(self):
 		try:
@@ -143,8 +193,9 @@ class Reconciliator:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
 		except TypeError:
 			print("Page 1 sans annotations")
-			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			self.lieu_residence = None
 			return
+			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
 
 
 		try:
@@ -195,7 +246,8 @@ class Reconciliator:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
 		except TypeError:
 			print("Page 1 sans annotations")
-			self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			self.lieu_naissance = None
+			# self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			return
 
 
@@ -430,7 +482,8 @@ class Reconciliator:
 			"informations_proces": {"numero_ordre": self.numero_ordre,
 									"numero_jugement": self.numero_jugement,
 									"lieu_jugement": self.lieu_jugement,
-									"date_du_proces": self.date_proces},
+									"date_du_proces": {"date_reconciliee": self.date_proces,
+										   "date_originelle": self.date_proces_orig}},
 			"soldat":
 				{
 					"identite": {
@@ -439,7 +492,9 @@ class Reconciliator:
 							 "certitude": self.certitude_nom_du_soldat},
 						"prenom":
 							{"prenom": self.prenom_du_soldat,
-							 "certitude": self.certitude_prenom_du_soldat}
+							 "certitude": self.certitude_prenom_du_soldat},
+						"age": self.age_soldat,
+						"date_naissance": self.date_naissance
 						},
 					"lieu_residence": self.lieu_residence,
 					"lieu_naissance": self.lieu_naissance,
@@ -449,5 +504,5 @@ class Reconciliator:
 			"accusation": {
 				"date_du_crime_ou_delit": self.date_crime_ou_delit
 			},
-			"mise_a_jour": self.annotations
+			"actualisations_du_jugement": self.annotations
 		}

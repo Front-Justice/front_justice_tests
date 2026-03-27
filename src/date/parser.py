@@ -36,12 +36,19 @@ class Parser(lexer.Lexer):
         ('left', 'AND'),  # Priorité pour "et"
     )
 
+    def p_mois_annee_range(self, p):
+        '''
+        mois_annee_range : mois_annee RANGE mois_annee
+        '''
+        p[0] = {"range": [p[1], p[3]]}
+
 
     def p_mois_annee(self, p):
         '''
         mois_annee : mois ANNEE
         '''
         p[0] = {**p[1], "annee": p[2]}
+
 
     def p_plage_dates(self, p):
         '''
@@ -77,6 +84,7 @@ class Parser(lexer.Lexer):
             | dizaine
         '''
         p[0] = {"jour": sum([item for item in p[1:]])}
+
 
 
     def p_mois(self, p):
@@ -167,6 +175,12 @@ class Parser(lexer.Lexer):
         p[0] = {"and": [p[1], p[3]]}
 
 
+    def p_date_complete_toutes_lettres_inversee(self, p):
+        '''
+        date_toutes_lettres_inversee : an_toutes_lettres jour_toutes_lettres_mois
+        '''
+        p[0] = {**p[1], **p[2]}
+
     def p_date_complete_toutes_lettres(self, p):
         '''
         date_toutes_lettres : jour_toutes_lettres_mois an_toutes_lettres
@@ -194,6 +208,8 @@ class Parser(lexer.Lexer):
                      | deux_dates_completes
                      | range_jour_mois ANNEE
                      | date_toutes_lettres
+                     | date_toutes_lettres_inversee
+                     | mois_annee_range
         '''
         if len(p) == 3:
             p[0] = {**p[1], "annee": int(p[2])}

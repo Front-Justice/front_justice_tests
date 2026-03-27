@@ -1,6 +1,6 @@
 import ply.lex as lex
 import copy
-import src.utils.utils as utils
+import src.date.utils as utils
 
 
 class Lexer(object):
@@ -20,6 +20,7 @@ class Lexer(object):
         "AN",
         "SPACE",
         "DE",
+       #  "LE",
         "CHIFFRE_UNITE",
         "CHIFFRE_DIZAINE",
         "CHIFFRE_CENTAINE",
@@ -33,6 +34,7 @@ class Lexer(object):
     t_JOUR = r"\d{1,2}"
     t_AND = r"et|,"
     t_ANDOR = r"-"
+   # t_LE = r"[lL]e"
     t_RANGE = utils.nfc_normalize(r"à\s|au\s|a\s")
 
 
@@ -75,6 +77,10 @@ class Lexer(object):
 
     def t_SPACE(self, t):
         r'\s+'  # Capturer les espaces, mais ne pas les retourner
+        pass
+
+    def t_LE(self, t):
+        r'[Ll]e'
         pass
 
 

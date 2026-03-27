@@ -1,11 +1,12 @@
 import PIL.Image
 from kraken.lib import vgsl
+from kraken.serialization import serialize as serialize
 from kraken import blla
 from kraken.lib import models
 from kraken import rpred
-import kraken
+import kraken.containers
 from src.utils.utils import OCRRecord
-
+import dataclasses
 
 class KRAKEN():
 	"""
@@ -21,7 +22,19 @@ class KRAKEN():
 		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device="cuda:0")
 		return baseline_seg
 
-	def predict_with_kraken(self, im:PIL.Image.Image, segments:kraken.blla.Segmentation) -> OCRRecord:
+
+
+	def serialize(self, prediction):
+		serialized = serialize(results=prediction,
+							   template="alto")
+		return serialized
+
+
+	def predict_with_kraken(self, im:PIL.Image.Image,
+							segments:kraken.blla.Segmentation,
+							extract_polygons:bool = False,
+							return_kraken_preds = False,
+							image_name = None) -> OCRRecord:
 		"""
 		Production de l'inférence à l'aide d'un modèle kraken et de segments.
 		:param im: L'image chargée
@@ -41,10 +54,17 @@ class KRAKEN():
 		"""
 		model = models.load_any(self.ocr_model, device="cuda:0")
 		pred_it = rpred.rpred(model, im, segments)
+		if return_kraken_preds:
+			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)
+			return results
 		prediction = []
 		for line, record in zip(segments.lines, pred_it):
 			interm_dict = {}
 			interm_dict['baseline'] = line.baseline
+			if extract_polygons:
+				interm_dict['polygon'] = line.boundary
+			else:
+				interm_dict['polygon'] = None
 			interm_dict['prediction'] = record.prediction
 			interm_dict['cuts'] = record.cuts
 			prediction.append(interm_dict)

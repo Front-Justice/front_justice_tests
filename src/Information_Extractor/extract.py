@@ -1,5 +1,5 @@
 ###############
-
+import math
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
 
 ###############
@@ -40,7 +40,7 @@ class Extractor:
 				 kraken_model_transcription: str,
 				 resize_factor: int = 1,
 				 debug: bool = False,
-				 use_party=True,
+				 use_party=False,
 				 device="cuda:0",
 				 minutier=None):
 		"""
@@ -55,11 +55,11 @@ class Extractor:
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large")
-		self.ner = pipeline('ner',
-							model=self.ner_model,
-							tokenizer=self.tokenizer,
-							aggregation_strategy="simple",
-							device="cpu")
+		self.date_recognition_pipeline = pipeline('ner',
+												  model=self.ner_model,
+												  tokenizer=self.tokenizer,
+												  aggregation_strategy="simple",
+												  device="cpu")
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
@@ -107,33 +107,35 @@ class Extractor:
 
 
 	def extract_signature_greffier(self,
-								   ocr_prediction:OCRRecord):
+								   ocr_prediction:OCRRecord,
+								   image):
 		"""
 		On extrait la ligne contenant la signature du greffier, pour clustering.
 		:param ocr_prediction:
 		:return:
 		"""
-		ligne_greffier = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
+		ligne_greffier, _ , index = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
 													   string_to_match="Le Greffier,",
-													    exact_match=True)
+													    exact_match=False,
+																  return_index=True)
 
-		corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
+		# corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
 		#
-		ligne_signature = ocr_prediction[corresponding_idx[0] + 1]
+		ligne_signature = ocr_prediction[index + 1]
 		print(ligne_signature.prediction)
-		if ligne_signature.prediction == "+":
+		image = Image.open(image).convert("RGBA")
+		height_rectangle = 150
+		if "+" in ligne_signature.prediction:
 			"Signature trouvée"
 			# image = Image.open(self.minute_courante[3]["image_path"]).convert("RGBA")
-			image = Image.open("data/minute_test_3/0316.jpg").convert("RGBA")
-			shifted_lines = utils.extend_line(ligne_signature, 150)
-			polygon = KRAKEN.blla.calculate_polygonal_environment(im=image, baselines=[shifted_lines])
-			utils.polygon_extraction(polygon, image)
+			utils.extract_bbox_from_baseline(ligne_signature, height_rectangle=150, image=image)
 		else:
 			new_transcription = utils.extend_baseline_and_retranscribe(line=ligne_signature,
 												   image_path=self.minute_courante[3]["image_path"],
 												   ocr_model=self.kraken_model_transcription)
-			print(new_transcription)
-		print("\n\n\nHERE\n\n\n")
+			utils.extract_bbox_from_baseline(new_transcription, height_rectangle=150, image=image)
+			# utils.polygon_extraction(polygon, image)
+		# return polygon
 
 	def extract_lines_from_zone(self,
 								annotations,
@@ -492,7 +494,7 @@ class Extractor:
 																	 return_word=True)
 			after_target_string = name_split[-1]
 			nom_soldat = after_target_string.split()[0]
-			entities = self.ner(after_target_string)
+			entities = self.date_recognition_pipeline(after_target_string)
 			if nom_soldat == entities[0]['word']:
 				certainty = 1
 			else:
@@ -501,7 +503,7 @@ class Extractor:
 
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(ligne_nom_soldat.prediction,
 																	   nom_soldat,
-																	   pipeline=self.ner)
+																	   pipeline=self.date_recognition_pipeline)
 		range_prenom_debut = ligne_nom_soldat.prediction.find(nom_soldat)
 		range_prenom_fin = ligne_nom_soldat.prediction.find(prenoms) + len(prenoms)
 		nom_complet = ligne_nom_soldat.prediction[range_prenom_debut:range_prenom_fin]
@@ -601,7 +603,7 @@ class Extractor:
 				nom_soldat = after_target_string.split()[0]
 			except IndexError:
 				nom_soldat = None
-		entities = self.ner(ligne_nom_soldat.prediction)
+		entities = self.date_recognition_pipeline(ligne_nom_soldat.prediction)
 		if len(entities) != 0:
 			if nom_soldat == entities[0]['word']:
 				certainty = 0.8
@@ -617,7 +619,7 @@ class Extractor:
 		else:
 			prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(ligne_nom_soldat.prediction,
 																		   nom_soldat,
-																		   pipeline=self.ner)
+																		   pipeline=self.date_recognition_pipeline)
 			try:
 				range_prenom_debut = ligne_nom_soldat.prediction.find(nom_soldat)
 			except TypeError:
@@ -652,7 +654,7 @@ class Extractor:
 											 "extracted": "UNK"}
 		else:
 			splits = splits[-1]
-			ner = self.ner(splits)
+			ner = self.date_recognition_pipeline(splits)
 			first_entity = ner[0]
 			if first_entity['entity_group'] == 'LOC' and first_entity['start'] == 0:
 				lieu_naissance = first_entity['word']
@@ -880,7 +882,7 @@ class Extractor:
 				"extracted": None,
 				"prediction": None}
 			}
-		entites_nommees = self.ner(apres_defenseur)
+		entites_nommees = self.date_recognition_pipeline(apres_defenseur)
 		try:
 			nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
 		except IndexError:
@@ -1063,6 +1065,39 @@ class Extractor:
 				"extracted": lignes_questions_as_string,
 				"bbox": zone_questions}
 
+	def extraire_date_1_p4(self, ocr_prediction: OCRRecord):
+		"""
+		Extraction de la première occurrence de la date en page 4.
+		:param ocr_prediction: la transcription de la page (objet OCRRecord)
+		:return: la date normalisée
+		"""
+
+		# La ligne "Le jugement a été lu par nous contient la date.
+		jugement_lu, _, index = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
+													string_to_match="le présent jugement a été lu par nous",
+													return_index=True)
+		ligne_jugement_lu = jugement_lu.prediction
+		NER = self.date_recognition_pipeline(ligne_jugement_lu)
+		if any(["date" in item.values() for item in NER]):
+			date_identifiee = extractions.extraire_feature(entities_list=NER,
+												lignes=jugement_lu,
+												feature="date")
+		else:
+			date_identifiee = utils.approximate_sentence_split(sentence=ligne_jugement_lu,
+															  substring="le présent jugement a été")[0]
+			date_identifiee = utils.split_before_keep_delimiter(target_string=date_identifiee, delimiter="an")[-1]
+			date_identifiee = date_identifiee.replace("L'", "")
+		corrected_date = utils.correct_date(date_identifiee)
+		try:
+			date_normalisee = date.process_date(corrected_date)
+		except TypeError:
+			date_normalisee = None
+
+		return {
+			"extracted": date_identifiee,
+			"corrected": corrected_date,
+			"normalized": date_normalisee
+		}
 
 	def extraire_noms_p4(self, ocr_prediction: OCRRecord) -> dict:
 		"""
@@ -1078,7 +1113,7 @@ class Extractor:
 
 		# La seconde, "le jugement a été lu par nous"
 		jugement_lu, _, index = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
-													string_to_match="le jugement a été lu",
+													string_to_match="le présent jugement a été lu",
 													return_index=True)
 		target_lines = ocr_prediction[index:index+2]
 		NER = self.entity_spotting_pipeline(target_lines.join_transcription())
@@ -1168,7 +1203,7 @@ class Extractor:
 	def extraire_paragraphe_final_p4(self,
 							  ocr_prediction: OCRRecord,
 							  annotations: YOLORecord,
-							  loaded_image: PIL.Image.Image = None) -> dict:
+							  loaded_image: PIL.Image.Image = None) -> tuple[dict, dict]:
 		"""
 		Cette fonction extrait les questions posées par le Président à partir des prédictions et des zones.
 		:param ocr_prediction: un objet OCRRecord
@@ -1190,23 +1225,25 @@ class Extractor:
 		except TypeError:
 			return {"prediction": lignes_recapitulatif_as_string,
 					"frais": None,
-					"date_proces": None,
-					"bbox": zone_tableau}
+					"bbox": zone_tableau}, None
 		somme_toutes_lettres = utils.approximate_sentence_split(sentence=after_somme, substring=" du montant de laquelle")[0]
 		somme_toutes_lettres = somme_toutes_lettres.strip()
 		total = utils.sum_to_float(somme_toutes_lettres)
 		
 		# On cherche la date du jugement, dans la dernière phrase du dernier paragraphe
-		derniere_phrase = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
-		ner = self.ner(derniere_phrase.lower())
+		try:
+			phrase_date = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
+		except TypeError:
+			date_line, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match="Fait en la Chambre du Conseil de Guerre")
+			phrase_date = utils.approximate_sentence_split(sentence=date_line.prediction, substring="Fait en la Chambre")[-1]
+		ner = self.date_recognition_pipeline(phrase_date.lower())
 		identified_date = [item for item in ner if item['entity_group'] == "DATE"]
 		try:
 			corrected = utils.correct_date(identified_date[0]['word'])
 		except IndexError:
-			return {
-			"predicted": None,
-			"date_normalisee": None
-		}
+			return {"predicted": lignes_recapitulatif_as_string,
+				"extracted": total,
+				"bbox": zone_tableau}, None
 		try:
 			parsed = date.process_date(corrected)
 		except TypeError:
@@ -1214,15 +1251,15 @@ class Extractor:
 
 		date_du_proces = {
 			"predicted": identified_date[0]['word'],
-			"date_normalisee": parsed
+			"corrected": corrected,
+			"normalized": parsed
 		}
 
 
 
-		return {"prediction": lignes_recapitulatif_as_string,
-				"frais": total,
-				"date_proces": date_du_proces,
-				"bbox": zone_tableau}
+		return {"predicted": lignes_recapitulatif_as_string,
+				"extracted": total,
+				"bbox": zone_tableau}, date_du_proces
 
 
 
@@ -1413,9 +1450,9 @@ class Extractor:
 			target_line = [corresponding_lines[1]]
 		except IndexError:
 			return {"bbox": date_zone,
-					"Date normalisee": None,
-					"Date": None,
-					"predictions": None}
+					"normalized": None,
+					"extracted": None,
+					"predicted": None}
 
 		date_crime_kraken = target_line[0].prediction
 
@@ -1444,26 +1481,26 @@ class Extractor:
 			# TODO: la correction supprime les tirets et la ponctuation, marqueur de période ou répétition, voir comment corriger ça
 			corrected_date = utils.correct_date(target_date)
 		except TypeError:
-			return {"date_normalisee": None,
-					"Date corrigée": None,
-					"Date retenue": date_crime_party,
+			return {"normalized": None,
+					"corrected": None,
+					"extracted": date_crime_party,
 					"baseline": target_line.baseline,
 					"bbox": date_zone,
 					"certitude": certitude,
-					"predictions": {"party": date_crime_party,
+					"predicted": {"party": date_crime_party,
 									"kraken": date_crime_kraken}}
 		try:
 			normalized_date = date.process_date(corrected_date, debug=False)
 		except TypeError:
 			normalized_date = None
 
-		return {"date_normalisee": normalized_date,
-				"Date corrigée": corrected_date,
-				"Date retenue": date_crime_party,
+		return {"normalized": normalized_date,
+				"corrected": corrected_date,
+				"extracted": date_crime_party,
 				"baseline": target_line.baseline,
 				"bbox": date_zone,
 				"certitude": certitude,
-				"predictions": {"party": date_crime_party,
+				"predicted": {"party": date_crime_party,
 								"kraken": date_crime_kraken}}
 
 	def extraire_informations_ajouts_posterieurs(self,
@@ -1498,14 +1535,16 @@ class Extractor:
 
 			sorted_lines = utils.sort_lines_with_rotation(as_record, zones_filtrees_as_rectangle)
 			lignes_fusionnees = sorted_lines.join_transcription()
-			resultat = self.ner(lignes_fusionnees.lower())
+			resultat = self.date_recognition_pipeline(lignes_fusionnees.lower())
+			# TODO: reprendre ça, il peut y avoir plusieurs dates
 			try:
-				extracted_date = next(item for item in resultat if item['entity_group'] == 'DATE')['word']
-			except StopIteration:
+				extracted_date = [item for item in resultat if item['entity_group'] == 'DATE'][-1]['word']
+			except IndexError:
 				extracted_date = None
 			if extracted_date is not None:
 				try:
-					normalized_date = date.process_date(extracted_date, debug=False)
+					corrected_date = utils.correct_date(extracted_date)
+					normalized_date = date.process_date(corrected_date, debug=False)
 				except TypeError:
 					normalized_date = None
 			else:
@@ -1538,7 +1577,8 @@ class Extractor:
 				"date": normalized_date,
 				"information": information_contenue,
 				"prediction": lignes_fusionnees,
-				"bbox": annotations[0].coordinates
+				"bbox": annotations[0].coordinates,
+				"baselines": [item.baseline for item in as_record]
 			})
 		return list_of_results
 
@@ -1646,7 +1686,7 @@ class Extractor:
 		else:
 			check_date_regexp = re.compile(r"\d{4}")
 
-			all_dates = [item for item in self.ner(lignes_condamnations_str) if item['entity_group'] == "DATE"]
+			all_dates = [item for item in self.date_recognition_pipeline(lignes_condamnations_str) if item['entity_group'] == "DATE"]
 			bornes_dates = []
 			for date in all_dates:
 				is_date = len(re.findall(check_date_regexp, date['word'])) > 0
@@ -1893,7 +1933,7 @@ class Extractor:
 
 		prenoms, certitude_prenoms = utils.extraction_prenom_du_soldat(name_line.prediction,
 																	   nom_du_soldat_kraken,
-																	   pipeline=self.ner)
+																	   pipeline=self.date_recognition_pipeline)
 		if show_images:
 			cropped = loaded_image.crop(
 				(
@@ -1963,7 +2003,7 @@ class Extractor:
 
 		try:
 			date_naissance_ner = \
-				[item['word'] for item in self.ner(lignes_description_as_string) if item['entity_group'] == 'DATE'][0]
+				[item['word'] for item in self.date_recognition_pipeline(lignes_description_as_string) if item['entity_group'] == 'DATE'][0]
 		except IndexError:
 			print(f"Not found: {debug}")
 			print([item.prediction for item in lignes_description_du_soldat])
@@ -1976,20 +2016,20 @@ class Extractor:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
 			print(f"Error with date {date_naissance_ner}")
-			date_naissance = {"date_normalisee": None,
-							  "Date naissance extraite": date_naissance_extraite,
-							  "Date corrigée": date_naissance_corrigee,
-							  "prediction": lignes_description_as_string}
+			date_naissance = {"normalized": None,
+							  "extracted": date_naissance_extraite,
+							  "corrected": date_naissance_corrigee,
+							  "predicted": lignes_description_as_string}
 			description_du_soldat["date_de_naissance"] = date_naissance
 			date_normalisee = None
 		try:
 			age = utils.calcule_age(date_normalisee['when'], date_proces=self.date_proces['when'])
 		except TypeError:
 			age = "UNK"
-		date_naissance = {"date_normalisee": date_normalisee,
-						  "Date naissance extraite": date_naissance_extraite,
-						  "Date corrigée": date_naissance_corrigee,
-						  "prediction": lignes_description_as_string}
+		date_naissance = {"normalized": date_normalisee,
+						  "extracted": date_naissance_extraite,
+						  "corrected": date_naissance_corrigee,
+						  "predicted": lignes_description_as_string}
 		description_du_soldat["date_de_naissance"] = date_naissance
 		description_du_soldat["age"] = age
 
@@ -2087,7 +2127,7 @@ class Extractor:
 				return None
 		lieu_naissance_corrige = utils.strip_punctuation(lieu_naissance)
 		informations_naissance = extractions.extraction_geographique(lieu_naissance_corrige, informations_naissance,
-																	 self.ner)
+																	 self.date_recognition_pipeline)
 
 		informations_naissance["prediction"] = lieu_naissance
 		description_du_soldat["lieu_naissance"] = informations_naissance
@@ -2103,7 +2143,7 @@ class Extractor:
 			# On agrandit al recherche si cela ne donne rien.
 			split_taille = utils.approximate_word_split(split_lieu_naissance[-1], "Taille", sensibility=0.85)
 			lieu_residence = split_taille[0]
-		informations_residence = extractions.extraction_geographique(lieu_residence, informations_residence, self.ner)
+		informations_residence = extractions.extraction_geographique(lieu_residence, informations_residence, self.date_recognition_pipeline)
 		informations_residence["prediction"] = lieu_residence
 		description_du_soldat["lieu_residence"] = informations_residence
 
@@ -2391,12 +2431,12 @@ class Extractor:
 
 		return description_du_soldat
 
-	def extraire_date_du_proces(self,
-								ocr_prediction: OCRRecord,
-								annotations: YOLORecord,
-								image: str = None,
-								loaded_image: PIL.Image.Image = None,
-								show_images: bool = False):
+	def extraire_date_du_proces_p1(self,
+								   ocr_prediction: OCRRecord,
+								   annotations: YOLORecord,
+								   image: str = None,
+								   loaded_image: PIL.Image.Image = None,
+								   show_images: bool = False):
 		"""
 		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -2466,17 +2506,16 @@ class Extractor:
 		corrected_date = utils.correct_date(date_extraite)
 		print(f"Corrected: {corrected_date}")
 		try:
-			extracted = date.process_date(corrected_date)
+			normalized = date.process_date(corrected_date)
 		except TypeError:
-			extracted = None
-		self.date_proces = extracted
-		return {
-			"bbox": zone_magistrats,
-			"baseline": baseline,
-			"prediction": line_as_string,
-			"Date corrigée": corrected_date,
-			"date_normalisee": extracted
-		}
+			normalized = None
+		self.date_proces = normalized
+		current_date = utils.DateRecord(extracted=date_extraite,
+										predicted=line_as_string,
+										bbox=zone_magistrats,
+										baseline=baseline,
+										normalized=normalized)
+		return current_date.to_json()
 
 	def extraire_magistrats(self,
 							ocr_prediction,
@@ -2607,12 +2646,12 @@ class Extractor:
 				if is_in_box is True:
 					try:
 						table_dict[idx].append(
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None)
+							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None)
 						)
 
 					except KeyError:
 						table_dict[idx] = [
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None)
+							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None)
 						]
 		table_des_magistrats = [item for item in table_dict.values()]
 
@@ -2626,12 +2665,12 @@ class Extractor:
 		for jure in jures:
 			jury_extrait = extractions.extraire_nom_et_fonction(
 				prediction=" ".join(line.prediction for line in jure),
-				pipeline=self.ner)
-			if jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
+				pipeline=self.date_recognition_pipeline)
+			print(jury_extrait['persName'])
+			if (jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
 																				" ".join(line.prediction for line in
-																						 jure)) > .7 \
-													  or utils.similarite_ratcliff("Juges", " ".join(
-						line.prediction for line in jure)) > .7):
+																						 jure)) > .7) \
+													  or utils.similarite_ratcliff("Juges", jury_extrait['persName']) > .7):
 				print(" ".join(line.prediction for line in jure))
 				print("ÉCARTÉ")
 				continue
@@ -2643,7 +2682,7 @@ class Extractor:
 			print("Warning: il manque un membre du jury")
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
-																   self.ner)
+																   self.date_recognition_pipeline)
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
 		coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates
@@ -2662,13 +2701,13 @@ class Extractor:
 				lignes_zone_magistrat.append(predicted_line)
 
 		# On extrait le nom du greffier:
-		greffier = extractions.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+		greffier = extractions.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.date_recognition_pipeline)
 		commissaire = extractions.extraire_commissaire(lignes_zone_magistrat=lignes_zone_magistrat,
-													   ner_pipeline=self.ner)
-		general = extractions.extraire_general(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.ner)
+													   ner_pipeline=self.date_recognition_pipeline)
+		general = extractions.extraire_general(lignes_zone_magistrat=lignes_zone_magistrat, ner_pipeline=self.date_recognition_pipeline)
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
-			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.ner)
+			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.date_recognition_pipeline)
 		return {"president": {"extracted": processed_president,
 							  "baseline": [line.baseline for line in president],
 							  "predictions": [line.prediction for line in president]},

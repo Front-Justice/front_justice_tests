@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 import tqdm
 
@@ -54,7 +55,7 @@ class Pipeline():
 			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
 			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
 			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
-			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/modele_page_4_v2_best.mlmodel"
+			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/modele_page_4.mlmodel"
 			 }
 		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
@@ -160,7 +161,12 @@ class Pipeline():
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
-	def transcription_kraken(self, image:str, transcription_only:bool, current_page:int, suffix="", model=None) -> OCRRecord:
+	def transcription_kraken(self, image:str,
+							 transcription_only:bool,
+							 current_page:int,
+							 suffix="",
+							 extract_polygons:bool=False,
+							 model=None) -> OCRRecord:
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
@@ -180,7 +186,7 @@ class Pipeline():
 		else:
 			baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
 			utils.pickle_object(obj=baseline, path=segmentation_json)
-		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline)
+		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, extract_polygons=extract_polygons)
 
 
 	def traitement_p_2(self, page, show_image=False):
@@ -338,14 +344,16 @@ class Pipeline():
 			utils.draw_lines_on_image(image_path=page["image_path"],
 									  baseline=[line.baseline for line in self.current_page_transcription])
 
-		self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription)
+		# current_dict["polygon_signature_greffier"] = self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription,
+		# 										  image=page["image_path"])
 
 		zones_page_4, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=classes_page_4,
 																		   confidence=0.5,
 																		   model=self.yolo_models["page_4"],
-																		   show_image=show_image)
+																		   show_image=False)
 
+		current_dict["date_proces_1"] = self.extractor.extraire_date_1_p4(ocr_prediction=self.current_page_transcription)
 		current_dict["identite"] = self.extractor.extraire_noms_p4(ocr_prediction=self.current_page_transcription)
 
 		if "tableau_frais" not in zones_manquantes:
@@ -360,7 +368,7 @@ class Pipeline():
 			pass
 
 		if "recapitulatif_somme" not in zones_manquantes:
-			current_dict["dernier_paragraphe"] = self.extractor.extraire_paragraphe_final_p4(
+			current_dict["dernier_paragraphe"], current_dict["date_proces_2"] = self.extractor.extraire_paragraphe_final_p4(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_4,
 				loaded_image=loaded_image)
@@ -375,7 +383,11 @@ class Pipeline():
 		return zone_dict, current_dict
 
 
-	def transcription_page(self, page:str, show_image:bool = False, force_resegment = False):
+	def transcription_page(self,
+						   page:str,
+						   show_image:bool = False,
+						   force_resegment:bool = False,
+						   extract_polygons:bool = False):
 		"""
 		Fonction wrapper de transcription d'une page
 		:param page: La page à transcrire
@@ -391,8 +403,8 @@ class Pipeline():
 				transcription_only=self.resegment is False
 								   and self.retranscribe is True,
 				current_page=int(
-					page['classe'].split("_")[-1]
-																		)
+					page['classe'].split("_")[-1],),
+				extract_polygons=extract_polygons
 																		)
 
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
@@ -501,7 +513,7 @@ class Pipeline():
 		zone_dict["zones_manquantes"] = zones_manquantes
 
 		if "Magistrats" not in zones_manquantes:
-			current_dict["date_proces"] = self.extractor.extraire_date_du_proces(
+			current_dict["date_proces"] = self.extractor.extraire_date_du_proces_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 				image=page["image_path"],
@@ -653,14 +665,17 @@ class Pipeline():
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
 		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
-		utils.convert_to_csv(minutes, "results/database.csv")
+		# utils.convert_to_csv(minutes, "results/database.csv")
+		previous_minute = None
 		# for key, pages in minutes.items():
-		# 	reconciliator = reconciliation.Reconciliator(minute_list=pages)
+		# 	reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_minute)
 		# 	reconciliator.reconciliate_minute()
 		# 	self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
+		# 	previous_minute = reconciliator.reconciliated_minute
 		# 	utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
 		# exit(0)
 		image_index = 0
+		previous_pages = None
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if start_after > image_index:
@@ -678,10 +693,15 @@ class Pipeline():
 					print(f"Treating {page}")
 					if page["classe"] == "page_4":
 						force_resegment = True
+						extract_polygons = True
 					else:
 						force_resegment = False
+						extract_polygons = False
 					force_resegment = False
-					self.transcription_page(page=page, show_image=False, force_resegment=force_resegment)
+					self.transcription_page(page=page,
+											show_image=False,
+											force_resegment=force_resegment,
+											extract_polygons=extract_polygons)
 					zones_ajouts, ajouts = self.process_additions(page=page)
 					if ajouts is None:
 						ajouts = {"ajouts": None}
@@ -701,7 +721,8 @@ class Pipeline():
 				self.reaffecter_dictionnaire(pages)
 				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 			if not target:
-				reconciliator = reconciliation.Reconciliator(minute_list=pages)
+				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
+				previous_pages = copy.copy(pages)
 				reconciliator.reconciliate_minute()
 				self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
 			utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
@@ -731,7 +752,7 @@ def main(images_dir:str,
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
 		"page_2": "src/Vision/models/yolov11_page_2.pt",
 		"page_3": "src/Vision/models/yolo26x_page_3.pt",
-		"page_4": "src/Vision/models/yolov11_page_4.pt",
+		"page_4": "src/Vision/models/yolo26_page_4.pt",
 		"ajouts": "src/Vision/models/yolo26_ajouts.pt"
 	}
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
