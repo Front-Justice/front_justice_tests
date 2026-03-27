@@ -63,9 +63,9 @@ class Extractor:
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
-		entity_spotting_model = ("/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Information_Extractor/models/model_NER")
+		entity_spotting_model = ("src/Information_Extractor/models/model_NER")
 
-		entity_spotting_model = ("/media/mgl/stock/Front_Justice/NER_training/BERT-NER-CoNLL/BERTNER/results_test_v3/best_model")
+		entity_spotting_model = ("src/Information_Extractor/models/best_model")
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
 		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base")
