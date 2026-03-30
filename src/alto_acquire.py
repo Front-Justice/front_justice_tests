@@ -461,7 +461,7 @@ if __name__ == '__main__':
 	clustering_n = 8
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
-	with mp.Pool(processes=int(8)) as pool:
+	with mp.Pool(processes=int(16)) as pool:
 		data = [(images, False) for images in grouped_images]
 		pool.starmap(main, data)
 	# main(images_dir, debug)
