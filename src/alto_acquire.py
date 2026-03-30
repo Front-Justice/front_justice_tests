@@ -465,7 +465,12 @@ if __name__ == '__main__':
 	clustering_n = 8
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
-	with mp.Pool(processes=int(20)) as pool:
-		data = [(images, False) for images in grouped_images]
-		pool.starmap(main, data)
-	# main(images_dir, debug)
+	# with mp.Pool(processes=int(20)) as pool:
+	# 	data = [(images, False) for images in grouped_images]
+	# 	pool.starmap(main, data)
+	with zipfile.ZipFile('results/files.zip', 'w') as myzip:
+		all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
+		all_files.sort(key=lambda x: int(x))
+		for file in all_files:
+			myzip.write(f"results/alto_results/{file}.xml")
+			myzip.write(f"results/alto_results/{file}.jpg")
