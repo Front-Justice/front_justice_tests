@@ -3,7 +3,7 @@ import copy
 import os
 import shutil
 from collections import namedtuple
-
+import multiprocessing as mp
 import tqdm
 
 import torch.cuda
@@ -377,12 +377,12 @@ class Pipeline():
 				with open(f"results/alto_results/{page['image_path'].split('/')[-1].split('.')[0]}.xml", "w") as output_xml:
 					output_xml.write(ET.tostring(alto_transcription, pretty_print=True, encoding='utf-8').decode())
 				shutil.copy(page["image_path"], f"results/alto_results/")
-		with zipfile.ZipFile('results/files.zip', 'w') as myzip:
-			all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
-			all_files.sort(key=lambda x: int(x))
-			for file in all_files:
-				myzip.write(f"results/alto_results/{file}.xml")
-				myzip.write(f"results/alto_results/{file}.jpg")
+		# with zipfile.ZipFile('results/files.zip', 'w') as myzip:
+		# 	all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
+		# 	all_files.sort(key=lambda x: int(x))
+		# 	for file in all_files:
+		# 		myzip.write(f"results/alto_results/{file}.xml")
+		# 		myzip.write(f"results/alto_results/{file}.jpg")
 
 	def insert_zones(self, zones, transcription):
 		tags = ET.fromstring(self.segmOnto_labels)
@@ -421,14 +421,14 @@ class Pipeline():
 
 		return transcription
 
-def main(images_dir:str,
+def main(images:list,
 		 debug:bool=False):
-	images = glob.glob(f"{images_dir}/*.jpg")
+	# images = glob.glob(f"{images_dir}/*.jpg")
 	# Attention, cette façon de trier ne peut fonctionner qu'au sein d'un même minutier
-	try:
-		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
-	except:
-		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
+	# try:
+	# 	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
+	# except:
+	# 	images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -442,6 +442,7 @@ def main(images_dir:str,
 						yolo_models=yolo_models,
 						debug=debug)
 	pipeline.workflow(images)
+	print(f"Images: {images} done.")
 
 
 if __name__ == '__main__':
@@ -455,4 +456,12 @@ if __name__ == '__main__':
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
 	debug = True if arguments.debug == "True" else False
-	main(images_dir, debug)
+	images = glob.glob(f"{images_dir}/*.jpg")
+	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
+	clustering_n = 8
+	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
+	print(grouped_images)
+	with mp.Pool(processes=int(8)) as pool:
+		data = [(images, False) for images in grouped_images]
+		pool.starmap(main, data)
+	# main(images_dir, debug)
