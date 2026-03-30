@@ -252,9 +252,13 @@ class Pipeline():
 		"""
 		print("Cas 1")
 		print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+		try:
+			current_page = int(page['classe'].split("_")[-1])
+		except ValueError:
+			current_page = "autre"
 		return self.transcription_kraken(
 			image=page["image_path"],
-			current_page=int(page['classe'].split("_")[-1]),
+			current_page=current_page,
 		return_alto=True)
 
 	def process_additions(self, page:json, show_image=False):
@@ -461,7 +465,7 @@ if __name__ == '__main__':
 	clustering_n = 8
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
-	with mp.Pool(processes=int(16)) as pool:
+	with mp.Pool(processes=int(20)) as pool:
 		data = [(images, False) for images in grouped_images]
 		pool.starmap(main, data)
 	# main(images_dir, debug)
