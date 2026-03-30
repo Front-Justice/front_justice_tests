@@ -2,6 +2,7 @@ import argparse
 import copy
 import os
 import shutil
+from collections import namedtuple
 
 import tqdm
 
@@ -39,6 +40,8 @@ class Pipeline():
 		self.current_page_transcription = None
 		self.minutes = {}
 		self.images_name_list = []
+
+		self.rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
 		self.current_image_idx = 0
 		self.pages_classees = []
 
@@ -52,12 +55,14 @@ class Pipeline():
 		# Les modèles d'OCR
 		self.resegment = resegment
 		self.retranscribe = retranscribe
+		self.global_yolo_model = YOLO.load("src/Vision/models/yolo_all_pages.pt")
 		self.kraken_lines_model = {
 			 0: "src/Vision/models/lignes_ajouts.mlmodel",
 			 1: "src/Vision/models/modele_ligne_page_1.mlmodel",
 			 2: "src/Vision/models/modele_ligne_page_2.mlmodel",
 			 3: "src/Vision/models/modele_ligne_page_3.mlmodel",
-			 4: "src/Vision/models/modele_page_4.mlmodel"
+			 4: "src/Vision/models/modele_page_4.mlmodel",
+			"autre": "src/Vision/models/modele_ligne_page_1.mlmodel",
 			 }
 		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
@@ -74,12 +79,64 @@ class Pipeline():
 										   device=device,
 										   minutier=self.minutes)
 
-	def reaffecter_dictionnaire(self, minute_courante):
-		"""
-		Cette fonction met à jour le dictionnaire dans la classe extractor.
-		:return:
-		"""
-		self.extractor.update_dict(minute_courante)  # Met à jour B
+		self.segmOnto_labels = """
+	<Tags>
+		<OtherTag ID="BT16575" LABEL="MarginTextZone" DESCRIPTION="block type MarginTextZone"/>
+		<OtherTag ID="BT16576" LABEL="DamageZone" DESCRIPTION="block type DamageZone"/>
+		<OtherTag ID="BT16577" LABEL="DigitizationArtefactZone" DESCRIPTION="block type DigitizationArtefactZone"/>
+		<OtherTag ID="BT16578" LABEL="DropCapitalZone" DESCRIPTION="block type DropCapitalZone"/>
+		<OtherTag ID="BT16579" LABEL="GraphicZone" DESCRIPTION="block type GraphicZone"/>
+		<OtherTag ID="BT16581" LABEL="NumberingZone" DESCRIPTION="block type NumberingZone"/>
+		<OtherTag ID="BT16582" LABEL="QuireMarksZone" DESCRIPTION="block type QuireMarksZone"/>
+		<OtherTag ID="BT16583" LABEL="RunningTitleZone" DESCRIPTION="block type RunningTitleZone"/>
+		<OtherTag ID="BT16584" LABEL="SealZone" DESCRIPTION="block type SealZone"/>
+		<OtherTag ID="BT16585" LABEL="StampZone" DESCRIPTION="block type StampZone"/>
+		<OtherTag ID="BT26269" LABEL="MainZone-orderNumber" DESCRIPTION="block type MainZone-orderNumber"/>
+		<OtherTag ID="BT26270" LABEL="MainZone-crimeDate" DESCRIPTION="block type MainZone-crimeDate"/>
+		<OtherTag ID="BT26271" LABEL="MainZone-judgementPlace" DESCRIPTION="block type MainZone-judgementPlace"/>
+		<OtherTag ID="BT26272" LABEL="MarginTextZone-addition" DESCRIPTION="block type MarginTextZone-addition"/>
+		<OtherTag ID="BT26273" LABEL="MainZone" DESCRIPTION="block type MainZone"/>
+		<OtherTag ID="BT26274" LABEL="MarginTextZone-note" DESCRIPTION="block type MarginTextZone-note"/>
+		<OtherTag ID="BT26275" LABEL="QuireMarksZone-signature" DESCRIPTION="block type QuireMarksZone-signature"/>
+		<OtherTag ID="BT26276" LABEL="MainZone-judgementNumber" DESCRIPTION="block type MainZone-judgementNumber"/>
+		<OtherTag ID="BT26277" LABEL="CustomZone-signature" DESCRIPTION="block type CustomZone-signature"/>
+		<OtherTag ID="LT6926" LABEL="DefaultLine" DESCRIPTION="line type DefaultLine"/>
+		<OtherTag ID="LT6927" LABEL="HeadingLine" DESCRIPTION="line type HeadingLine"/>
+		<OtherTag ID="LT6928" LABEL="InterlinearLine" DESCRIPTION="line type InterlinearLine"/>
+		<OtherTag ID="LT10703" LABEL="CustomLine:margin" DESCRIPTION="line type CustomLine:margin"/>
+		<OtherTag ID="LT10704" LABEL="CustomLine:scratched" DESCRIPTION="line type CustomLine:scratched"/>
+		<OtherTag ID="LT10705" LABEL="CustomLine:signature" DESCRIPTION="line type CustomLine:signature"/>
+		<OtherTag ID="LT10706" LABEL="default" DESCRIPTION="line type default"/>
+	</Tags>
+	"""
+
+		self.tagrefs_dict = {"BT16575": "MarginTextZone",
+"BT16576": "DamageZone",
+"BT16577": "DigitizationArtefactZone",
+"BT16578": "DropCapitalZone",
+"BT16579": "GraphicZone",
+"BT16581": "NumberingZone",
+"BT16582": "QuireMarksZone",
+"BT16583": "RunningTitleZone",
+"BT16584": "SealZone",
+"BT16585": "StampZone",
+"BT26269": "MainZone-orderNumber",
+"BT26270": "MainZone-crimeDate",
+"BT26271": "MainZone-judgementPlace",
+"BT26272": "MarginTextZone-addition",
+"BT26273": "MainZone",
+"BT26274": "MarginTextZone-note",
+"BT26275": "QuireMarksZone-signature",
+"BT26276": "MainZone-judgementNumber",
+"BT26277": "CustomZone-signature",
+"LT6926": "DefaultLine",
+"LT6927": "HeadingLine",
+"LT6928": "InterlinearLine",
+"LT10703": "CustomLine:margin",
+"LT10704": "CustomLine:scratched",
+"LT10705": "CustomLine:signature",
+"LT10706": "default"}
+		self.reverse_tagrefs_dict = {val:key for key, val in self.tagrefs_dict.items()}
 
 	def load_image(self, image):
 		self.current_image_path = image
@@ -162,7 +219,7 @@ class Pipeline():
 							 image:str,
 							 current_page:int,
 							 model=None,
-							 return_alto=True) -> OCRRecord:
+							 return_alto=False) -> OCRRecord:
 		"""
 		On segmente et on transcrit avec kraken
 		:param image: Le chemin vers l'image
@@ -186,8 +243,7 @@ class Pipeline():
 
 
 	def transcribe_to_alto(self,
-						   page:str,
-						   extract_polygons:bool = False):
+						   page:str):
 		"""
 		Fonction wrapper de transcription d'une page
 		:param page: La page à transcrire
@@ -198,7 +254,8 @@ class Pipeline():
 		print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 		return self.transcription_kraken(
 			image=page["image_path"],
-			current_page=int(page['classe'].split("_")[-1]))
+			current_page=int(page['classe'].split("_")[-1]),
+		return_alto=True)
 
 	def process_additions(self, page:json, show_image=False):
 		"""
@@ -225,15 +282,19 @@ class Pipeline():
 			return self.transcription_kraken(
 				image=page["image_path"],
 				current_page=0,
-				model=self.kraken_gloses_model
+				model=self.kraken_gloses_model,
+				return_alto=True
 			)
 		else:
 			return None
 
 	def update_label(self, transcription):
-		default_line = transcription.xpath("//alto:Tags/alto:OtherTag[@LABEL = 'default']", namespaces=self.alto_ns)[
-			-1]
-		default_line.set('LABEL', "DefaultLine")
+		try:
+			default_line = transcription.xpath("//alto:Tags/alto:OtherTag[@LABEL = 'default']", namespaces=self.alto_ns)[
+				-1]
+			default_line.set('LABEL', "DefaultLine")
+		except IndexError:
+			return transcription
 		return transcription
 
 
@@ -248,16 +309,14 @@ class Pipeline():
 		:return:
 		"""
 		# On enlève la déclaration XML
-		transcription_1 = "\n".join([line for line in transcription_1.split("\n")[1:]])
-		transcription_2 = "\n".join([line for line in transcription_2.split("\n")[1:]])
-		transcription_finale = ET.fromstring(transcription_1)
+		transcription_finale = transcription_1
 		transcription_finale = self.update_label(transcription_finale)
 		added_lines = ET.Element("OtherTag")
 		added_lines.set("LABEL", "CustomLine:addition")
 		added_lines.set("ID", "TYPE_2")
 		default_line = transcription_finale.xpath("//alto:Tags/alto:OtherTag", namespaces=self.alto_ns)[0]
 		default_line.addnext(added_lines)
-		transcription_cible = ET.fromstring(transcription_2)
+		transcription_cible = transcription_2
 		all_lines_cible = transcription_cible.xpath("//alto:TextLine", namespaces=self.alto_ns)
 		text_bloc_finale = transcription_finale.xpath("//alto:TextBlock", namespaces=self.alto_ns)[-1]
 		for line in all_lines_cible:
@@ -293,24 +352,74 @@ class Pipeline():
 			for page in pages:
 				print("---")
 				print(f"Treating {page}")
+				boxes, _ =	 self.YOLO_Segmenter.segment_zones(page["image_path"],
+																		   target_classes=["MarginTextZone-ajout"],
+																		   confidence=0.1,
+																		   model=self.global_yolo_model,
+																		   show_image=False)
 				alto_transcription = self.transcribe_to_alto(page=page)
+				print(page["image_path"])
+				# basename = f'results/alto_results/{page["image_path"].split("/")[-1].replace(".jpg", ".xml")}'
+				# with open("test.xml", "w") as output_file:
+				# 	output_file.write(alto_transcription)
+				alto_transcription = "\n".join([line for line in alto_transcription.split("\n")[1:]])
+				alto_transcription = ET.fromstring(alto_transcription)
+				alto_transcription = self.insert_zones(zones=boxes, transcription=alto_transcription)
 				lignes_ajoutees = self.process_additions(page=page)
 				if lignes_ajoutees:
+					lignes_ajoutees = "\n".join([line for line in lignes_ajoutees.split("\n")[1:]])
+					lignes_ajoutees = ET.fromstring(lignes_ajoutees)
 					print(lignes_ajoutees)
 					alto_transcription = self.merge_transcriptions(transcription_1=alto_transcription,
 											  transcription_2=lignes_ajoutees)
 				else:
-					alto_transcription = "\n".join([line for line in alto_transcription.split("\n")[1:]])
-					alto_transcription = ET.fromstring(alto_transcription)
 					alto_transcription = self.update_label(alto_transcription)
 				with open(f"results/alto_results/{page['image_path'].split('/')[-1].split('.')[0]}.xml", "w") as output_xml:
 					output_xml.write(ET.tostring(alto_transcription, pretty_print=True, encoding='utf-8').decode())
 				shutil.copy(page["image_path"], f"results/alto_results/")
 		with zipfile.ZipFile('results/files.zip', 'w') as myzip:
-			for file in glob.glob(f"results/alto_results/*"):
-				myzip.write(file)
+			all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
+			all_files.sort(key=lambda x: int(x))
+			for file in all_files:
+				myzip.write(f"results/alto_results/{file}.xml")
+				myzip.write(f"results/alto_results/{file}.jpg")
 
+	def insert_zones(self, zones, transcription):
+		tags = ET.fromstring(self.segmOnto_labels)
+		# root = transcription.getroot()
+		transcription.insert(1, tags)
+		for idx, zone in enumerate(zones):
+			print(zone)
+			new_zone = ET.Element("TextBlock")
+			new_zone.set("HPOS", str(zone.coordinates[0][0]))
+			new_zone.set("VPOS", str(zone.coordinates[0][1]))
+			new_zone.set("WIDTH", str(zone.coordinates[1][0] - zone.coordinates[0][0]))
+			new_zone.set("HEIGHT", str(zone.coordinates[1][1] - zone.coordinates[0][1]))
+			new_zone.set("ID", f"ID_{idx}")
+			new_zone.set("TAGREFS", self.reverse_tagrefs_dict[zone.label])
+			printSpace = transcription.xpath("//alto:PrintSpace", namespaces=self.alto_ns)[0]
+			printSpace.append(new_zone)
+			for idx, line in enumerate(transcription.xpath("//alto:TextLine", namespaces=self.alto_ns)):
+				baseline = line.xpath("@BASELINE")[0]
+				baseline = utils.convert_alto_coordinates(baseline)
 
+				# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
+				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+
+				zone_as_rectangle = self.rectangle(zone.coordinates[0][0],
+															 zone.coordinates[0][1],
+															 zone.coordinates[1][0],
+															 zone.coordinates[1][1])
+				is_in_box = utils.check_if_line_in_box(box_coord=zone_as_rectangle,
+												 baseline=converted_baseline,
+												 intersect_ratio=0.7)
+				# On supprime les lignes en double.
+				if is_in_box and zone.label != "MarginTextZone-addition":
+					new_zone.append(line)
+				elif is_in_box and zone.label == "MarginTextZone-addition":
+					line.getparent().remove(line)
+
+		return transcription
 
 def main(images_dir:str,
 		 debug:bool=False):

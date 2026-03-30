@@ -943,6 +943,11 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 			certainty = None
 	return forename, certainty
 
+def convert_alto_coordinates(coords):
+	splits = coords.split()
+	splits = [int(item) for item in splits]
+	converted = [[splits[idx], splits[idx + 1]] for idx in range(0, len(splits) - 1, 2)]
+	return converted
 
 def match_lines_in_zones(ocr_prediction: OCRRecord,
 						 zone_as_rectangle: namedtuple,
