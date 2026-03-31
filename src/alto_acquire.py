@@ -330,7 +330,6 @@ class Pipeline():
 		:return:
 		"""
 		# On enlève la déclaration XML
-		ajout_copy = copy.deepcopy(lignes_ajout)
 		transcription_finale = transcription_1
 		transcription_finale = self.update_label(transcription_finale)
 		tous_blocs_ajouts = transcription_finale.xpath(f"//alto:TextBlock[@TAGREFS='{self.reverse_tagrefs_dict['MarginTextZone-ajout']}']", namespaces=self.alto_ns)
