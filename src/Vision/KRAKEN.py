@@ -20,7 +20,7 @@ class KRAKEN():
 
 	def segment_lines_with_kraken(self, image):
 		seg_model = vgsl.TorchVGSLModel.load_model(self.segmentation_model)
-		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device="cuda:0")
+		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device="cuda:0" if torch.cuda.is_available() else "cpu")
 		return baseline_seg
 
 
