@@ -492,10 +492,10 @@ if __name__ == '__main__':
 	debug = True if arguments.debug == "True" else False
 	images = glob.glob(f"{images_dir}/*.jpg")
 	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
-	clustering_n = 4
+	clustering_n = 8
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
-	with mp.Pool(processes=int(32)) as pool:
+	with mp.Pool(processes=int(16)) as pool:
 		data = [(images, False) for images in grouped_images]
 		pool.starmap(main, data)
 	# main(images[0:2], debug=False)
