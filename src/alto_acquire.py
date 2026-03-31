@@ -330,6 +330,7 @@ class Pipeline():
 		:return:
 		"""
 		# On enlève la déclaration XML
+		ajout_copy = copy.deepcopy(lignes_ajout)
 		transcription_finale = transcription_1
 		transcription_finale = self.update_label(transcription_finale)
 		tous_blocs_ajouts = transcription_finale.xpath(f"//alto:TextBlock[@TAGREFS='{self.reverse_tagrefs_dict['MarginTextZone-ajout']}']", namespaces=self.alto_ns)
@@ -491,7 +492,7 @@ if __name__ == '__main__':
 	debug = True if arguments.debug == "True" else False
 	images = glob.glob(f"{images_dir}/*.jpg")
 	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
-	clustering_n = 8
+	clustering_n = 4
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
 	with mp.Pool(processes=int(32)) as pool:
