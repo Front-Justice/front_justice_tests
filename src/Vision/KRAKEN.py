@@ -26,7 +26,8 @@ class KRAKEN():
 
 	def serialize(self, prediction):
 		serialized = serialize(results=prediction,
-							   template="alto")
+							   template="alto",
+							   sub_line_segmentation=False)
 		return serialized
 
 
@@ -54,7 +55,7 @@ class KRAKEN():
 		"""
 		model = models.load_any(self.ocr_model, device="cuda:0")
 		pred_it = rpred.rpred(model, im, segments)
-		if return_kraken_preds:
+		if return_kraken_preds == True:
 			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)
 			return results
 		prediction = []

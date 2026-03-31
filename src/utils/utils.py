@@ -943,7 +943,13 @@ def extraction_prenom_du_soldat(prediction, nom_du_soldat, pipeline):
 			certainty = None
 	return forename, certainty
 
-def convert_alto_coordinates(coords):
+
+def convert_baseline_coordinates_to_alto(coords):
+	coords = [[str(point) for point in coord] for coord in coords]
+	converted = " ".join([" ".join(item) for item in coords])
+	return converted
+
+def convert_alto_coordinates_to_baseline(coords):
 	splits = coords.split()
 	splits = [int(item) for item in splits]
 	converted = [[splits[idx], splits[idx + 1]] for idx in range(0, len(splits) - 1, 2)]
@@ -1860,7 +1866,7 @@ def retrieve_substring_span(string: str, substring: str) -> list[int, int]:
 	return [string.find(substring), string.find(substring) + len(substring)]
 
 
-def check_if_line_in_box(box_coord: list[list[int]], baseline: list[int], intersect_ratio=.5) -> bool:
+def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_ratio=.5) -> bool:
 	"""
 	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone.
 	Présuppose des lignes globalement droites (= représentables par des fonctions affines).

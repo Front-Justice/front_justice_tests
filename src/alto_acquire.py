@@ -2,6 +2,7 @@ import argparse
 import copy
 import os
 import shutil
+import uuid
 from collections import namedtuple
 import multiprocessing as mp
 import tqdm
@@ -94,7 +95,7 @@ class Pipeline():
 		<OtherTag ID="BT26269" LABEL="MainZone-orderNumber" DESCRIPTION="block type MainZone-orderNumber"/>
 		<OtherTag ID="BT26270" LABEL="MainZone-crimeDate" DESCRIPTION="block type MainZone-crimeDate"/>
 		<OtherTag ID="BT26271" LABEL="MainZone-judgementPlace" DESCRIPTION="block type MainZone-judgementPlace"/>
-		<OtherTag ID="BT26272" LABEL="MarginTextZone-addition" DESCRIPTION="block type MarginTextZone-addition"/>
+		<OtherTag ID="BT26272" LABEL="MarginTextZone-ajout" DESCRIPTION="block type MarginTextZone-ajout"/>
 		<OtherTag ID="BT26273" LABEL="MainZone" DESCRIPTION="block type MainZone"/>
 		<OtherTag ID="BT26274" LABEL="MarginTextZone-note" DESCRIPTION="block type MarginTextZone-note"/>
 		<OtherTag ID="BT26275" LABEL="QuireMarksZone-signature" DESCRIPTION="block type QuireMarksZone-signature"/>
@@ -107,6 +108,7 @@ class Pipeline():
 		<OtherTag ID="LT10704" LABEL="CustomLine:scratched" DESCRIPTION="line type CustomLine:scratched"/>
 		<OtherTag ID="LT10705" LABEL="CustomLine:signature" DESCRIPTION="line type CustomLine:signature"/>
 		<OtherTag ID="LT10706" LABEL="default" DESCRIPTION="line type default"/>
+		<OtherTag ID="LT12191" LABEL="CustomLine:addition" DESCRIPTION="line type CustomLine:addition"/>
 	</Tags>
 	"""
 
@@ -123,7 +125,7 @@ class Pipeline():
 "BT26269": "MainZone-orderNumber",
 "BT26270": "MainZone-crimeDate",
 "BT26271": "MainZone-judgementPlace",
-"BT26272": "MarginTextZone-addition",
+"BT26272": "MarginTextZone-ajout",
 "BT26273": "MainZone",
 "BT26274": "MarginTextZone-note",
 "BT26275": "QuireMarksZone-signature",
@@ -135,7 +137,8 @@ class Pipeline():
 "LT10703": "CustomLine:margin",
 "LT10704": "CustomLine:scratched",
 "LT10705": "CustomLine:signature",
-"LT10706": "default"}
+"LT10706": "default",
+"LT12191": "CustomLine:addition"}
 		self.reverse_tagrefs_dict = {val:key for key, val in self.tagrefs_dict.items()}
 
 	def load_image(self, image):
@@ -233,11 +236,11 @@ class Pipeline():
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
 								   ocr_model=model)
 		baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
-		if return_alto:
+		if return_alto is True:
 			preds = kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, return_kraken_preds=True, image_name=image.split("/")[-1])
 			return kraken_ocr.serialize(preds)
 		else:
-			return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, return_kraken_preds=True)
+			return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, return_kraken_preds=False, extract_polygons=True)
 
 
 
@@ -273,24 +276,38 @@ class Pipeline():
 		print(f"Checking additions")
 
 
-		_, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
+		zones_identifiees, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=["MarginTextZone-ajout"],
 																		   confidence=0.1,
 																		   model=self.yolo_models["ajouts"],
 																		   show_image=False)
 
-
 		zone_dict = {}
 		zone_dict["zones_manquantes"] = zones_manquantes
 		if len(zones_manquantes) == 0:
-			return self.transcription_kraken(
+			transcription = self.transcription_kraken(
 				image=page["image_path"],
 				current_page=0,
 				model=self.kraken_gloses_model,
-				return_alto=True
+				return_alto=False
 			)
+			ordered_lines = []
+			for annotation in zones_identifiees:
+				# On va commencer par filtrer les lignes dans la zone.
+				zones_filtrees_as_rectangle = self.rectangle(annotation.coordinates[0][0],
+															 annotation.coordinates[0][1],
+															 annotation.coordinates[1][0],
+															 annotation.coordinates[1][1])
+				filtered_lines = utils.match_lines_in_zones(ocr_prediction=transcription,
+															zone_as_rectangle=zones_filtrees_as_rectangle,
+															intersect_ratio=0.3)
+				as_record = OCRRecord()
+				as_record.recreate_record(filtered_lines)
+				sorted_lines = utils.sort_lines_with_rotation(lines_as_record=as_record, zone=zones_filtrees_as_rectangle)
+				ordered_lines.append(sorted_lines)
+			return ordered_lines, zones_identifiees
 		else:
-			return None
+			return None, None
 
 	def update_label(self, transcription):
 		try:
@@ -304,7 +321,7 @@ class Pipeline():
 
 	def merge_transcriptions(self,
 									  transcription_1,
-									  transcription_2):
+									  lignes_ajout):
 		"""
 		Cette fonction met à jour une sérialisation ALTO avec le résultat de transcription.
 		On ajoute les lignes supplémentaires à la fin de l'ALTO, indépendamment de leur
@@ -315,17 +332,38 @@ class Pipeline():
 		# On enlève la déclaration XML
 		transcription_finale = transcription_1
 		transcription_finale = self.update_label(transcription_finale)
-		added_lines = ET.Element("OtherTag")
-		added_lines.set("LABEL", "CustomLine:addition")
-		added_lines.set("ID", "TYPE_2")
-		default_line = transcription_finale.xpath("//alto:Tags/alto:OtherTag", namespaces=self.alto_ns)[0]
-		default_line.addnext(added_lines)
-		transcription_cible = transcription_2
-		all_lines_cible = transcription_cible.xpath("//alto:TextLine", namespaces=self.alto_ns)
-		text_bloc_finale = transcription_finale.xpath("//alto:TextBlock", namespaces=self.alto_ns)[-1]
-		for line in all_lines_cible:
-			line.set("TAGREFS", "TYPE_2")
-			text_bloc_finale.insert(-1, line)
+		tous_blocs_ajouts = transcription_finale.xpath(f"//alto:TextBlock[@TAGREFS='{self.reverse_tagrefs_dict['MarginTextZone-ajout']}']", namespaces=self.alto_ns)
+		for bloc in tous_blocs_ajouts:
+			coords = bloc.xpath("@COORDS", namespaces=self.alto_ns)[0]
+			coords = utils.convert_alto_coordinates_to_baseline(coords)
+			coords = self.rectangle(coords[0][0],
+								   coords[0][1],
+								   coords[1][0],
+								   coords[1][1])
+			for record in lignes_ajout:
+				for line in record:
+					baseline = [line.baseline[0][0], line.baseline[0][1], line.baseline[1][0], line.baseline[1][1]]
+					if utils.check_if_line_in_box(box_coord=coords, baseline=baseline, intersect_ratio=.8):
+						created_line = ET.Element("TextLine")
+						created_line.set("BASELINE", utils.convert_baseline_coordinates_to_alto(line.baseline))
+						hpos, vpos = min([item[0] for item in line.polygon]), min([item[1] for item in line.polygon])
+						height = max([item[0] for item in line.polygon]) - min([item[0] for item in line.polygon])
+						width = max([item[1] for item in line.polygon]) - min([item[1] for item in line.polygon])
+						created_line.set("HPOS", str(hpos))
+						created_line.set("ID", f"l_{uuid.uuid4()}")
+						created_line.set("VPOS", str(vpos))
+						created_line.set("HEIGHT", str(height))
+						created_line.set("WIDTH", str(width))
+						created_line.set("TAGREFS", self.reverse_tagrefs_dict['CustomLine:addition'])
+						shape = ET.Element("Shape")
+						polygon = ET.Element("Polygon")
+						string = ET.Element("String")
+						string.set("CONTENT", line.prediction)
+						polygon.set("POINTS", utils.convert_baseline_coordinates_to_alto(line.polygon))
+						shape.append(polygon)
+						created_line.append(shape)
+						created_line.append(string)
+						bloc.append(created_line)
 		return transcription_finale
 
 
@@ -362,50 +400,43 @@ class Pipeline():
 																		   model=self.global_yolo_model,
 																		   show_image=False)
 				alto_transcription = self.transcribe_to_alto(page=page)
-				print(page["image_path"])
-				# basename = f'results/alto_results/{page["image_path"].split("/")[-1].replace(".jpg", ".xml")}'
-				# with open("test.xml", "w") as output_file:
-				# 	output_file.write(alto_transcription)
 				alto_transcription = "\n".join([line for line in alto_transcription.split("\n")[1:]])
 				alto_transcription = ET.fromstring(alto_transcription)
-				alto_transcription = self.insert_zones(zones=boxes, transcription=alto_transcription)
-				lignes_ajoutees = self.process_additions(page=page)
+				lignes_ajoutees, zones_ajouts = self.process_additions(page=page)
+				# with open("file.xml", "w") as output_file:
+				# 	output_file.write(alto_transcription)
+				# alto_transcription = ET.parse("file.xml")
+				alto_transcription = self.insert_zones(zones=boxes, transcription=alto_transcription, additions=zones_ajouts)
 				if lignes_ajoutees:
-					lignes_ajoutees = "\n".join([line for line in lignes_ajoutees.split("\n")[1:]])
-					lignes_ajoutees = ET.fromstring(lignes_ajoutees)
-					print(lignes_ajoutees)
 					alto_transcription = self.merge_transcriptions(transcription_1=alto_transcription,
-											  transcription_2=lignes_ajoutees)
+											  lignes_ajout=lignes_ajoutees)
 				else:
 					alto_transcription = self.update_label(alto_transcription)
 				with open(f"results/alto_results/{page['image_path'].split('/')[-1].split('.')[0]}.xml", "w") as output_xml:
 					output_xml.write(ET.tostring(alto_transcription, pretty_print=True, encoding='utf-8').decode())
 				shutil.copy(page["image_path"], f"results/alto_results/")
-		# with zipfile.ZipFile('results/files.zip', 'w') as myzip:
-		# 	all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
-		# 	all_files.sort(key=lambda x: int(x))
-		# 	for file in all_files:
-		# 		myzip.write(f"results/alto_results/{file}.xml")
-		# 		myzip.write(f"results/alto_results/{file}.jpg")
 
-	def insert_zones(self, zones, transcription):
+	def insert_zones(self, zones, transcription, additions):
 		tags = ET.fromstring(self.segmOnto_labels)
-		# root = transcription.getroot()
 		transcription.insert(1, tags)
-		for idx, zone in enumerate(zones):
-			print(zone)
-			new_zone = ET.Element("TextBlock")
+		all_zones = [item for item in zones] + [item for item in additions] if additions else zones
+		print(all_zones)
+		for idx, zone in enumerate(all_zones):
+			if zone.label == "MarginTextZone-addition":
+				continue
+			new_zone = ET.Element("{http://www.loc.gov/standards/alto/ns-v4#}TextBlock")
 			new_zone.set("HPOS", str(zone.coordinates[0][0]))
 			new_zone.set("VPOS", str(zone.coordinates[0][1]))
 			new_zone.set("WIDTH", str(zone.coordinates[1][0] - zone.coordinates[0][0]))
 			new_zone.set("HEIGHT", str(zone.coordinates[1][1] - zone.coordinates[0][1]))
 			new_zone.set("ID", f"ID_{idx}")
 			new_zone.set("TAGREFS", self.reverse_tagrefs_dict[zone.label])
+			new_zone.set("COORDS", utils.convert_baseline_coordinates_to_alto(zone.coordinates))
 			printSpace = transcription.xpath("//alto:PrintSpace", namespaces=self.alto_ns)[0]
 			printSpace.append(new_zone)
 			for idx, line in enumerate(transcription.xpath("//alto:TextLine", namespaces=self.alto_ns)):
 				baseline = line.xpath("@BASELINE")[0]
-				baseline = utils.convert_alto_coordinates(baseline)
+				baseline = utils.convert_alto_coordinates_to_baseline(baseline)
 
 				# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
 				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
@@ -417,11 +448,9 @@ class Pipeline():
 				is_in_box = utils.check_if_line_in_box(box_coord=zone_as_rectangle,
 												 baseline=converted_baseline,
 												 intersect_ratio=0.7)
-				# On supprime les lignes en double.
-				if is_in_box and zone.label != "MarginTextZone-addition":
+
+				if is_in_box:
 					new_zone.append(line)
-				elif is_in_box and zone.label == "MarginTextZone-addition":
-					line.getparent().remove(line)
 
 		return transcription
 
@@ -465,9 +494,10 @@ if __name__ == '__main__':
 	clustering_n = 8
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
-	# with mp.Pool(processes=int(20)) as pool:
-	# 	data = [(images, False) for images in grouped_images]
-	# 	pool.starmap(main, data)
+	with mp.Pool(processes=int(32)) as pool:
+		data = [(images, False) for images in grouped_images]
+		pool.starmap(main, data)
+	# main(images[0:2], debug=False)
 	with zipfile.ZipFile('results/files.zip', 'w') as myzip:
 		all_files = list(set([item.split('.')[0].split('/')[-1] for item in glob.glob(f"results/alto_results/*")]))
 		all_files.sort(key=lambda x: int(x))
