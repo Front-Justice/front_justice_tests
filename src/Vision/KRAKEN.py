@@ -7,6 +7,7 @@ from kraken import rpred
 import kraken.containers
 from src.utils.utils import OCRRecord
 import dataclasses
+import torch
 
 class KRAKEN():
 	"""
@@ -53,7 +54,7 @@ class KRAKEN():
 			}
 		]
 		"""
-		model = models.load_any(self.ocr_model, device="cuda:0")
+		model = models.load_any(self.ocr_model, device="cuda:0" if torch.cuda.is_available() else "cpu")
 		pred_it = rpred.rpred(model, im, segments)
 		if return_kraken_preds == True:
 			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)
