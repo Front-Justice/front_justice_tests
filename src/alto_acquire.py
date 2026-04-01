@@ -272,7 +272,7 @@ class Pipeline():
 																		   target_classes=["MarginTextZone-ajout"],
 																		   confidence=0.6,
 																		   model=self.yolo_models["ajouts"],
-																		   show_image=True)
+																		   show_image=False)
 		zone_dict = {}
 		zone_dict["zones_manquantes"] = zones_manquantes
 		if len(zones_manquantes) == 0:
