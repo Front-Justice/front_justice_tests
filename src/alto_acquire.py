@@ -493,7 +493,7 @@ if __name__ == '__main__':
 	images_dir = arguments.images
 	device = arguments.device
 	workers = arguments.workers
-	clusters = arguments.clusters
+	clusters = int(arguments.clusters)
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
 	debug = True if arguments.debug == "True" else False
