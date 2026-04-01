@@ -207,15 +207,15 @@ if __name__ == '__main__':
 	else:
 		out_dir = "src/Page_Classifier/data/predictions/"
 	print("Random Forest:")
-	RF_classifier.test()
+	# RF_classifier.test()
 	print("---\nSVC test:")
-	SVC_classifier.test()
-	exit(0)
+	# SVC_classifier.test()
+	# exit(0)
 	for image in tqdm.tqdm(images):
 		if len(glob.glob(f"{out_dir}/*/{image.split('/')[-1]}")) > 0:
 			print("Already treated.")
 			continue
-		prediction = classifier.predict(image=image)
+		prediction = RF_classifier.predict(image=image)
 		try:
 			os.mkdir(f"{out_dir}")
 		except FileExistsError:

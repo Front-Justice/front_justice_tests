@@ -5,6 +5,8 @@ from kraken import blla
 from kraken.lib import models
 from kraken import rpred
 import kraken.containers
+from torch import device
+
 from src.utils.utils import OCRRecord
 import dataclasses
 import torch
@@ -14,13 +16,14 @@ class KRAKEN():
 	Classe permettant la segmentation en ligne et l'OCR d'une page.
 	Attention, la segmentation en zones n'est pas gérée par cette classe.
 	"""
-	def __init__(self, segmentation_model, ocr_model):
+	def __init__(self, segmentation_model, ocr_model, device):
 		self.segmentation_model = segmentation_model
 		self.ocr_model = ocr_model
+		self.device = device
 
 	def segment_lines_with_kraken(self, image):
 		seg_model = vgsl.TorchVGSLModel.load_model(self.segmentation_model)
-		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device="cuda:0" if torch.cuda.is_available() else "cpu")
+		baseline_seg:kraken.containers.Segmentation = blla.segment(image, model=seg_model, device=self.device)
 		return baseline_seg
 
 
@@ -54,7 +57,7 @@ class KRAKEN():
 			}
 		]
 		"""
-		model = models.load_any(self.ocr_model, device="cuda:0" if torch.cuda.is_available() else "cpu")
+		model = models.load_any(self.ocr_model, device=self.device)
 		pred_it = rpred.rpred(model, im, segments)
 		if return_kraken_preds == True:
 			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)

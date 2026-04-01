@@ -29,9 +29,10 @@ class Pipeline():
 				 yolo_models,
 				 debug:bool = False,
 				 resegment=False,
-				 retranscribe=False):
+				 retranscribe=False,
+				 device="cpu"):
 		self.debug = debug
-
+		self.device = device
 		self.alto_ns = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
@@ -69,16 +70,6 @@ class Pipeline():
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
 		self.party_model = "src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
-		# L'outil d'extraction de l'information
-		self.resize_factor = 1
-		device = "cuda:0" if torch.cuda.is_available() else "cpu"
-		self.extractor = extract.Extractor(party_engine=None,
-										   kraken_model_annotations=self.kraken_gloses_model,
-										   kraken_model_transcription=self.kraken_ocr_model,
-										   resize_factor=self.resize_factor,
-										   debug=debug,
-										   device=device,
-										   minutier=self.minutes)
 
 		self.segmOnto_labels = """
 	<Tags>
@@ -234,7 +225,8 @@ class Pipeline():
 		assert os.path.isfile(model), f"No model named '{model}'"
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
-								   ocr_model=model)
+								   ocr_model=model,
+								   device=self.device)
 		baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
 		if return_alto is True:
 			preds = kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, return_kraken_preds=True, image_name=image.split("/")[-1])
@@ -278,10 +270,9 @@ class Pipeline():
 
 		zones_identifiees, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=["MarginTextZone-ajout"],
-																		   confidence=0.1,
+																		   confidence=0.6,
 																		   model=self.yolo_models["ajouts"],
-																		   show_image=False)
-
+																		   show_image=True)
 		zone_dict = {}
 		zone_dict["zones_manquantes"] = zones_manquantes
 		if len(zones_manquantes) == 0:
@@ -399,10 +390,10 @@ class Pipeline():
 																		   confidence=0.1,
 																		   model=self.global_yolo_model,
 																		   show_image=False)
+				lignes_ajoutees, zones_ajouts = self.process_additions(page=page)
 				alto_transcription = self.transcribe_to_alto(page=page)
 				alto_transcription = "\n".join([line for line in alto_transcription.split("\n")[1:]])
 				alto_transcription = ET.fromstring(alto_transcription)
-				lignes_ajoutees, zones_ajouts = self.process_additions(page=page)
 				# with open("file.xml", "w") as output_file:
 				# 	output_file.write(alto_transcription)
 				# alto_transcription = ET.parse("file.xml")
@@ -455,13 +446,9 @@ class Pipeline():
 		return transcription
 
 def main(images:list,
-		 debug:bool=False):
-	# images = glob.glob(f"{images_dir}/*.jpg")
-	# Attention, cette façon de trier ne peut fonctionner qu'au sein d'un même minutier
-	# try:
-	# 	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
-	# except:
-	# 	images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
+		 debug:bool=False,
+		 device:str='cpu'):
+
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -473,7 +460,8 @@ def main(images:list,
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
 						yolo_models=yolo_models,
-						debug=debug)
+						debug=debug,
+						device=device)
 	pipeline.workflow(images)
 	print(f"Images: {images} done.")
 
@@ -481,12 +469,14 @@ def main(images:list,
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("-i", "--images", help="Input folder")
-	arguments.add_argument("-d", "--debug", help="Debug mode", default=False)
+	arguments.add_argument("-db", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-rs", "--resegment", help="Launch new segmentation", default=False)
 	arguments.add_argument("-rt", "--retranscribe", help="Launch new transcription", default=False)
-	arguments.add_argument("-w", "--workers", help="Number of workers", default=1)
+	arguments.add_argument("-d", "--device", help="Device", default=1)
+	arguments.add_argument("-w", "--workers", help="Number of workers", default="cpu")
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
+	device = arguments.device
 	workers = arguments.workers
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
@@ -497,7 +487,7 @@ if __name__ == '__main__':
 	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
 	print(grouped_images)
 	with mp.Pool(processes=int(workers)) as pool:
-		data = [(images, False) for images in grouped_images]
+		data = [(images, False, device) for images in grouped_images]
 		pool.starmap(main, data)
 	# main(images[0:2], debug=False)
 	with zipfile.ZipFile('results/files.zip', 'w') as myzip:

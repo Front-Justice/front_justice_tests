@@ -10,6 +10,7 @@ from ultralytics import YOLO
 import PIL.Image as Image
 from src.utils.utils import YOLORecord
 import src.utils.utils as utils
+import cv2
 # import src.Vision.PARTY as PARTY
 
 
@@ -49,7 +50,9 @@ class YOLOSegmenter():
 
 
 		# Run batched inference on a list of images
-		results = model([image], conf=confidence, verbose=False)[0]  # return a list of Results objects
+		image = cv2.imread(image)
+		image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+		results = model([image], conf=confidence, verbose=False, imgsz=640)[0]  # return a list of Results objects
 		if show_image:
 			results.show()
 		check_list = []
