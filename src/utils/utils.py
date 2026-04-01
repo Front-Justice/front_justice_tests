@@ -973,7 +973,8 @@ def match_lines_in_zones(ocr_prediction: OCRRecord,
 		converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
 		is_in_box = check_if_line_in_box(box_coord=zone_as_rectangle,
 										 baseline=converted_baseline,
-										 intersect_ratio=intersect_ratio)
+										 intersect_ratio=intersect_ratio,
+										 record=line)
 
 		if is_in_box is True:
 			corresponding_lines.append(line)
@@ -1866,7 +1867,7 @@ def retrieve_substring_span(string: str, substring: str) -> list[int, int]:
 	return [string.find(substring), string.find(substring) + len(substring)]
 
 
-def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_ratio=.5) -> bool:
+def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_ratio=.5, record=None) -> bool:
 	"""
 	Cette fonction vérifie si une ligne est comprise pour au moins 50% dans une zone.
 	Présuppose des lignes globalement droites (= représentables par des fonctions affines).
@@ -1880,15 +1881,24 @@ def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_r
 	a, b = produce_line_function(baseline)
 	# On regarde la distance horizontale entre ces deux points
 	number_points = 20
+	# La baseline est de forme [x1, y1, x2, y2]
 	x_distance = round(baseline[-2] - baseline[0])
 	steps = x_distance // number_points
 
 	# On crée 20 points le long de la droite. Si la moitié sont dans la zone, on renvoie True
-	try:
-		n_points = [(item, round(a * item + b)) for item in range(baseline[0], baseline[-2], steps)]
-	except ValueError as e:
-		print(f"La ligne est verticale, on passe: {baseline}.")
-		return False
+	if steps == 0:
+		steps = x_distance / number_points
+		n_points = [(round(item), round((a * item) + b)) for item in [baseline[0] + n*steps for n in range(number_points + 1)]]
+		print(baseline)
+		print(n_points)
+	else:
+		try:
+			n_points = [(item, (a * item) + b) for item in range(baseline[0], baseline[-2], steps)]
+		except ValueError as e:
+			print(f"La ligne est verticale, on passe: {baseline}.")
+			steps = x_distance // number_points
+			print(baseline)
+			n_points = [(baseline[0], baseline[1] + (steps*item)) for item in range(20)]
 	number_in = 0
 	for point in n_points:
 		if point_in_box(coord=point, box_coord=box_coord):
@@ -2130,11 +2140,11 @@ def get_baseline_from_string(line: list[OCRLine] | OCRLine,
 		return target_baseline
 
 
-def draw_lines_on_image(image_path, baseline: list, return_image=False):
+def draw_lines_on_image(image_path, baselines: list, return_image=False):
 	print("Attempting to show image")
 	image = Image.open(image_path)
 	draw = PIL.ImageDraw.Draw(image)
-	for line in baseline:
+	for line in baselines:
 		draw.line(line, width=5, fill="green", joint="curve")
 	if return_image is False:
 		image.show()

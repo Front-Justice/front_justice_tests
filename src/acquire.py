@@ -342,7 +342,7 @@ class Pipeline():
 		if show_image == True:
 			print("Show image")
 			utils.draw_lines_on_image(image_path=page["image_path"],
-									  baseline=[line.baseline for line in self.current_page_transcription])
+									  baselines=[line.baseline for line in self.current_page_transcription])
 
 		# current_dict["polygon_signature_greffier"] = self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription,
 		# 										  image=page["image_path"])
@@ -416,7 +416,7 @@ class Pipeline():
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
-			utils.draw_lines_on_image(image_path=page["image_path"], baseline=baselines)
+			utils.draw_lines_on_image(image_path=page["image_path"], baselines=baselines)
 
 
 	def process_additions(self, page:json, show_image=False):
