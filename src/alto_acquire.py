@@ -488,17 +488,18 @@ if __name__ == '__main__':
 	arguments.add_argument("-rt", "--retranscribe", help="Launch new transcription", default=False)
 	arguments.add_argument("-d", "--device", help="Device", default=1)
 	arguments.add_argument("-w", "--workers", help="Number of workers", default="cpu")
+	arguments.add_argument("-c", "--clusters", help="Number of images per worker", default=8)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	device = arguments.device
 	workers = arguments.workers
+	clusters = arguments.clusters
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
 	debug = True if arguments.debug == "True" else False
 	images = glob.glob(f"{images_dir}/*.jpg")
 	images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
-	clustering_n = 8
-	grouped_images = [images[idx:idx + clustering_n] for idx in range(0, len(images), clustering_n)]
+	grouped_images = [images[idx:idx + clusters] for idx in range(0, len(images), clusters)]
 	print(grouped_images)
 	with mp.Pool(processes=int(workers)) as pool:
 		data = [(images, False, device) for images in grouped_images]
