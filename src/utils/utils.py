@@ -1889,15 +1889,12 @@ def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_r
 	if steps == 0:
 		steps = x_distance / number_points
 		n_points = [(round(item), round((a * item) + b)) for item in [baseline[0] + n*steps for n in range(number_points + 1)]]
-		print(baseline)
-		print(n_points)
 	else:
 		try:
 			n_points = [(item, (a * item) + b) for item in range(baseline[0], baseline[-2], steps)]
 		except ValueError as e:
-			print(f"La ligne est verticale, on passe: {baseline}.")
+			print(f"La ligne est verticale.")
 			steps = x_distance // number_points
-			print(baseline)
 			n_points = [(baseline[0], baseline[1] + (steps*item)) for item in range(20)]
 	number_in = 0
 	for point in n_points:

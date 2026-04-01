@@ -330,7 +330,6 @@ class Pipeline():
 		for bloc in tous_blocs_ajouts:
 			for idx, (zone, lignes) in enumerate(zones_et_lignes):
 				if bloc.xpath("@ID")[0] != f"AJOUT_{idx}":
-					print("passing.")
 					continue
 				for line in lignes:
 					created_line = ET.Element("TextLine")
