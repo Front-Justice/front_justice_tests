@@ -430,16 +430,17 @@ class Pipeline():
 				baseline = utils.convert_alto_coordinates_to_baseline(baseline)
 				# Si la ligne de base comprend plus d'un point, on simplifie en prenant les extrémités
 				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
-				for addition in additions:
-					addition_as_rectangle = self.rectangle(addition.coordinates[0][0],
-													   addition.coordinates[0][1],
-													   addition.coordinates[1][0],
-													   addition.coordinates[1][1])
-					is_in_box = utils.check_if_line_in_box(box_coord=addition_as_rectangle,
-													 baseline=converted_baseline,
-													 intersect_ratio=0.7)
-					if is_in_box:
-						line.getparent().remove(line)
+				if additions:
+					for addition in additions:
+						addition_as_rectangle = self.rectangle(addition.coordinates[0][0],
+														   addition.coordinates[0][1],
+														   addition.coordinates[1][0],
+														   addition.coordinates[1][1])
+						is_in_box = utils.check_if_line_in_box(box_coord=addition_as_rectangle,
+														 baseline=converted_baseline,
+														 intersect_ratio=0.7)
+						if is_in_box:
+							line.getparent().remove(line)
 
 
 
