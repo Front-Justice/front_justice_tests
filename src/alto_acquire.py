@@ -394,7 +394,11 @@ class Pipeline():
 				# with open("file.xml", "w") as output_file:
 				# 	output_file.write(alto_transcription)
 				# alto_transcription = ET.parse("file.xml")
-				alto_transcription = self.insert_zones(zones=boxes, transcription=alto_transcription, additions=[ajouts for ajouts, lignes in lignes_ajoutees_zones_ajouts])
+				if lignes_ajoutees_zones_ajouts:
+					additions = [ajouts for ajouts, lignes in lignes_ajoutees_zones_ajouts]
+				else:
+					additions = None
+				alto_transcription = self.insert_zones(zones=boxes, transcription=alto_transcription, additions=additions)
 				if lignes_ajoutees_zones_ajouts:
 					alto_transcription = self.merge_transcriptions(transcription_1=alto_transcription,
 											  zones_et_lignes=lignes_ajoutees_zones_ajouts)
