@@ -673,10 +673,10 @@ def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
 	greffier_dict = {}
 	ligne_greffier, _ = utils.match_line_by_substring(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier.baseline
-	ligne_greffier = ligne_greffier.prediction
-	greffier, form_greffier = utils.check_word_in_sentence(ligne_greffier, "Greffier")
+	prediction = ligne_greffier.prediction
+	greffier, form_greffier = utils.check_word_in_sentence(prediction, "Greffier")
 	if greffier is True:
-		debut_de_chaine = ligne_greffier.split(form_greffier)[0]
+		debut_de_chaine = prediction.split(form_greffier)[0]
 	else:
 		print("Ligne mal reconnue")
 		return {"greffier": None}
@@ -692,6 +692,8 @@ def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
 		else:
 			nom_et_statut = debut_de_chaine.replace("M.", "")
 	nom_et_fonction_du_greffier = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
+	baseline = utils.get_baseline_from_string(line=ligne_greffier,
+											  target_string=nom_et_statut)
 	if commis is True:
 		nom_et_fonction_du_greffier["commis"] = True
 	else:
@@ -699,7 +701,7 @@ def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
 
 	greffier_dict["extracted"] = nom_et_fonction_du_greffier
 	greffier_dict["baseline"] = baseline
-	greffier_dict["prediction"] = ligne_greffier
+	greffier_dict["prediction"] = prediction
 
 	return greffier_dict
 
@@ -1057,11 +1059,11 @@ def extraire_commissaire(lignes_zone_magistrat: list, ner_pipeline):
 	commissaire_dict = {}
 	ligne_commissaire, _ = utils.match_line_by_substring(lignes_zone_magistrat,
 														 "commissaire du gouvernement")
-	baseline = ligne_commissaire.baseline
-	ligne_commissaire = ligne_commissaire.prediction
-	commissaire, form_commissaire = utils.check_word_in_sentence(ligne_commissaire, "commissaire")
+
+	prediction = ligne_commissaire.prediction
+	commissaire, form_commissaire = utils.check_word_in_sentence(prediction, "commissaire")
 	if commissaire is True:
-		debut_de_chaine = ligne_commissaire.split(form_commissaire)[0]
+		debut_de_chaine = prediction.split(form_commissaire)[0]
 	else:
 		print("Ligne mal reconnue")
 		return {"commissaire": None}
@@ -1073,18 +1075,20 @@ def extraire_commissaire(lignes_zone_magistrat: list, ner_pipeline):
 		nom_et_statut = debut_de_chaine.split(form_substitut)[0].replace("M.", "")
 	else:
 		# Parfois l'indication de substitut est mise en fin de ligne. On relance sur toute la ligne.
-		substitut, form_substitut = utils.check_word_in_sentence(ligne_commissaire,
+		substitut, form_substitut = utils.check_word_in_sentence(prediction,
 																 target_word="substitut",
 																 sensibility=0.5)
 		nom_et_statut = debut_de_chaine.replace("M.", "")
 	nom_et_fonction_du_commissaire = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
+	baseline = utils.get_baseline_from_string(line=ligne_commissaire,
+											  target_string=nom_et_statut)
 	if substitut is True:
 		nom_et_fonction_du_commissaire["substitut"] = True
 	else:
 		nom_et_fonction_du_commissaire["substitut"] = False
 	commissaire_dict["extracted"] = nom_et_fonction_du_commissaire
 	commissaire_dict["baseline"] = baseline
-	commissaire_dict["prediction"] = ligne_commissaire
+	commissaire_dict["prediction"] = prediction
 
 	return commissaire_dict
 
@@ -1098,17 +1102,17 @@ def extraire_general(lignes_zone_magistrat: OCRRecord, ner_pipeline):
 	:return: un dictionnaire contenant les informations importantes: informations de nom, substitut, baseline, prediction kraken
 	"""
 	ligne_grade, _ = utils.match_line_by_substring(lignes_zone_magistrat, "nommés par le (1) général")
-	baseline = ligne_grade.baseline
-	ligne_grade = ligne_grade.prediction
-	ligne_grade = utils.nfc_normalize(ligne_grade)
-	grade, form_grade = utils.check_word_in_sentence(ligne_grade, "général")
+	prediction = ligne_grade.prediction
+	prediction = utils.nfc_normalize(prediction)
+	grade, form_grade = utils.check_word_in_sentence(prediction, "général")
 	if grade is True:
-		grade_extrait = f"{form_grade} {ligne_grade.split(form_grade)[1].strip()}"
+		grade_extrait = f"{form_grade} {prediction.split(form_grade)[1].strip()}"
 	else:
 		print("Ligne mal reconnue")
 		return {"grade": None}
-
+	baseline = utils.get_baseline_from_string(line=ligne_grade,
+											  target_string=grade_extrait)
 	nom_et_fonction_du_grade = {"extracted": grade_extrait}
 	nom_et_fonction_du_grade["baseline"] = baseline
-	nom_et_fonction_du_grade["prediction"] = ligne_grade
+	nom_et_fonction_du_grade["prediction"] = prediction
 	return nom_et_fonction_du_grade

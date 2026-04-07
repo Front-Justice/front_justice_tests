@@ -731,11 +731,11 @@ class Extractor:
 																					show_images=False,
 																					loaded_image=loaded_image,
 																					ocr_prediction=ocr_prediction,
-																					intersect_ratio=[.8])
+																					intersect_ratio=[.8],
+																					select_highest_prob_zone=True)
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
-		plusieurs_soldats = False
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
@@ -1083,10 +1083,17 @@ class Extractor:
 												lignes=jugement_lu,
 												feature="date")
 		else:
-			date_identifiee = utils.approximate_sentence_split(sentence=ligne_jugement_lu,
-															  substring="le présent jugement a été")[0]
-			date_identifiee = utils.split_before_keep_delimiter(target_string=date_identifiee, delimiter="an")[-1]
-			date_identifiee = date_identifiee.replace("L'", "")
+			try:
+				date_identifiee = utils.approximate_sentence_split(sentence=ligne_jugement_lu,
+																  substring="le présent jugement a été")[0]
+				date_identifiee = utils.split_before_keep_delimiter(target_string=date_identifiee, delimiter="an")[-1]
+				date_identifiee = date_identifiee.replace("L'", "")
+			except TypeError:
+				return {
+					"extracted": None,
+					"corrected": None,
+					"normalized": None
+				}
 		corrected_date = utils.correct_date(date_identifiee)
 		try:
 			date_normalisee = date.process_date(corrected_date)
@@ -1591,7 +1598,6 @@ class Extractor:
 											loaded_image: PIL.Image.Image = None,
 											show_images: bool = True):
 		"""
-		Cette fonction extrait le numéro d'ordre à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
 		'''
@@ -1630,7 +1636,7 @@ class Extractor:
 		"""
 		inculpation = {"antécédents": {},
 					   "inculpation": {}}
-		corresponding_lines, numero_ordre_zone = self.extract_lines_from_zone(annotations=annotations,
+		corresponding_lines, _ = self.extract_lines_from_zone(annotations=annotations,
 																			  target_zone="Inculpation_antecedents",
 																			  show_images=show_images,
 																			  loaded_image=loaded_image,
@@ -1825,9 +1831,15 @@ class Extractor:
 		else:
 			certitude = 0.5
 			target_number = target_number_party
-
+		if target_number:
+			baseline = utils.get_baseline_from_string(line=target_line,
+													  target_string=target_number,
+													  loaded_image=loaded_image,
+													  show_image=False)
+		else:
+			baseline = None
 		return {"extracted": target_number,
-				"baseline": target_line.baseline,
+				"baseline": baseline,
 				"bbox": numero_ordre_zone,
 				"certitude": certitude,
 				"predictions": {"party": numero_ordre_party,
@@ -2492,19 +2504,19 @@ class Extractor:
 		an_mil_neuf_date, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
 															string_to_match="an mil neuf cent")
 		if cejourdui_date == an_mil_neuf_date:
-			correct_line = cejourdui_date
+			correct_lines = cejourdui_date
 			line_as_string = cejourdui_date.prediction
-			baseline = correct_line.baseline
 		else:
 			correct_lines = [cejourdui_date, an_mil_neuf_date]
 			line_as_string = f"{cejourdui_date.prediction} {an_mil_neuf_date.prediction}"
-			baseline = [item.baseline for item in correct_lines]
 		date_span = utils.approximate_word_split(line_as_string, "CEJOURD'HUI")
 
 		date_extraite = date_span[-1]
-		print(f"Orig: {date_extraite}")
+		baseline = utils.get_baseline_from_string(line=correct_lines,
+												  target_string=date_extraite,
+												  show_image=False,
+												  loaded_image=loaded_image)
 		corrected_date = utils.correct_date(date_extraite)
-		print(f"Corrected: {corrected_date}")
 		try:
 			normalized = date.process_date(corrected_date)
 		except TypeError:
@@ -2514,7 +2526,8 @@ class Extractor:
 										predicted=line_as_string,
 										bbox=zone_magistrats,
 										baseline=baseline,
-										normalized=normalized)
+										normalized=normalized,
+										corrected=corrected_date)
 		return current_date.to_json()
 
 	def extraire_magistrats(self,
@@ -2666,6 +2679,8 @@ class Extractor:
 			jury_extrait = extractions.extraire_nom_et_fonction(
 				prediction=" ".join(line.prediction for line in jure),
 				pipeline=self.date_recognition_pipeline)
+			jury_extrait['baseline'] = [line.baseline for line in jure]
+			jury_extrait['prediction'] = " ".join([line.prediction for line in jure])
 			print(jury_extrait['persName'])
 			if (jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
 																				" ".join(line.prediction for line in
@@ -2674,9 +2689,7 @@ class Extractor:
 				print(" ".join(line.prediction for line in jure))
 				print("ÉCARTÉ")
 				continue
-			jury_dict = {"extracted": jury_extrait,
-						 "baseline": [line.baseline for line in jure],
-						 "predictions": [line.prediction for line in jure]}
+			jury_dict = {"extracted": jury_extrait}
 			processed_jures.append(jury_dict)
 		if len(processed_jures) < 4:
 			print("Warning: il manque un membre du jury")

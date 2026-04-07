@@ -56,11 +56,20 @@ class Reconciliator:
 
 
 	def _reconciliate_date_naissance(self):
-		date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
-		self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		try:
+			date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		except TypeError:
+			date_page_1 = None
+		try:
+			self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+		except TypeError:
+			self.date_naissance = None
 		age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
 		if self.date_proces:
-			age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
+			try:
+				age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
+			except AttributeError:
+				age_theorique = None
 			print(age_theorique)
 			print(age_soldat)
 			if age_theorique == age_soldat:
@@ -125,8 +134,11 @@ class Reconciliator:
 		try:
 			profession_page_1 = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except AttributeError:
-			self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
-			return
+			try:
+				self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			except AttributeError:
+				self.profession = None
+				return
 		try:
 			profession_page_2 = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, IndexError):
@@ -167,7 +179,10 @@ class Reconciliator:
 		:return:
 		"""
 		self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
-		self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
+		try:
+			self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
+		except KeyError:
+			self.magistrats = None
 		self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
 		self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
 		self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
@@ -233,14 +248,14 @@ class Reconciliator:
 	def _reconciliate_lieu_naissance(self):
 		try:
 			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
-		except KeyError:
+		except (KeyError, TypeError):
 			nom_ville_transcrit_p1 = None
 		try:
 			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
-		except KeyError:
+		except (KeyError, TypeError):
 			try:
 				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
-			except KeyError:
+			except (KeyError, TypeError):
 				nom_ville_identifie_p1 = None
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)

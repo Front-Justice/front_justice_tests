@@ -27,7 +27,8 @@ class Pipeline():
 				 debug:bool = False,
 				 use_party=True,
 				 resegment=False,
-				 retranscribe=False):
+				 retranscribe=False,
+				 device="cpu"):
 		self.debug = debug
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
@@ -36,6 +37,7 @@ class Pipeline():
 		self.current_image_path = None
 		self.current_page_transcription = None
 		self.minutes = {}
+		self.device = device
 		self.images_name_list = []
 		self.current_image_idx = 0
 		self.pages_classees = []
@@ -180,7 +182,8 @@ class Pipeline():
 		segmentation_json = f'results/ocr_predictions/{image.replace("/", "_").replace(f"{suffix}.jpg", "_segments.pickle")}'
 		loaded_page = Image.open(image)
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=self.kraken_lines_model[current_page],
-								   ocr_model=model)
+								   ocr_model=model,
+								   device=self.device)
 		if transcription_only:
 			baseline = utils.unpickle_object(path=segmentation_json)
 		else:
@@ -533,7 +536,7 @@ class Pipeline():
 		try:
 			date_naissance = current_dict["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except (KeyError, TypeError):
-			return zone_dict, current_dict
+			date_naissance = None
 		try:
 			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
 																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
@@ -558,7 +561,6 @@ class Pipeline():
 			except TypeError:
 				pass
 
-		# return zone_dict, current_dict
 
 
 		# On extrait le numéro d'ordre en premier, cas il y a une vérification de la classification.
@@ -597,7 +599,6 @@ class Pipeline():
 
 
 		# On extrait la date du crime
-		# TODO: normaliser les noms de zone
 		if "MainZone-crimeDate" in zones_manquantes:
 			current_dict["date_du_crime_ou_delit"] = None
 		else:
@@ -609,7 +610,6 @@ class Pipeline():
 				loaded_image=loaded_image)
 
 		# On extrait le lieu du jugement
-		# TODO: normaliser les noms de zone
 		if "MainZone-judgementPlace" in zones_manquantes:
 			current_dict["lieu_jugement"] = None
 		else:
@@ -638,7 +638,6 @@ class Pipeline():
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
-
 		return zone_dict, current_dict
 
 
@@ -664,7 +663,7 @@ class Pipeline():
 			self.classification_images(images)
 			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
 		print("Pages classées, minutes regroupées")
-		minutes = utils.load_json_to_dict(self.minutes_annotation_file)
+		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
 		# utils.convert_to_csv(minutes, "results/database.csv")
 		previous_minute = None
 		# for key, pages in minutes.items():
@@ -736,7 +735,8 @@ def main(images_dir:str,
 		 use_party:bool=True,
 		 resegment:bool=False,
 		 retranscribe:bool=False,
-		 start_after:int=0):
+		 start_after:int=0,
+		 device:str="cpu"):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
@@ -761,14 +761,16 @@ def main(images_dir:str,
 						debug=debug,
 						use_party=use_party,
 						resegment=resegment,
-						retranscribe=retranscribe)
+						retranscribe=retranscribe,
+						device=device)
 	pipeline.workflow(images, target, start_after)
 
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("-i", "--images", help="Input folder")
-	arguments.add_argument("-d", "--debug", help="Debug mode", default=False)
+	arguments.add_argument("-db", "--debug", help="Debug mode", default=False)
+	arguments.add_argument("-d", "--device", help="Device", default="cpu")
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
 	arguments.add_argument("-sa", "--start_after", help="Start after given image index", default=0)
 	arguments.add_argument("-rs", "--resegment", help="Launch new segmentation", default=False)
@@ -777,9 +779,17 @@ if __name__ == '__main__':
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	target = arguments.target
+	device = arguments.device
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
 	use_party = True if arguments.use_party == "True" else False
 	start_after = int(arguments.start_after)
 	debug = True if arguments.debug == "True" else False
-	main(images_dir, target, debug, use_party, resegment, retranscribe, start_after)
+	main(images_dir=images_dir,
+		 target=target,
+		 debug=debug,
+		 use_party=use_party,
+		 resegment=resegment,
+		 retranscribe=retranscribe,
+		 start_after=start_after,
+		 device=device)

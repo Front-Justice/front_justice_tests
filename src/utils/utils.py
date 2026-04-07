@@ -31,18 +31,20 @@ import kraken.containers as containers
 @dataclass
 class DateRecord:
 	"""Classe principale pour la description d'une date"""
-	def __init__(self, extracted, predicted, normalized, bbox, baseline):
+	def __init__(self, extracted, predicted, normalized, bbox, baseline, corrected):
 		self.extracted: str = extracted
 		self.predicted: str = predicted
 		self.normalized: dict = normalized
+		self.corrected: str = corrected
 		self.bbox: list = bbox
 		self.baseline: list = baseline
 
 	def to_json(self):
 		return {
-			"normalized": self.normalized,
 			"predicted": self.predicted,
 			"extracted": self.extracted,
+			"corrected": self.corrected,
+			"normalized": self.normalized,
 			"bbox": self.bbox,
 			"baseline": self.baseline
 		}
@@ -1124,7 +1126,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(random_string())
 			# Date du procès
 			try:
-				date_proces = page['extractions']['date_proces']['date_normalisee']['when']
+				date_proces = page['extractions']['date_proces']['normalized']['when']
 			except TypeError:
 				date_proces = "UNK"
 			interm.append(date_proces)
@@ -2104,11 +2106,14 @@ def get_baseline_from_string(line: list[OCRLine] | OCRLine,
 		return baselines
 	else:
 		print(type(line))
+		print(target_string)
 		cuts = line.cuts
 		baseline = line.baseline
 		prediction = line.prediction
 		prediction = prediction.lower()
 		target_string = target_string.lower()
+		target_string = target_string.strip()
+		prediction = prediction.strip()
 		target_string = nfc_normalize(target_string)
 		prediction = nfc_normalize(prediction)
 		if target_string not in prediction:
