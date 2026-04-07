@@ -55,15 +55,16 @@ class Pipeline():
 		self.resegment = resegment
 		self.retranscribe = retranscribe
 		self.kraken_lines_model = {
-			 0: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/lignes_ajouts.mlmodel",
-			 1: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/modele_page_1_200p_best.mlmodel",
-			 2: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_2.mlmodel",
-			 3: "/home/mgl/Bureau/Travail/projets/Front_Justice/inference/dataset/models/lignes_page_3.mlmodel",
-			 4: "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/modele_page_4.mlmodel"
-			 }
+			0: "src/Vision/models/lignes_ajouts.mlmodel",
+			1: "src/Vision/models/modele_ligne_page_1.mlmodel",
+			2: "src/Vision/models/modele_ligne_page_2.mlmodel",
+			3: "src/Vision/models/modele_ligne_page_3.mlmodel",
+			4: "src/Vision/models/modele_page_4.mlmodel",
+			"autre": "src/Vision/models/modele_ligne_page_1.mlmodel",
+		}
 		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
-		self.party_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/model.safetensors"
+		self.party_model = "src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
