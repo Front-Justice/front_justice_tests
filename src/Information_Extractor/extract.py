@@ -61,7 +61,7 @@ class Extractor:
 												  model=self.ner_model,
 												  tokenizer=self.tokenizer,
 												  aggregation_strategy="simple",
-												  device=device)
+												  device=-1 if device == "cpu" else device)
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
@@ -75,8 +75,7 @@ class Extractor:
 												 model=entity_spotting_model,
 												 tokenizer=tokenizer,
 												 aggregation_strategy="simple",
-												 device=device)
-		print(device)
+												 device=-1 if device == "cpu" else device)
 
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")

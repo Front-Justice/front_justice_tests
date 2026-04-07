@@ -3,7 +3,6 @@ import copy
 import os
 import tqdm
 
-import torch.cuda
 import multiprocessing as mp
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
@@ -50,6 +49,7 @@ class Pipeline():
 		for name, path in yolo_models.items():
 			assert os.path.exists(path), f"{path} n'existe pas."
 			self.yolo_models[name] = YOLO.load(path)
+			self.yolo_models[name].to(device)
 		self.YOLO_Segmenter = YOLO.YOLOSegmenter()
 
 		# Les modèles d'OCR
@@ -822,13 +822,21 @@ def main(images_dir:str,
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
 	print("Starting.")
+	minute_annotee = {}
+	minute_reconciliee = {}
 	if workers != 1:
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device) for k, v in minutes.items()]
-			pool.starmap(single_minute_workflow, data)
+			for annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
+				minute_annotee = {**minute_annotee, **annotations}
+				minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	else:
 		for idx, minute in minutes.items():
-			single_minute_workflow({idx:minute}, images_dir=images_dir, device=device)
+			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device)
+			minute_annotee = {**minute_annotee, **annotations}
+			minute_reconciliee = {**minute_reconciliee, **reconciliation}
+	utils.serialize_dict(minute_annotee, "test.json")
+	utils.serialize_dict(minute_annotee, "test_reconcilie.json")
 
 def single_minute_workflow(minute:dict, images_dir:str, device:str):
 	yolo_models = {
@@ -848,13 +856,14 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str):
 						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
 						yolo_models=yolo_models,
 						debug=debug,
-						use_party=use_party,
+						use_party=False,
 						resegment=resegment,
 						retranscribe=retranscribe,
 						device=device,
 						images_dir=images_dir,
 						current_minute = minute)
 	pipeline.workflow(minute)
+	return pipeline.minutes, pipeline.minutes_reconciliees
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
