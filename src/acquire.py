@@ -9,7 +9,6 @@ import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
 import Information_Extractor.reconciliation as reconciliation
-import src.Vision.PARTY as PARTY
 import glob
 import PIL.Image as Image
 import json
@@ -848,6 +847,8 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str):
 		"ajouts": "src/Vision/models/yolo26_ajouts.pt"
 	}
 	use_party = False
+	if use_party:
+		import src.Vision.PARTY as PARTY
 	resegment = False
 	retranscribe = False
 	debug = False
