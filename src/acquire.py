@@ -825,6 +825,7 @@ def main(images_dir:str,
 	minute_annotee = {}
 	minute_reconciliee = {}
 	if workers != 1:
+		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device) for k, v in minutes.items()]
 			for annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
@@ -888,7 +889,6 @@ if __name__ == '__main__':
 	use_party = True if arguments.use_party == "True" else False
 	start_after = int(arguments.start_after)
 	debug = True if arguments.debug == "True" else False
-	torch.set_num_threads(1)
 	main(images_dir=images_dir,
 		 target=target,
 		 debug=debug,

@@ -210,7 +210,7 @@ class Reconciliator:
 			print("Page 1 sans annotations")
 			self.lieu_residence = None
 			return
-			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+		self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
 
 
 		try:
