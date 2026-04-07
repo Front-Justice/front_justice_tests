@@ -2,7 +2,7 @@ import argparse
 import copy
 import os
 import tqdm
-
+import torch
 import multiprocessing as mp
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
@@ -888,6 +888,7 @@ if __name__ == '__main__':
 	use_party = True if arguments.use_party == "True" else False
 	start_after = int(arguments.start_after)
 	debug = True if arguments.debug == "True" else False
+	torch.set_num_threads(1)
 	main(images_dir=images_dir,
 		 target=target,
 		 debug=debug,
