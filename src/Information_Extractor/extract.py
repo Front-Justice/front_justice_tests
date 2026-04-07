@@ -41,7 +41,7 @@ class Extractor:
 				 resize_factor: int = 1,
 				 debug: bool = False,
 				 use_party=False,
-				 device="cuda:0",
+				 device="cpu",
 				 minutier=None):
 		"""
 		Constructeur de la classe Extractor
@@ -54,12 +54,14 @@ class Extractor:
 		self.date_proces = ""
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates")
-		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large")
+		print(device)
+		self.ner_model.to(device)
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device)
 		self.date_recognition_pipeline = pipeline('ner',
 												  model=self.ner_model,
 												  tokenizer=self.tokenizer,
 												  aggregation_strategy="simple",
-												  device="cpu")
+												  device=device)
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
@@ -74,6 +76,7 @@ class Extractor:
 												 tokenizer=tokenizer,
 												 aggregation_strategy="simple",
 												 device=device)
+		print(device)
 
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")

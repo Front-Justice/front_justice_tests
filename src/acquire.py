@@ -4,7 +4,7 @@ import os
 import tqdm
 
 import torch.cuda
-
+import multiprocessing as mp
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
@@ -28,7 +28,9 @@ class Pipeline():
 				 use_party=True,
 				 resegment=False,
 				 retranscribe=False,
-				 device="cpu"):
+				 device="cpu",
+				 images_dir=None,
+				 current_minute = None):
 		self.debug = debug
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
@@ -36,11 +38,12 @@ class Pipeline():
 		self.current_image = None
 		self.current_image_path = None
 		self.current_page_transcription = None
-		self.minutes = {}
+		self.minutes = current_minute
 		self.device = device
 		self.images_name_list = []
 		self.current_image_idx = 0
 		self.pages_classees = []
+		self.images_basedir = images_dir.replace("/", "_")
 
 		# Les modèles de zones
 		self.yolo_models = {}
@@ -65,11 +68,12 @@ class Pipeline():
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
+		print(f"Use party: {use_party} and debug: {debug}")
 		if debug == True or use_party == False:
+			print("Setting party engine to None")
 			party_engine = None
 		else:
 			party_engine = PARTY.PartyPredict()
-		device = "cuda:0" if torch.cuda.is_available() else "cpu"
 		self.extractor = extract.Extractor(party_engine=party_engine,
 										   kraken_model_annotations=self.kraken_gloses_model,
 										   kraken_model_transcription=self.kraken_ocr_model,
@@ -642,7 +646,7 @@ class Pipeline():
 
 
 
-	def workflow(self, images:list, target:str|None, start_after:int):
+	def workflow(self, minute:dict, target:str|None=None, start_after:int=0):
 		"""
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
@@ -653,28 +657,13 @@ class Pipeline():
 		"""
 		print("Début du workflow")
 		# Il faudra supprimer ça pour la mise en production
-		self.images_basedir = "_".join(images[0].split("/")[:-1])
-		self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations.json"
-		self.minutes_reconciliees_file = f"results/{self.images_basedir}_minutes_annotations_reconcilie.json"
-		self.minutes_reconciliees = []
-		if os.path.isfile(f"results/{self.images_basedir}_minutes.json"):
-			self.minutes = utils.load_json_to_dict(f"results/{self.images_basedir}_minutes.json")
-		else:
-			self.classification_images(images)
-			self.regroupement_minutes(out_dir=f"results/{self.images_basedir}_minutes.json")
-		print("Pages classées, minutes regroupées")
-		# minutes = utils.load_json_to_dict(self.minutes_annotation_file)
-		# utils.convert_to_csv(minutes, "results/database.csv")
-		previous_minute = None
-		# for key, pages in minutes.items():
-		# 	reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_minute)
-		# 	reconciliator.reconciliate_minute()
-		# 	self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
-		# 	previous_minute = reconciliator.reconciliated_minute
-		# 	utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
-		# exit(0)
+		minute_number = list(minute.keys())[0]
+		self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}.json"
+		self.minutes_reconciliees_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}_reconcilie.json"
+		self.minutes_reconciliees = None
 		image_index = 0
 		previous_pages = None
+		print(self.minutes)
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if start_after > image_index:
@@ -685,7 +674,6 @@ class Pipeline():
 				if target:
 					if page['image_path'] != target:
 						continue
-
 				# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
 					print("---")
@@ -718,16 +706,90 @@ class Pipeline():
 				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
 				self.reaffecter_dictionnaire(pages)
-				utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 			if not target:
 				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
 				previous_pages = copy.copy(pages)
 				reconciliator.reconciliate_minute()
-				self.minutes_reconciliees.append(reconciliator.reconciliated_minute)
-			utils.save_as_dict(self.minutes_reconciliees, self.minutes_reconciliees_file)
-		utils.convert_to_csv(self.minutes, "results/database.csv")
-		exit(0)
+				self.minutes_reconciliees = reconciliator.reconciliated_minute
 
+
+def regroupement_minutes(pages_classees):
+	"""
+	Cette fonction regroupe les minutes
+	:return: None, mais produit le dictionnaire self.minutes de la forme:
+	 ```JSON
+	 {0: [
+	 {'répertoire': '11_J_187(1)',
+	 'id': 33,
+	 'image_path': 'data/minute_test/11_J_187(1)_0033.jpg',
+	 'classe': 'page_1'},
+	 ...
+	 {'répertoire': '11_J_187(1)',
+	 'id': 36,
+	 'image_path': 'data/minute_test/11_J_187(1)_0036.jpg',
+	 'classe': 'page_4'}]
+	 }```
+	"""
+	print("Reconstitution des minutes")
+	current_minute = []
+	current_minute_number = 0
+	minutes = {}
+	# Puis on rassemble les minutes
+	for idx, ((dossier, ident, image), classe) in enumerate(pages_classees):
+		current_image = {}
+		current_image["répertoire"] = dossier
+		current_image["id"] = ident
+		current_image["image_path"] = image
+		current_image["classe"] = classe
+		current_minute.append(current_image)
+		if ident == pages_classees[-1][0][1]:
+			print("Dossier terminé")
+			minutes[current_minute_number] = current_minute
+			break
+		if classe in ["page_4", "page_autre"] and pages_classees[idx + 1][1] == "page_1":
+			minutes[current_minute_number] = current_minute
+			current_minute = []
+			current_minute_number += 1
+	return minutes
+	# utils.save_as_dict(minutes, out_dir)
+
+def classification_images(images, page_classifier_model, page_classifier_vocab):
+	"""
+	Cette fonction classe toutes les images à l'aide d'un Random Forest
+	:param images: la liste d'images
+	:return:
+	"""
+	# On commence par classer toutes les images du dossier
+	print("Classification des images")
+	images_name_list = []
+	pages_classees =  []
+	page_classifier = PC.PageClassifier(build_vocab=False,
+											 model=page_classifier_model,
+											 vocab=page_classifier_vocab)
+	for image in tqdm.tqdm(images):
+		dossier, ident = utils.get_name_from_path(image)
+		# On vérifie s'il n'y a pas de problème de disparition d'image
+		check_image_consistency(ident, images_name_list)
+		images_name_list.append(ident)
+		current_page_type = page_classifier.predict(image=image)
+		pages_classees.append(((dossier, ident, image), current_page_type))
+		if image == images[-1]:
+			print("Dossier terminé")
+	print(pages_classees)
+	return pages_classees
+
+def check_image_consistency(current_image, images_name_list):
+	"""
+	Cette fonction vérifie s'il y a un problème au sein des fichiers et si une image est manquante,
+	fondé sur la liste des images qui doit être une liste suivie d'entier
+	:param current_image:
+	:return:
+	"""
+	if len(images_name_list) != 0 and current_image - images_name_list[-1] != 1:
+		print(f"Il manque probablement une image.")
+		print(f"Image courante: {current_image}. \n"
+			  f"Image précédente: {images_name_list[-1]}.\n"
+			  f"On passe à la minute suivante.")
 
 def main(images_dir:str,
 		 target:str=None,
@@ -736,17 +798,39 @@ def main(images_dir:str,
 		 resegment:bool=False,
 		 retranscribe:bool=False,
 		 start_after:int=0,
-		 device:str="cpu"):
+		 device:str="cpu",
+		 workers:int=1):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
 	else:
 		target = None
-	# Attention, cette façon de trier ne peut fonctionner qu'au sein d'un même minutier
+
 	try:
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
 		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
+	print(images_dir)
+	images_basedir = images_dir.replace("/", "_")
+	minutes_dir = f"results/{images_basedir}_minutes.json"
+	if os.path.isfile(minutes_dir):
+		minutes = utils.load_json_to_dict(minutes_dir)
+	else:
+		pages_classees = classification_images(images=images,
+							  page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
+							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib")
+		minutes = regroupement_minutes(pages_classees=pages_classees)
+		utils.serialize_dict(minutes, minutes_dir)
+	print("Starting.")
+	if workers != 1:
+		with mp.Pool(processes=workers) as pool:
+			data = [({k:v}, images_dir, device) for k, v in minutes.items()]
+			pool.starmap(single_minute_workflow, data)
+	else:
+		for idx, minute in minutes.items():
+			single_minute_workflow({idx:minute}, images_dir=images_dir, device=device)
+
+def single_minute_workflow(minute:dict, images_dir:str, device:str):
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -755,6 +839,11 @@ def main(images_dir:str,
 		"page_4": "src/Vision/models/yolo26_page_4.pt",
 		"ajouts": "src/Vision/models/yolo26_ajouts.pt"
 	}
+	use_party = False
+	resegment = False
+	retranscribe = False
+	debug = False
+	print("Initiating.")
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
 						yolo_models=yolo_models,
@@ -762,15 +851,17 @@ def main(images_dir:str,
 						use_party=use_party,
 						resegment=resegment,
 						retranscribe=retranscribe,
-						device=device)
-	pipeline.workflow(images, target, start_after)
-
+						device=device,
+						images_dir=images_dir,
+						current_minute = minute)
+	pipeline.workflow(minute)
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
 	arguments.add_argument("-i", "--images", help="Input folder")
 	arguments.add_argument("-db", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-d", "--device", help="Device", default="cpu")
+	arguments.add_argument("-w", "--workers", help="Workers", default=1)
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
 	arguments.add_argument("-sa", "--start_after", help="Start after given image index", default=0)
 	arguments.add_argument("-rs", "--resegment", help="Launch new segmentation", default=False)
@@ -779,6 +870,7 @@ if __name__ == '__main__':
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	target = arguments.target
+	workers = int(arguments.workers)
 	device = arguments.device
 	resegment = arguments.resegment
 	retranscribe = True if arguments.retranscribe == "True" else False
@@ -792,4 +884,7 @@ if __name__ == '__main__':
 		 resegment=resegment,
 		 retranscribe=retranscribe,
 		 start_after=start_after,
-		 device=device)
+		 device=device,
+		 workers=workers)
+
+
