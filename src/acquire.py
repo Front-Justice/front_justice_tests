@@ -830,7 +830,7 @@ def main(images_dir:str,
 			data = [({k:v}, images_dir, device) for k, v in minutes.items()]
 			for annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				minute_annotee = {**minute_annotee, **annotations}
-				minute_reconciliee = {**minute_reconciliee, **reconciliation}
+				# minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	else:
 		for idx, minute in minutes.items():
 			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device)
