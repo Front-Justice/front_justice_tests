@@ -210,7 +210,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
     transforms.Resize(IMAGE_SIZE),
     transforms.CenterCrop(IMAGE_SIZE),
     transforms.ToTensor(),
