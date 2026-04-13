@@ -5,6 +5,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchvision.transforms
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import torchvision.models as models
@@ -68,6 +69,10 @@ class CustomDataset(Dataset):
         image = Image.open(img_path).convert("L")  # Charger en niveaux de gris
         if self.transform:
             image = self.transform(image)
+            topil = transforms.ToPILImage()
+            image = topil(image)
+            image.show()
+            exit()
         return image, label
 
 
@@ -110,13 +115,9 @@ class SimpleCNN(nn.Module):
 def train_model(train_loader, val_loader, num_epochs):
     model = SimpleCNN(num_classes=NUM_CLASSES).to(DEVICE)
 
-    model = models.resnet152(pretrained=False).to(DEVICE)
-
-    # Adapter pour 1 canal (niveaux de gris)
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False).to(DEVICE)
-
-    # Adapter pour N classes
-    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES).to(DEVICE)
+    # model = models.resnet152(pretrained=False).to(DEVICE)
+    # model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False).to(DEVICE)
+    # model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES).to(DEVICE)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -203,7 +204,7 @@ LEARNING_RATE = float(arguments.learning_rate)
 DATA_DIR = arguments.input_dir
 # --- 1. Définir les paramètres ---
 # DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
-IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
+IMAGE_SIZE = (65, 1500)  # Taille cible (après padding/redimensionnement)
 NUM_CLASSES = 2  # À adapter selon votre nombre de classes
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
