@@ -1,3 +1,4 @@
+import argparse
 import os
 import shutil
 import sys
@@ -9,25 +10,7 @@ from torchvision import transforms
 from PIL import Image
 import tqdm
 
-# --- 1. Définir les paramètres ---
-# DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
-DATA_DIR = sys.argv[1]
-IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
-BATCH_SIZE = 32
-NUM_EPOCHS = 10
-NUM_CLASSES = 2  # À adapter selon votre nombre de classes
-LEARNING_RATE = 0.001
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- 2. Définir les transformations ---
-# Transformation pour les images en niveaux de gris
-transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),  # Convertir en niveaux de gris
-    transforms.Resize(IMAGE_SIZE),  # Redimensionner (conserve le ratio)
-    transforms.CenterCrop(IMAGE_SIZE),  # Recadrer au centre (optionnel)
-    transforms.ToTensor(),  # Convertir en tenseur [0, 1]
-    transforms.Normalize(mean=[0.5], std=[0.5]),  # Normaliser à [-1, 1]
-])
 
 # --- 3. Créer un Dataset personnalisé ---
 class CustomDataset(Dataset):
@@ -154,6 +137,34 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     print(f"Copying models/simple_cnn_grayscale_{best_epoch}.pth to models/simple_cnn_grayscale_best.pth")
     shutil.copy(f"models/simple_cnn_grayscale_{best_epoch}.pth", "models/simple_cnn_grayscale_best.pth")
 # --- 8. Lancer l'entraînement ---
+
+
+arguments = argparse.ArgumentParser()
+arguments.add_argument("-d", "--device", default="cuda:0")
+arguments.add_argument("-b", "--batch_size", default=32)
+arguments.add_argument("-e", "--epochs", default=10)
+arguments.add_argument("-lr", "--learning_rate", default=0.001)
+arguments = arguments.parse_args()
+DEVICE = arguments.device
+BATCH_SIZE = arguments.batch_size
+NUM_EPOCHS = arguments.epochs
+LEARNING_RATE = arguments.learning_rate
+# --- 1. Définir les paramètres ---
+# DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
+DATA_DIR = sys.argv[1]
+IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
+NUM_CLASSES = 2  # À adapter selon votre nombre de classes
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# --- 2. Définir les transformations ---
+# Transformation pour les images en niveaux de gris
+transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),  # Convertir en niveaux de gris
+    transforms.Resize(IMAGE_SIZE),  # Redimensionner (conserve le ratio)
+    transforms.CenterCrop(IMAGE_SIZE),  # Recadrer au centre (optionnel)
+    transforms.ToTensor(),  # Convertir en tenseur [0, 1]
+    transforms.Normalize(mean=[0.5], std=[0.5]),  # Normaliser à [-1, 1]
+])
 train_model(model, train_loader, val_loader, criterion, optimizer, NUM_EPOCHS)
 
 # --- 9. Sauvegarder le modèle ---
