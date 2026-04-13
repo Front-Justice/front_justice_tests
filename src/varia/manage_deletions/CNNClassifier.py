@@ -20,7 +20,7 @@ def compute_metrics(predictions, labels):
     metric4 = evaluate.load("f1")
 
     # get the label predictions
-    predictions, labels = predictions.cpu(), labels.cpu()
+    predictions, labels = [item.cpu() for item in predictions], [item.cpu() for item in labels]
     predictions = np.argmax(predictions, axis=2)
 
     # get the right format
