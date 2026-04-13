@@ -35,7 +35,6 @@ def compute_metrics(predictions, labels):
     # print(labels)
 
     acc = metric1.compute(predictions=predictions, references=labels)
-    print(acc)
     recall = metric2.compute(predictions=predictions, references=labels, average=None)
     precision = metric3.compute(predictions=predictions, references=labels, average=None)
     f1 = metric4.compute(predictions=predictions, references=labels, average=None)
@@ -150,12 +149,11 @@ def train_model(train_loader, val_loader, num_epochs):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                f1_deleted = results['f1'][0]
                 current_epoch_f1.append(f1_deleted)
 
         results = compute_metrics(predictions=all_predictions, labels=all_labels)
-        current_epoch_f1_average = np.mean(current_epoch_f1)
-        all_f1.append(current_epoch_f1_average)
+        f1_deleted = results['f1'][0]
+        all_f1.append(f1_deleted)
 
         val_loss = val_loss / len(val_loader.dataset)
         val_acc = 100 * correct / total
