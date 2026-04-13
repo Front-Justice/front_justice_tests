@@ -1,6 +1,9 @@
 import argparse
 import copy
 import os
+import time
+
+import PIL.Image
 import tqdm
 import torch
 import multiprocessing as mp
@@ -13,8 +16,10 @@ import glob
 import PIL.Image as Image
 import json
 
+from torchvision import transforms
 import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
+import src.varia.Line_Deletion.deletions as deletions
 
 
 class Pipeline():
@@ -411,7 +416,7 @@ class Pipeline():
 								   and self.retranscribe is True,
 				current_page=int(
 					page['classe'].split("_")[-1],),
-				extract_polygons=extract_polygons
+				extract_polygons=True
 																		)
 
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
@@ -420,6 +425,30 @@ class Pipeline():
 			print("Cas 2")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
+		print(self.current_page_transcription)
+		image = PIL.Image.open(page["image_path"])
+		for line in self.current_page_transcription:
+			cropped = utils.polygon_extraction(line.polygon, image, keep_alpha=False, return_image=True)
+			cropped = cropped.convert("L")
+			transform = deletions.transform(image_size=(65, 1500))
+			normalized = transform(cropped)
+			normalized = normalized.unsqueeze(1)
+			preds = deletions.predict(model_path="src/varia/Line_Deletion/models/line_deletion.pth", image=normalized)
+			if preds == "deleted":
+				print("\n\n---")
+				print("Deletion identified.")
+				cropped.show()
+				for char_poly, char in zip(line.cuts, line.prediction):
+					current_char = utils.polygon_extraction(char_poly, image, keep_alpha=False, return_image=True, vertical_padding=12)
+					current_char = current_char.convert("L")
+					transform = deletions.transform(image_size=(65, 65))
+					normalized = transform(current_char)
+					normalized = normalized.unsqueeze(1)
+					preds = deletions.predict(model_path="src/varia/Line_Deletion/models/chars_deletion.pth", image=normalized)
+					if preds == "deleted":
+						print("-")
+						print(char)
+						print(preds)
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
@@ -692,7 +721,7 @@ class Pipeline():
 					zones_ajouts, ajouts = self.process_additions(page=page)
 					if ajouts is None:
 						ajouts = {"ajouts": None}
-					utils.save_as_dict(self.minutes, self.minutes_annotation_file)
+					# utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
 				elif page['classe'] == "page_2":
@@ -810,6 +839,7 @@ def main(images_dir:str,
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
 		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
+	images_number = len(images)
 	print(images_dir)
 	images_basedir = images_dir.replace("/", "_")
 	minutes_dir = f"results/{images_basedir}_minutes.json"
@@ -821,6 +851,7 @@ def main(images_dir:str,
 							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib")
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
+	minutes_number = len(minutes)
 	print("Starting.")
 	minute_annotee = {}
 	minute_reconciliee = {}
@@ -837,7 +868,8 @@ def main(images_dir:str,
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	utils.serialize_dict(minute_annotee, "test.json")
-	utils.serialize_dict(minute_annotee, "test_reconcilie.json")
+	# utils.serialize_dict(minute_annotee, "test_reconcilie.json")
+	return images_number, minutes_number
 
 def single_minute_workflow(minute:dict, images_dir:str, device:str):
 	yolo_models = {
@@ -852,7 +884,7 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str):
 	if use_party:
 		import src.Vision.PARTY as PARTY
 	resegment = False
-	retranscribe = False
+	retranscribe = True
 	debug = False
 	print("Initiating.")
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
@@ -889,7 +921,9 @@ if __name__ == '__main__':
 	use_party = True if arguments.use_party == "True" else False
 	start_after = int(arguments.start_after)
 	debug = True if arguments.debug == "True" else False
-	main(images_dir=images_dir,
+
+	start_time = time.time()
+	nombre_images, nombre_minutes = main(images_dir=images_dir,
 		 target=target,
 		 debug=debug,
 		 use_party=use_party,
@@ -898,5 +932,10 @@ if __name__ == '__main__':
 		 start_after=start_after,
 		 device=device,
 		 workers=workers)
+	end_time = time.time()
+	elapsed_time = end_time - start_time
+	ratio_images = nombre_images / elapsed_time
+	ratio_minutes = nombre_minutes / elapsed_time
+	print(f"Fait en: {elapsed_time} secondes: {ratio_images} image par seconde et {ratio_minutes} minute par seconde.")
 
 
