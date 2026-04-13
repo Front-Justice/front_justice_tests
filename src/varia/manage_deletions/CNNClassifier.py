@@ -13,6 +13,8 @@ import evaluate
 import numpy as np
 
 def compute_metrics(predictions, labels):
+    predictions = torch.stack(predictions)
+    labels = torch.stack(labels)
     # load the metrics we want to evaluate
     metric1 = evaluate.load("accuracy")
     metric2 = evaluate.load("recall")
@@ -20,7 +22,7 @@ def compute_metrics(predictions, labels):
     metric4 = evaluate.load("f1")
 
     # get the label predictions
-    predictions, labels = [item.cpu() for item in predictions], [item.cpu() for item in labels]
+    predictions, labels = predictions.cpu(), labels.cpu()
     predictions = np.argmax(predictions, axis=2)
 
     # get the right format
@@ -141,6 +143,9 @@ def train_model(train_loader, val_loader, num_epochs):
             for images, labels in val_loader:
                 images = images.to(DEVICE)
                 labels = labels.to(DEVICE)
+                # On ignore le dernier batch s'il ne fait pas la taille du batch size
+                if len(images) != BATCH_SIZE:
+                    continue
                 all_labels.append(labels)
                 outputs = model(images)
                 all_predictions.append(outputs)
