@@ -36,7 +36,7 @@ class CustomDataset(Dataset):
 
 
 class SimpleCNN(nn.Module):
-    def __init__(self, num_classes=NUM_CLASSES):
+    def __init__(self, num_classes):
         super(SimpleCNN, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),  # 1 canal (niveaux de gris)
@@ -69,14 +69,12 @@ class SimpleCNN(nn.Module):
         x = self.classifier(x)
         return x
 
-model = SimpleCNN(num_classes=NUM_CLASSES).to(DEVICE)
-
-# --- 6. Définir la perte et l'optimiseur ---
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- 7. Boucle d'entraînement ---
-def train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs):
+def train_model(train_loader, val_loader, num_epochs):
+    model = SimpleCNN(num_classes=NUM_CLASSES).to(DEVICE)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     all_accuracies = []
     for epoch in range(num_epochs):
         model.train()
@@ -164,6 +162,6 @@ val_dataset = CustomDataset(os.path.join(DATA_DIR, "val"), transform=transform)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-train_model(model, train_loader, val_loader, criterion, optimizer, NUM_EPOCHS)
+train_model(train_loader, val_loader, NUM_EPOCHS)
 
 # --- 9. Sauvegarder le modèle ---
