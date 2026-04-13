@@ -188,7 +188,7 @@ arguments = arguments.parse_args()
 DEVICE = arguments.device
 workers = int(arguments.workers)
 BATCH_SIZE = int(arguments.batch_size)
-NUM_EPOCHS = arguments.epochs
+NUM_EPOCHS = int(arguments.epochs)
 LEARNING_RATE = float(arguments.learning_rate)
 DATA_DIR = arguments.input_dir
 # --- 1. Définir les paramètres ---
