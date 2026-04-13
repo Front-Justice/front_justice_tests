@@ -110,7 +110,7 @@ class SimpleCNN(nn.Module):
 def train_model(train_loader, val_loader, num_epochs):
     model = SimpleCNN(num_classes=NUM_CLASSES).to(DEVICE)
 
-    model = models.resnet18(pretrained=False).to(DEVICE)
+    model = models.resnet152(pretrained=False).to(DEVICE)
 
     # Adapter pour 1 canal (niveaux de gris)
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False).to(DEVICE)
