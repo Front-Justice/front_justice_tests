@@ -12,7 +12,6 @@ import tqdm
 
 
 
-# --- 3. Créer un Dataset personnalisé ---
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -35,14 +34,7 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-# --- 4. Charger les données ---
-train_dataset = CustomDataset(os.path.join(DATA_DIR, "train"), transform=transform)
-val_dataset = CustomDataset(os.path.join(DATA_DIR, "val"), transform=transform)
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-# --- 5. Définir le modèle CNN ---
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes=NUM_CLASSES):
         super(SimpleCNN, self).__init__()
@@ -147,9 +139,9 @@ arguments.add_argument("-lr", "--learning_rate", default=0.001)
 arguments.add_argument("-i", "--input_dir", default="")
 arguments = arguments.parse_args()
 DEVICE = arguments.device
-BATCH_SIZE = arguments.batch_size
+BATCH_SIZE = int(arguments.batch_size)
 NUM_EPOCHS = arguments.epochs
-LEARNING_RATE = arguments.learning_rate
+LEARNING_RATE = float(arguments.learning_rate)
 DATA_DIR = arguments.input_dir
 # --- 1. Définir les paramètres ---
 # DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
@@ -157,15 +149,21 @@ IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
 NUM_CLASSES = 2  # À adapter selon votre nombre de classes
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- 2. Définir les transformations ---
-# Transformation pour les images en niveaux de gris
+
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),  # Convertir en niveaux de gris
-    transforms.Resize(IMAGE_SIZE),  # Redimensionner (conserve le ratio)
-    transforms.CenterCrop(IMAGE_SIZE),  # Recadrer au centre (optionnel)
-    transforms.ToTensor(),  # Convertir en tenseur [0, 1]
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize(IMAGE_SIZE),
+    transforms.CenterCrop(IMAGE_SIZE),
+    transforms.ToTensor(),
     transforms.Normalize(mean=[0.5], std=[0.5]),  # Normaliser à [-1, 1]
 ])
+
+train_dataset = CustomDataset(os.path.join(DATA_DIR, "train"), transform=transform)
+val_dataset = CustomDataset(os.path.join(DATA_DIR, "val"), transform=transform)
+
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+
 train_model(model, train_loader, val_loader, criterion, optimizer, NUM_EPOCHS)
 
 # --- 9. Sauvegarder le modèle ---
