@@ -1,6 +1,6 @@
 import os
 import shutil
-
+import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,7 +10,8 @@ from PIL import Image
 import tqdm
 
 # --- 1. Définir les paramètres ---
-DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"  # Dossier contenant train/ et val/
+# DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
+DATA_DIR = sys.argv[1]
 IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
 BATCH_SIZE = 32
 NUM_EPOCHS = 10
@@ -145,7 +146,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
               f"Val Loss: {val_loss:.4f}, "
               f"Val Acc: {val_acc:.2f}%")
         all_accuracies.append(val_acc)
-        os.makedirs(exist_ok=True, "models")
+        os.makedirs(exist_ok=True, name="models")
         torch.save(model.state_dict(), f"models/simple_cnn_grayscale_{epoch}.pth")
 
     best_epoch = all_accuracies.index(max(all_accuracies))
