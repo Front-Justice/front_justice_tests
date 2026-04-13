@@ -133,10 +133,12 @@ arguments = argparse.ArgumentParser()
 arguments.add_argument("-d", "--device", default="cuda:0")
 arguments.add_argument("-b", "--batch_size", default=32)
 arguments.add_argument("-e", "--epochs", default=10)
+arguments.add_argument("-w", "--workers", default=4)
 arguments.add_argument("-lr", "--learning_rate", default=0.001)
 arguments.add_argument("-i", "--input_dir", default="")
 arguments = arguments.parse_args()
 DEVICE = arguments.device
+workers = arguments.workers
 BATCH_SIZE = int(arguments.batch_size)
 NUM_EPOCHS = arguments.epochs
 LEARNING_RATE = float(arguments.learning_rate)
@@ -159,8 +161,8 @@ transform = transforms.Compose([
 train_dataset = CustomDataset(os.path.join(DATA_DIR, "train"), transform=transform)
 val_dataset = CustomDataset(os.path.join(DATA_DIR, "val"), transform=transform)
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=workers)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=workers)
 
 train_model(train_loader, val_loader, NUM_EPOCHS)
 
