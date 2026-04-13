@@ -144,14 +144,15 @@ arguments.add_argument("-d", "--device", default="cuda:0")
 arguments.add_argument("-b", "--batch_size", default=32)
 arguments.add_argument("-e", "--epochs", default=10)
 arguments.add_argument("-lr", "--learning_rate", default=0.001)
+arguments.add_argument("-i", "--input_dir", default="")
 arguments = arguments.parse_args()
 DEVICE = arguments.device
 BATCH_SIZE = arguments.batch_size
 NUM_EPOCHS = arguments.epochs
 LEARNING_RATE = arguments.learning_rate
+DATA_DIR = arguments.input_dir
 # --- 1. Définir les paramètres ---
 # DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
-DATA_DIR = sys.argv[1]
 IMAGE_SIZE = (1500, 65)  # Taille cible (après padding/redimensionnement)
 NUM_CLASSES = 2  # À adapter selon votre nombre de classes
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
