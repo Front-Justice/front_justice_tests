@@ -13,7 +13,6 @@ import evaluate
 import numpy as np
 
 def compute_metrics(predictions, labels):
-    print("Starting eval")
     # load the metrics we want to evaluate
     metric1 = evaluate.load("accuracy")
     metric2 = evaluate.load("recall")
@@ -22,7 +21,7 @@ def compute_metrics(predictions, labels):
 
     # get the label predictions
     predictions, labels = predictions.cpu(), labels.cpu()
-    predictions = np.argmax(predictions, axis=1)
+    predictions = np.argmax(predictions, axis=2)
 
     # get the right format
     predictions = np.array(predictions, dtype='int32').flatten()
@@ -43,8 +42,6 @@ def compute_metrics(predictions, labels):
     recall = recall['recall'].tolist()
     precision = precision["precision"].tolist()
     f1 = f1["f1"].tolist()
-
-    print("Eval finished")
     result = {"accuracy": acc, "recall": recall, "precision": precision, "f1": f1}
     print(result)
     return result
@@ -139,19 +136,24 @@ def train_model(train_loader, val_loader, num_epochs):
         correct = 0
         total = 0
         current_epoch_f1 = []
+        all_labels = []
+        all_predictions = []
         with torch.no_grad():
             for images, labels in val_loader:
                 images = images.to(DEVICE)
                 labels = labels.to(DEVICE)
+                all_labels.append(labels)
                 outputs = model(images)
+                all_predictions.append(outputs)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item() * images.size(0)
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                results = compute_metrics(predictions=outputs, labels=labels)
                 f1_deleted = results['f1'][0]
                 current_epoch_f1.append(f1_deleted)
+
+        results = compute_metrics(predictions=all_predictions, labels=all_labels)
         current_epoch_f1_average = np.mean(current_epoch_f1)
         all_f1.append(current_epoch_f1_average)
 
