@@ -69,10 +69,6 @@ class CustomDataset(Dataset):
         image = Image.open(img_path).convert("L")  # Charger en niveaux de gris
         if self.transform:
             image = self.transform(image)
-            topil = transforms.ToPILImage()
-            image = topil(image)
-            image.show()
-            exit()
         return image, label
 
 
