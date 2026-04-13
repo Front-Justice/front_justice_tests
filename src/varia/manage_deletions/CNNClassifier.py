@@ -149,7 +149,6 @@ def train_model(train_loader, val_loader, num_epochs):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                current_epoch_f1.append(f1_deleted)
 
         results = compute_metrics(predictions=all_predictions, labels=all_labels)
         f1_deleted = results['f1'][0]
