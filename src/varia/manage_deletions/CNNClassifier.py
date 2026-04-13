@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+import torchvision.models as models
 from PIL import Image
 import tqdm
 import evaluate
@@ -74,7 +75,7 @@ class SimpleCNN(nn.Module):
     def __init__(self, num_classes):
         super(SimpleCNN, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),  # 1 canal (niveaux de gris)
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
@@ -108,6 +109,15 @@ class SimpleCNN(nn.Module):
 # --- 7. Boucle d'entraînement ---
 def train_model(train_loader, val_loader, num_epochs):
     model = SimpleCNN(num_classes=NUM_CLASSES).to(DEVICE)
+
+    model = models.resnet18(pretrained=False).to(DEVICE)
+
+    # Adapter pour 1 canal (niveaux de gris)
+    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False).to(DEVICE)
+
+    # Adapter pour N classes
+    model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES).to(DEVICE)
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     all_accuracies = []
