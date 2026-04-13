@@ -9,8 +9,45 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from PIL import Image
 import tqdm
+import evaluate
+import numpy as np
 
+def compute_metrics(predictions, labels):
+    print("Starting eval")
+    # load the metrics we want to evaluate
+    metric1 = evaluate.load("accuracy")
+    metric2 = evaluate.load("recall")
+    metric3 = evaluate.load("precision")
+    metric4 = evaluate.load("f1")
 
+    # get the label predictions
+    predictions, labels = predictions.cpu(), labels.cpu()
+    predictions = np.argmax(predictions, axis=1)
+
+    # get the right format
+    predictions = np.array(predictions, dtype='int32').flatten()
+    labels = np.array(labels, dtype='int32').flatten()
+
+    # automatically, value of -100 are produce ; we haven't understood why but we change them to 0. If not, it will give poor results
+    ###
+    labels = [0 if x == -100 else x for x in labels]
+    ###
+    # print(predictions)
+    # print(labels)
+
+    acc = metric1.compute(predictions=predictions, references=labels)
+    print(acc)
+    recall = metric2.compute(predictions=predictions, references=labels, average=None)
+    precision = metric3.compute(predictions=predictions, references=labels, average=None)
+    f1 = metric4.compute(predictions=predictions, references=labels, average=None)
+    recall = recall['recall'].tolist()
+    precision = precision["precision"].tolist()
+    f1 = f1["f1"].tolist()
+
+    print("Eval finished")
+    result = {"accuracy": acc, "recall": recall, "precision": precision, "f1": f1}
+    print(result)
+    return result
 
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
@@ -76,6 +113,7 @@ def train_model(train_loader, val_loader, num_epochs):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     all_accuracies = []
+    all_f1 = []
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -100,6 +138,7 @@ def train_model(train_loader, val_loader, num_epochs):
         val_loss = 0.0
         correct = 0
         total = 0
+        current_epoch_f1 = []
         with torch.no_grad():
             for images, labels in val_loader:
                 images = images.to(DEVICE)
@@ -110,6 +149,11 @@ def train_model(train_loader, val_loader, num_epochs):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
+                results = compute_metrics(predictions=outputs, labels=labels)
+                f1_deleted = results['f1'][0]
+                current_epoch_f1.append(f1_deleted)
+        current_epoch_f1_average = np.mean(current_epoch_f1)
+        all_f1.append(current_epoch_f1_average)
 
         val_loss = val_loss / len(val_loader.dataset)
         val_acc = 100 * correct / total
@@ -122,8 +166,8 @@ def train_model(train_loader, val_loader, num_epochs):
         os.makedirs(exist_ok=True, name="models")
         torch.save(model.state_dict(), f"models/simple_cnn_grayscale_{epoch}.pth")
 
-    best_epoch = all_accuracies.index(max(all_accuracies))
-    print(f"Best accuracy: {max(all_accuracies)} for epoch {best_epoch}")
+    best_epoch = all_f1.index(max(all_f1))
+    print(f"Best F1: {max(all_f1)} for epoch {best_epoch}")
     print(f"Copying models/simple_cnn_grayscale_{best_epoch}.pth to models/simple_cnn_grayscale_best.pth")
     shutil.copy(f"models/simple_cnn_grayscale_{best_epoch}.pth", "models/simple_cnn_grayscale_best.pth")
 # --- 8. Lancer l'entraînement ---
