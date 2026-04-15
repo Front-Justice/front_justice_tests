@@ -2,10 +2,12 @@ import argparse
 import copy
 import os
 import time
-
+import itertools
 import PIL.Image
+import numpy as np
 import tqdm
 import torch
+import torchvision
 import multiprocessing as mp
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
@@ -16,10 +18,9 @@ import glob
 import PIL.Image as Image
 import json
 
-from torchvision import transforms
 import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
-import src.varia.Line_Deletion.deletions as deletions
+import src.Vision.LinesDeletion as deletions
 
 
 class Pipeline():
@@ -47,6 +48,9 @@ class Pipeline():
 		self.current_image_idx = 0
 		self.pages_classees = []
 		self.images_basedir = images_dir.replace("/", "_")
+		self.LinesDeletionsIdentifier = deletions.LinesDeletionsIdentifier(model_lines="src/varia/Line_Deletion/models/line_deletion.pth",
+																		   model_chars="src/varia/Line_Deletion/models/chars_deletion.pth")
+
 
 		# Les modèles de zones
 		self.yolo_models = {}
@@ -418,37 +422,24 @@ class Pipeline():
 					page['classe'].split("_")[-1],),
 				extract_polygons=True
 																		)
-
+			t1 = time.time()
+			image = PIL.Image.open(page["image_path"])
+			for line in self.current_page_transcription:
+				sentence = self.LinesDeletionsIdentifier.identify_deletions_in_line(line, image)
+				line.prediction_with_deletion = sentence
+			t2 = time.time()
+			elapsed = t2 - t1
+			print(f"Fait en {elapsed} secondes")
+			exit()
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
 			print("Found existing kraken transcription: " + target_transcription)
 			print("Cas 2")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
-		print(self.current_page_transcription)
-		image = PIL.Image.open(page["image_path"])
-		for line in self.current_page_transcription:
-			cropped = utils.polygon_extraction(line.polygon, image, keep_alpha=False, return_image=True)
-			cropped = cropped.convert("L")
-			transform = deletions.transform(image_size=(65, 1500))
-			normalized = transform(cropped)
-			normalized = normalized.unsqueeze(1)
-			preds = deletions.predict(model_path="src/varia/Line_Deletion/models/line_deletion.pth", image=normalized)
-			if preds == "deleted":
-				print("\n\n---")
-				print("Deletion identified.")
-				cropped.show()
-				for char_poly, char in zip(line.cuts, line.prediction):
-					current_char = utils.polygon_extraction(char_poly, image, keep_alpha=False, return_image=True, vertical_padding=12)
-					current_char = current_char.convert("L")
-					transform = deletions.transform(image_size=(65, 65))
-					normalized = transform(current_char)
-					normalized = normalized.unsqueeze(1)
-					preds = deletions.predict(model_path="src/varia/Line_Deletion/models/chars_deletion.pth", image=normalized)
-					if preds == "deleted":
-						print("-")
-						print(char)
-						print(preds)
+
+
+
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
@@ -858,20 +849,20 @@ def main(images_dir:str,
 	if workers != 1:
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
-			data = [({k:v}, images_dir, device) for k, v in minutes.items()]
+			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
 			for annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				minute_annotee = {**minute_annotee, **annotations}
 				# minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	else:
 		for idx, minute in minutes.items():
-			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device)
+			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	utils.serialize_dict(minute_annotee, "test.json")
 	# utils.serialize_dict(minute_annotee, "test_reconcilie.json")
 	return images_number, minutes_number
 
-def single_minute_workflow(minute:dict, images_dir:str, device:str):
+def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe:bool):
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -882,9 +873,8 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str):
 	}
 	use_party = False
 	if use_party:
-		import src.Vision.PARTY as PARTY
+		pass
 	resegment = False
-	retranscribe = True
 	debug = False
 	print("Initiating.")
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",

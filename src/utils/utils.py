@@ -1,7 +1,6 @@
-import csv
+import cv2
 import json
 import math
-import os
 from datetime import datetime, timedelta
 import pickle
 import random
@@ -117,7 +116,8 @@ class OCRLine:
 	baseline: list
 	prediction: str
 	cuts: list
-	polygon: list | None
+	polygon: list | None = None
+	prediction_with_deletion: str | None = None
 
 
 class OCRRecord():
@@ -131,6 +131,7 @@ class OCRRecord():
 		for item in record:
 			Line: OCRLine = OCRLine(baseline=item['baseline'],
 									prediction=item['prediction'],
+									prediction_with_deletion=None,
 									cuts=item['cuts'],
 									polygon=item['polygon'])
 			self.record.append(Line)
@@ -175,10 +176,13 @@ class OCRRecord():
 			if show_cuts is True:
 				out_dict.append({"baseline": line.baseline,
 								 "cuts": line.cuts,
-								 "prediction": line.prediction})
+								 "prediction": line.prediction,
+								 "prediction_with_deletion": line.prediction_with_deletion})
 			else:
 				out_dict.append({"baseline": line.baseline,
-								 "prediction": line.prediction})
+								 "prediction": line.prediction,
+								 "polygon": line.polygon,
+								 "prediction_with_deletion": line.prediction_with_deletion})
 		return json.dumps(out_dict)
 
 	def to_json(self):
@@ -190,7 +194,9 @@ class OCRRecord():
 		for item in self.record:
 			dictionnary.append({"prediction": item.prediction,
 								"baseline": item.baseline,
-								"cuts": item.cuts})
+								"cuts": item.cuts,
+								"polygon": item.polygon,
+								 "prediction_with_deletion": item.prediction_with_deletion})
 		return dictionnary
 
 	def from_json(self, path):
@@ -199,7 +205,15 @@ class OCRRecord():
 		for item in lines_as_dict:
 			if "polygon" not in item:
 				item["polygon"] = None
-			Line: OCRLine = OCRLine(baseline=item['baseline'], prediction=item['prediction'], cuts=item['cuts'], polygon=item['polygon'])
+			try:
+				prediction_with_deletion = item['prediction_with_deletion']
+			except KeyError:
+				prediction_with_deletion = None
+			Line: OCRLine = OCRLine(baseline=item['baseline'],
+									prediction=item['prediction'],
+									cuts=item['cuts'],
+									polygon=item['polygon'],
+									prediction_with_deletion=prediction_with_deletion)
 			self.record.append(Line)
 
 
@@ -538,7 +552,47 @@ def extract_bbox_from_baseline(target_line:OCRLine, image:Image.Image, height_re
 	polygon = [[xa, ya], [xb, yb], [xc, yc], [xd, yd]]
 	polygon_extraction(polygon, image)
 
-def polygon_extraction(polygon, image:Image.Image):
+
+def opencv_polygon_extraction(polygon, image:Union[Image.Image,np.array], keep_alpha:bool=True, return_image:bool=False, vertical_padding=None):
+	# Convertir en np.ndarray si c'est une PIL.Image
+	if isinstance(image, Image.Image):
+		image = np.array(image)
+		if image.ndim == 2:  # Niveaux de gris
+			image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+	elif image.ndim == 2:  # Déjà en niveaux de gris (NumPy)
+		image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+	# Créer un masque vide (uint8: 0-255)
+	mask = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
+
+	# Remplir le polygone dans le masque
+	cv2.fillPoly(mask, [np.array(polygon, dtype=np.int32)], 255)
+
+	# Calculer la bounding box
+	x_coords = [p[0] for p in polygon]
+	y_coords = [p[1] for p in polygon]
+	x_min, x_max = max(0, min(x_coords) - vertical_padding), min(image.shape[1], max(x_coords) + vertical_padding)
+	y_min, y_max = max(0, min(y_coords) - vertical_padding), min(image.shape[0], max(y_coords) + vertical_padding)
+
+	# Recadrer l'image et le masque
+	cropped_img = image[y_min:y_max, x_min:x_max]
+	cropped_mask = mask[y_min:y_max, x_min:x_max]
+
+	# Ajouter le canal alpha si nécessaire
+	if keep_alpha:
+		if cropped_img.shape[2] == 3:  # RGB → RGBA
+			cropped_img = cv2.cvtColor(cropped_img, cv2.COLOR_RGB2RGBA)
+		cropped_img[:, :, 3] = cropped_mask  # Appliquer le masque comme alpha
+
+
+	if return_image:
+		return cropped_img
+	else:
+		if show_image:
+			cropped_img = Image.fromarray(cropped_img)
+			cropped_img.show()
+		return None
+
+def polygon_extraction(polygon, image:Union[Image.Image,np.array], keep_alpha:bool=True, return_image:bool=False, vertical_padding=None):
 	"""
 	Cette fonction extrait un polygone d'une image et la montre
 	https://stackoverflow.com/a/22650239
@@ -546,7 +600,10 @@ def polygon_extraction(polygon, image:Image.Image):
 	"""
 	# read image as RGB and add alpha (transparency)
 	# convert to numpy (for convenience)
-	imArray = np.asarray(image)
+	if isinstance(image, Image.Image):
+		imArray = np.asarray(image)
+	else:
+		imArray = image
 
 	# create mask
 	maskIm = Image.new('L', (imArray.shape[1], imArray.shape[0]), 0)
@@ -563,19 +620,30 @@ def polygon_extraction(polygon, image:Image.Image):
 	newImArray[:, :, :3] = imArray[:, :, :3]
 
 	# transparency (4th column)
-	newImArray[:, :, 3] = mask * 255
+	if keep_alpha is True:
+		newImArray[:, :, 3] = mask * 255
 
 	# back to Image from numpy
-	x_max = max([i[0] for i in polygon])
-	x_min = min([i[0] for i in polygon])
-	y_max = max([i[1] for i in polygon])
-	y_min = min([i[1] for i in polygon])
+	x_coords = [point[0] for point in polygon]
+	y_coords = [point[1] for point in polygon]
+	x_min, x_max = min(x_coords), max(x_coords)
+	y_min, y_max = min(y_coords), max(y_coords)
+
+	if vertical_padding:
+		x_min, x_max = x_min - vertical_padding, x_max + vertical_padding
 	rectangle_coordinates = (x_min, y_min, x_max, y_max)
 
 	# On enregistre
-	newIm = Image.fromarray(newImArray, "RGBA")
+	if keep_alpha is True:
+		mode = "RGBA"
+	else:
+		mode = "RGB"
+	newIm = Image.fromarray(newImArray, mode)
 	cropped_img = newIm.crop(rectangle_coordinates)
-	cropped_img.show()
+	if return_image is True:
+		return cropped_img
+	else:
+		cropped_img.show()
 
 
 def extend_baseline_and_retranscribe(line: OCRLine,
