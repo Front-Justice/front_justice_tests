@@ -205,7 +205,7 @@ DATA_DIR = arguments.input_dir
 # --- 1. Définir les paramètres ---
 # DATA_DIR = "/media/mgl/stock/Front_Justice/data/HTR_data/data/main_text/extracted/data/lines_splits/"
 IMAGE_SIZE = (65, 1500)  # Taille cible (après padding/redimensionnement)
-IMAGE_SIZE = (65, 65)  # Taille cible (après padding/redimensionnement)
+# IMAGE_SIZE = (65, 65)  # Taille cible (après padding/redimensionnement)
 NUM_CLASSES = 2  # À adapter selon votre nombre de classes
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
