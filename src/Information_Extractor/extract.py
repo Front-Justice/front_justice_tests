@@ -28,10 +28,9 @@ import src.Information_Extractor.extraction_functions as extractions
 
 class Extractor:
 	"""
-	Classe pour extraire les informations à partir:
-	 	- d'un corpus d'annotations au format COCO
-	 	- d'un corpus de documents XML au format ALTO
-	 	- du même corpus d'images
+	Classe contenant un grand nombre de méthodes pour extraire les informations à partir:
+	 	- d'un corpus d'annotations, objet YOLORecord
+	 	- d'un ensemble de lignes, objet OCRRecord
 	"""
 
 	def __init__(self,
@@ -65,12 +64,10 @@ class Extractor:
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
-		entity_spotting_model = ("src/Information_Extractor/models/model_NER")
-
-		entity_spotting_model = ("src/Information_Extractor/models/best_model")
+		entity_spotting_model = ("src/Information_Extractor/models/entity_spotting")
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base")
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
 		self.entity_spotting_pipeline = pipeline('ner',
 												 model=entity_spotting_model,
 												 tokenizer=tokenizer,
@@ -78,10 +75,6 @@ class Extractor:
 												 device=-1 if device == "cpu" else device)
 
 		self.alto_namepaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
-		self.target_corpus = glob.glob("../Page_Classifier/data/corpus/page_1/*.jpg")
-		self.conversion_dict = {item.replace("(", "-").replace(")", "").split("/")[-1].replace(".jpg", ""): item for
-								item in
-								self.target_corpus}
 		self.resize_factor: int = resize_factor
 		self.use_party = use_party
 		if debug is False:
@@ -93,17 +86,14 @@ class Extractor:
 		self.extracted_annotations = {}
 		self.excluded_classes = ["Titre"]
 
-	def filter_zones(self, annotations: YOLORecord, category: str) -> YOLORecord:
+	def filter_zones(self,
+					 annotations: YOLORecord,
+					 category: str) -> YOLORecord:
 		"""
 		Fonction permettant de filtrer les zones par catégorie
-		:param annotations: Une liste de dictionnaires de la forme:
-		[
-			{'label': 'Magistrats', 'coordinates': [113, 1362, 3038, 3235]},
-			...,
-			{'label': 'Table', 'coordinates': [195, 2039, 3034, 2863]}
-		]
+		:param annotations: un objet YOLORecord
 		:param category: la catégorie à filtrer
-		:return: La même liste avec la zone ciblée
+		:return: un YOLORecord contenant uniquement les zones ciblées
 		"""
 		return [annotation for annotation in annotations if annotation.label == category]
 
@@ -226,7 +216,7 @@ class Extractor:
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
 		:param party_engine: le moteur de transcription party
 		:param annotations: un objet YOLORecord qui contient les coordonnées et labels de zone
-		:param ocr_prediction: un objet OCRRecord qui contient les baselines, predictions et cuts d'une liste de lignes
+		:param ocr_prediction: un objet OCRRecord qui contient les lignes prédites
 		:param image: [Debug] le chemin vers l'image à afficher
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
@@ -346,20 +336,8 @@ class Extractor:
 		"""
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
 		:param image: [Debug] le chemin vers l'image à afficher
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
@@ -1409,20 +1387,8 @@ class Extractor:
 		"""
 		Cette fonction extrait la date du crime à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
+		:param ocr_prediction: un objet OCRRecord avec les lignes prédites
+		:param annotations: un objet YOLORecord avec les zones identifiées
 		:param image: [Debug] le chemin vers l'image à afficher
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
@@ -2650,6 +2616,7 @@ class Extractor:
 			# On itère sur les lignes identifiées par Kraken
 			for idx, predicted_line in enumerate(ocr_prediction):
 				prediction = predicted_line.prediction
+				image_path = predicted_line.image_path
 				baseline = predicted_line.baseline
 				# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
 				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
@@ -2661,12 +2628,12 @@ class Extractor:
 				if is_in_box is True:
 					try:
 						table_dict[idx].append(
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None)
+							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
 						)
 
 					except KeyError:
 						table_dict[idx] = [
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None)
+							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
 						]
 		table_des_magistrats = [item for item in table_dict.values()]
 

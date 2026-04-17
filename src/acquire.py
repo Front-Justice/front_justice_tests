@@ -2,12 +2,9 @@ import argparse
 import copy
 import os
 import time
-import itertools
 import PIL.Image
-import numpy as np
 import tqdm
 import torch
-import torchvision
 import multiprocessing as mp
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
@@ -24,6 +21,10 @@ import src.Vision.LinesDeletion as deletions
 
 
 class Pipeline():
+	"""
+	Classe principale de production des données. Réalise la classification et le tri des images,
+	la reconstitution des minutes, l'acquisition du texte, l'extraction des informations.
+	"""
 	def __init__(self,
 				 page_classifier_model,
 				 page_classifier_vocab,
@@ -48,8 +49,8 @@ class Pipeline():
 		self.current_image_idx = 0
 		self.pages_classees = []
 		self.images_basedir = images_dir.replace("/", "_")
-		self.LinesDeletionsIdentifier = deletions.LinesDeletionsIdentifier(model_lines="src/varia/Line_Deletion/models/line_deletion.pth",
-																		   model_chars="src/varia/Line_Deletion/models/chars_deletion.pth")
+		self.LinesDeletionsIdentifier = deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
+																		   model_chars="src/Vision/models/chars_deletion.pth")
 
 
 		# Les modèles de zones
@@ -126,7 +127,7 @@ class Pipeline():
 
 	def regroupement_minutes(self, out_dir):
 		"""
-		Cette fonction regroupe les minutes
+		Cette fonction regroupe les images pour reconstituer les minutes.
 		:return: None, mais produit le dictionnaire self.minutes de la forme:
 		 ```JSON
 		 {0: [
@@ -183,7 +184,7 @@ class Pipeline():
 							 extract_polygons:bool=False,
 							 model=None) -> OCRRecord:
 		"""
-		On segmente et on transcrit avec kraken
+		Segmentation et transcription avec Kraken
 		:param image: Le chemin vers l'image
 		:param transcription_only: faut-il lancer la transcription uniquement ?
 		:return:
@@ -202,7 +203,8 @@ class Pipeline():
 		else:
 			baseline = kraken_ocr.segment_lines_with_kraken(image=loaded_page)
 			utils.pickle_object(obj=baseline, path=segmentation_json)
-		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, extract_polygons=extract_polygons)
+		return kraken_ocr.predict_with_kraken(im=loaded_page, segments=baseline, extract_polygons=extract_polygons,
+											  image_name=image)
 
 
 	def traitement_p_2(self, page, show_image=False):
@@ -403,12 +405,12 @@ class Pipeline():
 						   page:str,
 						   show_image:bool = False,
 						   force_resegment:bool = False,
-						   extract_polygons:bool = False):
+						   extract_polygons:bool = False) -> None:
 		"""
-		Fonction wrapper de transcription d'une page
-		:param page: La page à transcrire
+		Fonction wrapper de transcription d'une page. Produit également la reconnaissance des
+		mots biffés dans la ligne. Met à jour l'objet self.current_page_transcription
+		:param page: Le chemin vers la page à transcrire
 		:param show_image: Montrer l'image transcrite avec les lignes ?
-		:return:
 		"""
 		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
@@ -425,33 +427,37 @@ class Pipeline():
 			t1 = time.time()
 			image = PIL.Image.open(page["image_path"])
 			for line in self.current_page_transcription:
-				sentence = self.LinesDeletionsIdentifier.identify_deletions_in_line(line, image)
+				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
 				line.prediction_with_deletion = sentence
 			t2 = time.time()
 			elapsed = t2 - t1
 			print(f"Fait en {elapsed} secondes")
-			exit()
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
 			print("Found existing kraken transcription: " + target_transcription)
 			print("Cas 2")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
-
-
-
+			t1 = time.time()
+			image = PIL.Image.open(page["image_path"])
+			for line in self.current_page_transcription:
+				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
+			line.prediction_with_deletion = sentence
+			t2 = time.time()
+			elapsed = t2 - t1
+			print(f"Fait en {elapsed} secondes")
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
 			utils.draw_lines_on_image(image_path=page["image_path"], baselines=baselines)
 
 
-	def process_additions(self, page:json, show_image=False):
+	def process_additions(self, page:json) -> tuple[dict, dict]:
 		"""
 		Cette fonction gère les ajouts postérieurs.
 		:param page: the page metadata as json
 		:param show_image: montrer l'image ou pas.
-		:return:
+		:return: le dictionnaire contenant les zones, et le dictionnaire avec les informations extraites.
 		"""
 
 		# On segmente la page 1: boxes générales
@@ -550,6 +556,7 @@ class Pipeline():
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
 			current_dict['soldat'] = None
+			return zone_dict, current_dict
 		else:
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
@@ -825,7 +832,6 @@ def main(images_dir:str,
 		images = [item for item in images if item == target]
 	else:
 		target = None
-
 	try:
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
@@ -834,7 +840,7 @@ def main(images_dir:str,
 	print(images_dir)
 	images_basedir = images_dir.replace("/", "_")
 	minutes_dir = f"results/{images_basedir}_minutes.json"
-	if os.path.isfile(minutes_dir):
+	if os.path.isfile(minutes_dir) and not target:
 		minutes = utils.load_json_to_dict(minutes_dir)
 	else:
 		pages_classees = classification_images(images=images,
@@ -857,7 +863,7 @@ def main(images_dir:str,
 		for idx, minute in minutes.items():
 			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
-			minute_reconciliee = {**minute_reconciliee, **reconciliation}
+			# minute_reconciliee = {**minute_reconciliee, **reconciliation}
 	utils.serialize_dict(minute_annotee, "test.json")
 	# utils.serialize_dict(minute_annotee, "test_reconcilie.json")
 	return images_number, minutes_number
@@ -925,7 +931,7 @@ if __name__ == '__main__':
 	end_time = time.time()
 	elapsed_time = end_time - start_time
 	ratio_images = nombre_images / elapsed_time
-	ratio_minutes = nombre_minutes / elapsed_time
-	print(f"Fait en: {elapsed_time} secondes: {ratio_images} image par seconde et {ratio_minutes} minute par seconde.")
+	ratio_minutes = elapsed_time / nombre_minutes
+	print(f"Fait en: {elapsed_time} secondes: {ratio_images} image par seconde et {ratio_minutes} secondes pour une minute.")
 
 

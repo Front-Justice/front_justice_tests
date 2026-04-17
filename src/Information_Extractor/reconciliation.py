@@ -6,6 +6,9 @@ import pandas as pd
 
 
 class Reconciliator:
+	"""
+	Classe de réconciliation des informations extraites.
+	"""
 	def __init__(self, minute_list, previous_minute):
 		self.minute_list = minute_list
 		self.reconciliated_minute = {}
@@ -64,11 +67,14 @@ class Reconciliator:
 			self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except TypeError:
 			self.date_naissance = None
-		age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
+		try:
+			age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
+		except (IndexError, TypeError, KeyError):
+			age_soldat = None
 		if self.date_proces:
 			try:
 				age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
-			except AttributeError:
+			except (AttributeError, TypeError, KeyError):
 				age_theorique = None
 			print(age_theorique)
 			print(age_soldat)
@@ -133,15 +139,15 @@ class Reconciliator:
 	def _retrieve_profession(self):
 		try:
 			profession_page_1 = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
-		except AttributeError:
+		except (AttributeError, TypeError):
 			try:
 				self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
-			except AttributeError:
+			except (AttributeError, IndexError):
 				self.profession = None
 				return
 		try:
 			profession_page_2 = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
-		except (AttributeError, IndexError):
+		except (AttributeError, IndexError, TypeError, KeyError):
 			self.profession = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
 			return
 
@@ -178,31 +184,43 @@ class Reconciliator:
 		Cette fonction récupèrer l'information qui ne se répète pas.
 		:return:
 		"""
-		self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
+		try:
+			self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
+		except TypeError:
+			self.description_physique = None
 		try:
 			self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
 		except KeyError:
 			self.magistrats = None
-		self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
-		self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
-		self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
+		try:
+			self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
+		except KeyError:
+			self.numero_ordre = None
+		try:
+			self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
+		except KeyError:
+			self.numero_ordre = None
+		try:
+			self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
+		except KeyError:
+			self.lieu_jugement = None
 		try:
 			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
-		except TypeError:
+		except (TypeError, KeyError):
 			self.date_crime_ou_delit = None
 
 
 	def _reconciliate_lieu_residence(self):
 		try:
 			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
-		except KeyError:
+		except (KeyError, TypeError):
 			nom_ville_transcrit_p1 = None
 		try:
 			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
-		except KeyError:
+		except (KeyError, TypeError):
 			try:
 				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
-			except KeyError:
+			except (KeyError, TypeError):
 				nom_ville_identifie_p1 = None
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
@@ -210,7 +228,10 @@ class Reconciliator:
 			print("Page 1 sans annotations")
 			self.lieu_residence = None
 			return
-		self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+		try:
+			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+		except KeyError:
+			self.lieu_residence = None
 
 
 		try:
@@ -309,7 +330,10 @@ class Reconciliator:
 		:return: None
 		"""
 		if len(self.minute_list) == 1:
-			self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
+			try:
+				self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
+			except TypeError:
+				self.prenom_du_soldat = None
 			return
 		try:
 			prenoms_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
@@ -317,7 +341,7 @@ class Reconciliator:
 			prenoms_page_1 = None
 		try:
 			prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
-		except KeyError:
+		except (TypeError, KeyError):
 			prenoms_page_2 = None
 		delimiter = re.compile(r"[.;\s\-]+")
 		try:
@@ -487,11 +511,15 @@ class Reconciliator:
 
 
 	def _produce_dict(self):
+		try:
+			greffier = self.magistrats["greffier"]["extracted"]["persName"]
+		except TypeError:
+			greffier = None
 		self.reconciliated_minute = {
 			"metadata":
 				{
 				"images": self.images_path,
-				"greffier": self.magistrats["greffier"]["extracted"]["persName"]
+				"greffier": greffier
 			},
 			"magistrats": self.magistrats,
 			"informations_proces": {"numero_ordre": self.numero_ordre,

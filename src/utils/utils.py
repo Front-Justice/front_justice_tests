@@ -113,6 +113,7 @@ class OCRLine:
 	Classe principale pour la description d'une ligne en sortie de Kraken ou Party. Contient la baseline, la prédiction,
 	les cuts (= les polygones individuels pour chaque caractère prédit) et le polygone le cas échéant
 	"""
+	image_path: str
 	baseline: list
 	prediction: str
 	cuts: list
@@ -123,17 +124,19 @@ class OCRLine:
 class OCRRecord():
 	"""
 	Classe principale qui contient les résultats de l'OCR.
-	Une liste d'objets OCRLine qui contiennent chacun la baseline, la prédiction, les cuts.
+	Une liste d'objets OCRLine qui contiennent chacun la baseline,
+	la prédiction, les cuts, les polygones et le chemin vers l'image.
 	"""
 
 	def __init__(self, record: list[dict] = []):
 		self.record: list = []
-		for item in record:
-			Line: OCRLine = OCRLine(baseline=item['baseline'],
-									prediction=item['prediction'],
+		for line in record:
+			Line: OCRLine = OCRLine(baseline=line['baseline'],
+									prediction=line['prediction'],
 									prediction_with_deletion=None,
-									cuts=item['cuts'],
-									polygon=item['polygon'])
+									cuts=line['cuts'],
+									polygon=line['polygon'],
+									image_path=line['image_path'])
 			self.record.append(Line)
 
 	def recreate_record(self, list_of_lines: list[OCRLine]):
@@ -177,12 +180,14 @@ class OCRRecord():
 				out_dict.append({"baseline": line.baseline,
 								 "cuts": line.cuts,
 								 "prediction": line.prediction,
-								 "prediction_with_deletion": line.prediction_with_deletion})
+								 "prediction_with_deletion": line.prediction_with_deletion,
+								"image_path": line.image_path})
 			else:
 				out_dict.append({"baseline": line.baseline,
 								 "prediction": line.prediction,
 								 "polygon": line.polygon,
-								 "prediction_with_deletion": line.prediction_with_deletion})
+								 "prediction_with_deletion": line.prediction_with_deletion,
+								"image_path": line.image_path})
 		return json.dumps(out_dict)
 
 	def to_json(self):
@@ -191,15 +196,20 @@ class OCRRecord():
 		:return:
 		"""
 		dictionnary = []
-		for item in self.record:
-			dictionnary.append({"prediction": item.prediction,
-								"baseline": item.baseline,
-								"cuts": item.cuts,
-								"polygon": item.polygon,
-								 "prediction_with_deletion": item.prediction_with_deletion})
+		for line in self.record:
+			dictionnary.append({"prediction": line.prediction,
+								"baseline": line.baseline,
+								"cuts": line.cuts,
+								"polygon": line.polygon,
+								 "prediction_with_deletion": line.prediction_with_deletion,
+								"image_path": line.image_path})
 		return dictionnary
 
-	def from_json(self, path):
+	def from_json(self, path) -> None:
+		"""
+		Instancie un objet de classe OCRRecord à partir d'un fichier JSON.
+		:param path: le chemin vers le fichier
+		"""
 		lines_as_dict = load_json_to_dict(path)
 		self.record = []
 		for item in lines_as_dict:
@@ -213,7 +223,8 @@ class OCRRecord():
 									prediction=item['prediction'],
 									cuts=item['cuts'],
 									polygon=item['polygon'],
-									prediction_with_deletion=prediction_with_deletion)
+									prediction_with_deletion=prediction_with_deletion,
+									image_path=item["image_path"])
 			self.record.append(Line)
 
 
@@ -1983,14 +1994,24 @@ def check_if_missing(list_target, list_source):
 	return missing
 
 
-def pickle_object(obj, path):
+def pickle_object(obj, path) -> None:
+	"""
+	Pickle un objet dans le chemin choisi
+	:param obj:  l'objet à pickliser
+	:param path: le chemin
+	"""
 	with open(path, "wb") as segmentation_as_file:
 		pickle.dump(obj, segmentation_as_file, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def unpickle_object(path):
-	with open(path, "rb") as segmentation_as_file:
-		return pickle.load(segmentation_as_file)
+	"""
+	Unpickle un objet enregistré dans un chemin
+	:param path: le chemin en question
+	:return: l'objet cherché
+	"""
+	with open(path, "rb") as object:
+		return pickle.load(object)
 
 
 def save_as_dict(dictionnary: dict, path: str):
@@ -2087,9 +2108,14 @@ def load_json_to_dict(path):
 		return json.load(f)
 
 
-def serialize_dict(dictionnary, path):
+def serialize_dict(dictionnaire, path) -> None:
+	"""
+	Sérialise un dictionnaire en fichier json
+	:param dictionnaire: le dictionnaire en question
+	:param path: Le chemin vers le fichier json
+	"""
 	with open(path, 'w') as f:
-		json.dump(dictionnary, f, indent=2, default=str)
+		json.dump(dictionnaire, f, indent=2, default=str)
 
 
 def get_name_from_path(path):
