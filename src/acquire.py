@@ -17,10 +17,10 @@ import json
 
 import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
-import src.Vision.LinesDeletion as deletions
+import src.Vision.LinesDeletion as Deletions
 
 
-class Pipeline():
+class Pipeline:
 	"""
 	Classe principale de production des données. Réalise la classification et le tri des images,
 	la reconstitution des minutes, l'acquisition du texte, l'extraction des informations.
@@ -36,6 +36,9 @@ class Pipeline():
 				 device="cpu",
 				 images_dir=None,
 				 current_minute = None):
+		self.minutes_reconciliees = None
+		self.minutes_reconciliees_file = None
+		self.current_page_type = None
 		self.debug = debug
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
@@ -49,7 +52,7 @@ class Pipeline():
 		self.current_image_idx = 0
 		self.pages_classees = []
 		self.images_basedir = images_dir.replace("/", "_")
-		self.LinesDeletionsIdentifier = deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
+		self.LinesDeletionsIdentifier = Deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
 																		   model_chars="src/Vision/models/chars_deletion.pth")
 
 
@@ -147,11 +150,7 @@ class Pipeline():
 		current_minute_number = 0
 		# Puis on rassemble les minutes
 		for idx, ((dossier, ident, image), classe) in enumerate(self.pages_classees):
-			current_image = {}
-			current_image["répertoire"] = dossier
-			current_image["id"] = ident
-			current_image["image_path"] = image
-			current_image["classe"] = classe
+			current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 			current_minute.append(current_image)
 			if ident == self.pages_classees[-1][0][1]:
 				print("Dossier terminé")
@@ -185,6 +184,9 @@ class Pipeline():
 							 model=None) -> OCRRecord:
 		"""
 		Segmentation et transcription avec Kraken
+		:param model: le modèle à utiliser
+		:param current_page: la classe de la page en cours, pour utiliser un modèle de
+		segmentation adapté.
 		:param image: Le chemin vers l'image
 		:param transcription_only: faut-il lancer la transcription uniquement ?
 		:return:
@@ -207,7 +209,7 @@ class Pipeline():
 											  image_name=image)
 
 
-	def traitement_p_2(self, page, show_image=False):
+	def traitement_p_2(self, page):
 		"""
 		Extraction d'information de la deuxième page du procès. On propose une approche modulaire: une méthode par type
 		d'information recherchée
@@ -274,13 +276,11 @@ class Pipeline():
 			loaded_image=loaded_image)
 		if identite:
 			current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
-		zone_dict = {}
-		zone_dict["zones_identifiees"] = zones_page_2.to_json()
-		zone_dict["zones_manquantes"] = zones_manquantes
+		zone_dict = {"zones_identifiees": zones_page_2.to_json(), "zones_manquantes": zones_manquantes}
 		return zone_dict, current_dict
 
 
-	def traitement_p_3(self, page, show_image=False):
+	def traitement_p_3(self, page):
 		"""
 		Extraction d'information de la deuxième page du procès. On propose une approche modulaire: une méthode par type
 		d'information recherchée
@@ -329,9 +329,7 @@ class Pipeline():
 			annotations=zones_page_3,
 			loaded_image=loaded_image)
 
-		zone_dict = {}
-		zone_dict["zones_identifiees"] = zones_page_3.to_json()
-		zone_dict["zones_manquantes"] = zones_manquantes
+		zone_dict = {"zones_identifiees": zones_page_3.to_json(), "zones_manquantes": zones_manquantes}
 		return zone_dict, current_dict
 
 	def traitement_p_4(self, page, show_image=False):
@@ -357,7 +355,7 @@ class Pipeline():
 		new_size = (int(width / self.resize_factor), int(height / self.resize_factor))
 		loaded_image = loaded_image.resize(new_size)
 
-		if show_image == True:
+		if show_image:
 			print("Show image")
 			utils.draw_lines_on_image(image_path=page["image_path"],
 									  baselines=[line.baseline for line in self.current_page_transcription])
@@ -395,20 +393,18 @@ class Pipeline():
 
 
 
-		zone_dict = {}
-		zone_dict["zones_identifiees"] = zones_page_4.to_json()
-		zone_dict["zones_manquantes"] = zones_manquantes
+		zone_dict = {"zones_identifiees": zones_page_4.to_json(), "zones_manquantes": zones_manquantes}
 		return zone_dict, current_dict
 
 
 	def transcription_page(self,
 						   page:str,
 						   show_image:bool = False,
-						   force_resegment:bool = False,
-						   extract_polygons:bool = False) -> None:
+						   force_resegment:bool = False) -> None:
 		"""
 		Fonction wrapper de transcription d'une page. Produit également la reconnaissance des
 		mots biffés dans la ligne. Met à jour l'objet self.current_page_transcription
+		:param force_resegment: Faut-il resegmenter la page?
 		:param page: Le chemin vers la page à transcrire
 		:param show_image: Montrer l'image transcrite avec les lignes ?
 		"""
@@ -456,14 +452,12 @@ class Pipeline():
 		"""
 		Cette fonction gère les ajouts postérieurs.
 		:param page: the page metadata as json
-		:param show_image: montrer l'image ou pas.
 		:return: le dictionnaire contenant les zones, et le dictionnaire avec les informations extraites.
 		"""
 
 		# On segmente la page 1: boxes générales
 		print(f"Checking additions")
 
-		current_dict = {}
 
 		zones_ajouts, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
 																		   target_classes=["MarginTextZone-ajout"],
@@ -472,12 +466,10 @@ class Pipeline():
 																		   show_image=False)
 
 
-		zone_dict = {}
-		zone_dict["zones_identifiées"] = zones_ajouts.to_json()
-		zone_dict["zones_manquantes"] = zones_manquantes
+		zone_dict = {"zones_identifiées": zones_ajouts.to_json(), "zones_manquantes": zones_manquantes}
 		if len(zones_manquantes) == 0:
 			target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.ajouts.json')}"
-			if not os.path.isfile(target_transcription):
+			if not os.path.isfile(target_transcription) or self.retranscribe is True:
 				lignes_glosees = self.transcription_kraken(
 					image=page["image_path"],
 					transcription_only=False,
@@ -498,8 +490,7 @@ class Pipeline():
 			return None, None
 
 		informations_ajouts = self.extractor.extraire_informations_ajouts_posterieurs(ocr_prediction=lignes_glosees,
-																					  annotations=zones_ajouts,
-																					  image_path=page["image_path"])
+																					  annotations=zones_ajouts)
 
 		informations_ajouts = {"annotations_ajouts": informations_ajouts}
 		return zone_dict, informations_ajouts
@@ -541,16 +532,12 @@ class Pipeline():
 																		   model=self.yolo_models["page_1"],
 																		   show_image=False)
 
-		zone_dict = {}
-		zone_dict["zones_identifiées"] = zones_page_1.to_json()
-		zone_dict["zones_manquantes"] = zones_manquantes
+		zone_dict = {"zones_identifiées": zones_page_1.to_json(), "zones_manquantes": zones_manquantes}
 
 		if "Magistrats" not in zones_manquantes:
 			current_dict["date_proces"] = self.extractor.extraire_date_du_proces_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
-				image=page["image_path"],
-				show_images=False,
 				loaded_image=loaded_image)
 
 		# On extrait le nom et prénom du soldat
@@ -560,8 +547,7 @@ class Pipeline():
 		else:
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1,
-				loaded_image=loaded_image)
+				annotations=zones_page_1)
 			# Production de corpus, à supprimer
 
 		try:
@@ -583,7 +569,6 @@ class Pipeline():
 			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
-				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
 			try:
@@ -677,7 +662,7 @@ class Pipeline():
 		"""
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
-		:param images: Les images à traiter
+		:param minute: le minutier complet, organisé en minutes
 		:param target: [DEBUG] l'image à traiter dans le corpus
 		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
@@ -714,8 +699,7 @@ class Pipeline():
 					force_resegment = False
 					self.transcription_page(page=page,
 											show_image=False,
-											force_resegment=force_resegment,
-											extract_polygons=extract_polygons)
+											force_resegment=force_resegment)
 					zones_ajouts, ajouts = self.process_additions(page=page)
 					if ajouts is None:
 						ajouts = {"ajouts": None}
@@ -723,9 +707,9 @@ class Pipeline():
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
 				elif page['classe'] == "page_2":
-					zones, annotations = self.traitement_p_2(page=page, show_image=False)
+					zones, annotations = self.traitement_p_2(page=page)
 				elif page['classe'] == "page_3":
-					zones, annotations = self.traitement_p_3(page=page, show_image=False)
+					zones, annotations = self.traitement_p_3(page=page)
 				elif page['classe'] == "page_4":
 					zones, annotations = self.traitement_p_4(page=page, show_image=False)
 				else:
@@ -763,11 +747,7 @@ def regroupement_minutes(pages_classees):
 	minutes = {}
 	# Puis on rassemble les minutes
 	for idx, ((dossier, ident, image), classe) in enumerate(pages_classees):
-		current_image = {}
-		current_image["répertoire"] = dossier
-		current_image["id"] = ident
-		current_image["image_path"] = image
-		current_image["classe"] = classe
+		current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 		current_minute.append(current_image)
 		if ident == pages_classees[-1][0][1]:
 			print("Dossier terminé")
@@ -783,6 +763,8 @@ def regroupement_minutes(pages_classees):
 def classification_images(images, page_classifier_model, page_classifier_vocab):
 	"""
 	Cette fonction classe toutes les images à l'aide d'un Random Forest
+	:param page_classifier_vocab: le chemin vers le vocabulaire (mapping classes/labels)
+	:param page_classifier_model: le chemin vers le modèle de classification
 	:param images: la liste d'images
 	:return:
 	"""
@@ -809,7 +791,8 @@ def check_image_consistency(current_image, images_name_list):
 	"""
 	Cette fonction vérifie s'il y a un problème au sein des fichiers et si une image est manquante,
 	fondé sur la liste des images qui doit être une liste suivie d'entier
-	:param current_image:
+	:param images_name_list: l'ensemble des images
+	:param current_image: l'image en cours
 	:return:
 	"""
 	if len(images_name_list) != 0 and current_image - images_name_list[-1] != 1:

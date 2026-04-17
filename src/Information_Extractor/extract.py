@@ -100,11 +100,11 @@ class Extractor:
 
 	def extract_signature_greffier(self,
 								   ocr_prediction:OCRRecord,
-								   image):
+								   image: PIL.Image.Image) -> None:
 		"""
 		On extrait la ligne contenant la signature du greffier, pour clustering.
-		:param ocr_prediction:
-		:return:
+		:param ocr_prediction: un objet OCRRecord
+		:param image: l'image chargée
 		"""
 		ligne_greffier, _ , index = utils.match_line_by_substring(corresponding_lines=ocr_prediction,
 													   string_to_match="Le Greffier,",
@@ -214,7 +214,6 @@ class Extractor:
 		"""
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param party_engine: le moteur de transcription party
 		:param annotations: un objet YOLORecord qui contient les coordonnées et labels de zone
 		:param ocr_prediction: un objet OCRRecord qui contient les lignes prédites
 		:param image: [Debug] le chemin vers l'image à afficher
@@ -422,21 +421,8 @@ class Extractor:
 		"""
 		Cette fonction extrait le numéro de jugement à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
-		:param image: [Debug] le chemin vers l'image à afficher
+		:param annotations: l'objet YOLORecord avec les zones.
+		:param ocr_prediction: un objet OCRRecord
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
 		:return: Un dictionnaire de la forme:
@@ -1232,13 +1218,17 @@ class Extractor:
 
 	def extraire_informations_ajouts_posterieurs(self,
 												 ocr_prediction: OCRRecord,
-												 annotations: YOLORecord,
-												 image_path:str):
+												 annotations: YOLORecord):
 		"""
-		Cette fonction extrait la date et classe le type d'information d'un ajout du greffier. Il y a en effet toujours une date !
-		:param ocr_prediction:
-		:param annotations:
-		:return:
+		Cette fonction permet de traiter les ajouts postérieurs (actualisations sur un soldat).
+		Extrait la date et classifie le type d'information d'un ajout
+		du greffier.
+		:param ocr_prediction: un objet OCRRecord, qui contient toutes les lignes ajoutées
+		identifiées par le modèle
+		:param annotations: un objet YOLORecord, qui contient toutes les zones comprenant
+		un ajout.
+		:return: la liste des ajouts identifiés, contenant la zone, les lignes et les prédictions,
+		le type d'information contenue dans l'ajout.
 		"""
 		list_of_results = []
 		for annotation in annotations:
@@ -1314,26 +1304,11 @@ class Extractor:
 	def extraire_inculpation_et_antecedents(self,
 											ocr_prediction: OCRRecord,
 											annotations: YOLORecord,
-											image: str = None,
 											loaded_image: PIL.Image.Image = None,
 											show_images: bool = True):
 		"""
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
-		:param image: [Debug] le chemin vers l'image à afficher
+		:param ocr_prediction: Un objet OCRRecord
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		:param show_images: [Debug] afficher l'image?
 		:return: Un dictionnaire de la forme:
@@ -1568,34 +1543,12 @@ class Extractor:
 
 	def extraire_description_soldat_NER_p1(self,
 										   ocr_prediction: OCRRecord,
-										   annotations: YOLORecord,
-										   loaded_image: PIL.Image.Image = None):
+										   annotations: YOLORecord):
 		"""
 		Cette fonction extrait la description du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
-		:param ocr_prediction: Une liste de dictionnaires de la forme:
-		'''
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
-		'''
-		:param zones_nom: une liste de dictionnaires de la forme:
-		[
-			{
-				'label': 'nom_du_soldat',
-				'coordinates': [[212, 2400], [2735, 2551]]
-			}
-		]
-		:param image: [Debug] le chemin vers l'image à afficher
-		:param show_images: [Debug] afficher l'image
+		:param ocr_prediction: un objet OCRRecord
+		:param annotations: un objet YOLORecord
 		:return: Un dictionnaire de la forme:
 			{
 				"extracted": {
@@ -1640,7 +1593,7 @@ class Extractor:
 		# On commence par le nom du soldat
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 
-		plusieurs_soldats = False
+		# plusieurs_soldats = False
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
@@ -1664,11 +1617,11 @@ class Extractor:
 				}
 
 		elif len(soldat) > 1:
-			plusieurs_soldats = True
-			bbox_nom_soldat = None
+			# plusieurs_soldats = True
+			# bbox_nom_soldat = None
 			print("Plusieurs soldats.")
 		else:
-			bbox_nom_soldat = None
+			# bbox_nom_soldat = None
 			print("Aucun soldat identifié par YOLO.")
 
 
@@ -1789,9 +1742,7 @@ class Extractor:
 	def extraire_date_du_proces_p1(self,
 								   ocr_prediction: OCRRecord,
 								   annotations: YOLORecord,
-								   image: str = None,
-								   loaded_image: PIL.Image.Image = None,
-								   show_images: bool = False):
+								   loaded_image: PIL.Image.Image = None):
 		"""
 		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
@@ -1809,15 +1760,8 @@ class Extractor:
 			}
 		]
 		'''
-		:param zones_nom: une liste de dictionnaires de la forme:
-		[
-			{
-				'label': 'nom_du_soldat',
-				'coordinates': [[212, 2400], [2735, 2551]]
-			}
-		]
-		:param image: [Debug] le chemin vers l'image à afficher
-		:param show_images: [Debug] afficher l'image
+		:param annotations: l'objet YOLORecord avec les zones.
+		:param loaded_image: [Debug] le chemin vers l'image à afficher
 		:return: Un dictionnaire de la forme:
 			{
 				"extracted": {
@@ -1976,7 +1920,7 @@ class Extractor:
 				cropped.show()
 
 		# On itère sur les zones identifiées par YOLO
-		for idx, line in enumerate(lignes_table_triees):
+		for _, line in enumerate(lignes_table_triees):
 			corresponding_box = line.coordinates
 			box_as_rectangle = self.rectangle(corresponding_box[0][0],
 											  corresponding_box[0][1],
@@ -2049,7 +1993,6 @@ class Extractor:
 													 coords_zone_englobante_magistrats[1][1])
 		lignes_zone_magistrat = []
 		for predicted_line in ocr_prediction:
-			prediction = predicted_line.prediction
 			baseline = predicted_line.baseline
 			# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
 			converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
