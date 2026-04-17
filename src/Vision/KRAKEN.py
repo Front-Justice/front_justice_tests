@@ -5,16 +5,14 @@ from kraken import blla
 from kraken.lib import models
 from kraken import rpred
 import kraken.containers
-from torch import device
 
 from src.utils.utils import OCRRecord
 import dataclasses
-import torch
 
 class KRAKEN():
 	"""
 	Classe permettant la segmentation en ligne et l'OCR d'une page.
-	Attention, la segmentation en zones n'est pas gérée par cette classe.
+	La segmentation **en zones** n'est pas gérée par cette classe mais pas une classe YOLO.
 	"""
 	def __init__(self, segmentation_model, ocr_model, device):
 		self.segmentation_model = segmentation_model
@@ -29,6 +27,11 @@ class KRAKEN():
 
 
 	def serialize(self, prediction):
+		"""
+		Applique la sérialisation d'un fichier en ALTO.
+		:param prediction:
+		:return:
+		"""
 		serialized = serialize(results=prediction,
 							   template="alto",
 							   sub_line_segmentation=False)
@@ -44,18 +47,7 @@ class KRAKEN():
 		Production de l'inférence à l'aide d'un modèle kraken et de segments.
 		:param im: L'image chargée
 		:param segments: Les segments (objet Kraken)
-		:return: Une liste de dictionnaires de la forme:
-		[
-			{
-				'baseline': [[231, 5467], [2329, 5450]],
-				'prediction': "(3) Indiquer le crime ou le délit psur lequel l'accusé a été traduit devant le Conseil de guerre (art. 140)."
-			},
-			...,
-			{
-				'baseline': [[241, 5612], [731, 5619]],
-				'prediction': 'FORMULE N^o 16.'
-			}
-		]
+		:return: un objet OCRRecord.
 		"""
 		model = models.load_any(self.ocr_model, device=self.device)
 		pred_it = rpred.rpred(model, im, segments)
@@ -72,6 +64,7 @@ class KRAKEN():
 				interm_dict['polygon'] = None
 			interm_dict['prediction'] = record.prediction
 			interm_dict['cuts'] = record.cuts
+			interm_dict['image_path'] = image_name
 			prediction.append(interm_dict)
 		my_OCR_record = OCRRecord(record=prediction)
 		return my_OCR_record

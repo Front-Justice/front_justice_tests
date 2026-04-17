@@ -1,25 +1,57 @@
 import argparse
 import itertools
 import os
-import shutil
-import sys
+import re
 import torch
 import torch.nn as nn
 import src.utils.utils as utils
-import torch.optim as optim
-import torchvision.transforms
-from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-import torchvision.models as models
 from PIL import Image
-import tqdm
-import evaluate
+from typing import Union
 import numpy as np
 
 from src.utils.utils import OCRLine
 
+class SimpleCNN(nn.Module):
+	def __init__(self, num_classes):
+		super(SimpleCNN, self).__init__()
+		self.features = nn.Sequential(
+			nn.Conv2d(1, 32, kernel_size=3, padding=1),
+			nn.ReLU(),
+			nn.MaxPool2d(2),
+			nn.Conv2d(32, 64, kernel_size=3, padding=1),
+			nn.ReLU(),
+			nn.MaxPool2d(2),
+			nn.Conv2d(64, 128, kernel_size=3, padding=1),
+			nn.ReLU(),
+			nn.MaxPool2d(2),
+			nn.Conv2d(128, 128, kernel_size=3, padding=1),
+			nn.ReLU(),
+			nn.MaxPool2d(2),
+			nn.Conv2d(128, 64, kernel_size=3, padding=1),
+			nn.ReLU(),
+			nn.MaxPool2d(2),
+		)
+		self.avgpool = nn.AdaptiveAvgPool2d((4, 4))  # Accepte n'importe quelle taille
+		self.classifier = nn.Sequential(
+			nn.Flatten(),
+			nn.Linear(64 * 4 * 4, 512),
+			nn.ReLU(),
+			nn.Linear(512, num_classes),
+		)
+
+	def forward(self, x):
+		x = self.features(x)
+		x = self.avgpool(x)
+		x = self.classifier(x)
+		return x
+
 
 class LinesDeletionsIdentifier():
+	"""
+	Classe principale de la détection des biffures sur une ligne. Utilise un
+	petit réseau CNN pour de la classification d'images.
+	"""
 	def __init__(self, model_lines, model_chars):
 		self.dictionary =  {0: "deleted", 1: "undeleted"}
 		self.model_lines = model_lines
@@ -50,15 +82,31 @@ class LinesDeletionsIdentifier():
 		self.model_lines.load_state_dict(state_dict)
 
 
-	def predict(self, image, model):
+	def predict(self, image: np.array, model: SimpleCNN):
+		"""
+		Classification de l'image.
+		:param image: l'image
+		:param model: le modèle à utiliser
+		:return:
+		"""
 		with torch.no_grad():
 			image = image.to("cpu")
 			outputs = model(image)
 			maxes = np.argmax(outputs, axis=1)
 			return maxes
 
-	def identify_deletions_in_line(self, line:OCRLine, image):
-		cropped = utils.polygon_extraction(line.polygon, image, keep_alpha=False, return_image=True)
+	def identify_deletions(self, lines:OCRLine, image: Image.Image, level:Union["word", "char"] = "word") -> list[str]:
+		"""
+		Algorithme de détection des biffures dans une liste de ligne à partir d'une série de prédiction.
+		Fonctionne en deux temps: l'identification des lignes qui contiennent une césure, et l'identification des
+		caractères / des mots qui sont biffés. Les deux phases utilisent le même réseau pour l'inférence, mais deux modèles distincts.
+		:param lines: la liste de lignes à traiter
+		:param image: l'image de la page
+		:param level: le niveau de la classification: au mot (plus sensible, moins précis) / au caractère (plus précis, moins sensible)
+		:return: la liste des phrases avec biffure selon les normes CatMUS
+		"""
+		# On commence par classer chaque ligne
+		cropped = utils.polygon_extraction(lines.polygon, image, keep_alpha=False, return_image=True)
 		cropped = cropped.convert("L")
 		normalized = self.transform_lines(cropped)
 		# Shape [1, height, width]
@@ -66,11 +114,22 @@ class LinesDeletionsIdentifier():
 		# Shape [1, 1, height, width]
 		preds = self.predict(model=self.model_lines, image=normalized)
 		preds = self.dictionary[preds.tolist()[0]]
+		# Si la ligne est identifiée comme ayant une biffure, on continue.
 		if preds == "deleted":
 			imgs = []
 			image = np.asarray(image)
-			for char_poly, char in zip(line.cuts, line.prediction):
-				current_char = utils.polygon_extraction(char_poly, image, keep_alpha=False, return_image=True, vertical_padding=12)
+			for char_poly, char in zip(lines.cuts, lines.prediction):
+				# current_char = utils.opencv_polygon_extraction(char_poly,
+				# 											   image,
+				# 											   keep_alpha=False,
+				# 											   return_image=True,
+				# 											   vertical_padding=12)
+				current_char = utils.polygon_extraction(char_poly,
+															   image,
+															   keep_alpha=False,
+															   return_image=True,
+															   vertical_padding=12)
+				# current_char = Image.fromarray(current_char).convert("L")
 				current_char = current_char.convert("L")
 				resized = self.resize_chars(current_char)
 				imgs.append(resized)
@@ -78,7 +137,7 @@ class LinesDeletionsIdentifier():
 			normalized = self.normalize_chars(imgs)
 			preds = self.predict(model=self.model_chars, image=normalized).tolist()
 			preds = [self.dictionary[pred] for pred in preds]
-			zipped = list(zip(line.prediction, preds))
+			zipped = list(zip(lines.prediction, preds))
 			recreate_words = {}
 			word_n = 0
 			for char, pred in zipped:
@@ -91,6 +150,20 @@ class LinesDeletionsIdentifier():
 					recreate_words[word_n] = [(char, pred)]
 			sentence = ""
 			for word in recreate_words.values():
+				if level == "char":
+					word_len = len(word)
+					classes = [pred for (char, pred) in word]
+					deleted = classes.count("deleted")
+					undeleted = classes.count("undeleted")
+					if deleted > undeleted or deleted == undeleted:
+						sentence += "⟦"
+						sentence += "".join([char[0] for char in word])
+						sentence += "⟧ "
+						continue
+					elif deleted < undeleted:
+						sentence += "".join([char[0] for char in word])
+						sentence += " "
+					continue
 				# Cas simple 1: tous les caractères sont gardés
 				if all([item[1] == "undeleted" for item in word]):
 					sentence += "".join([char[0] for char in word])
@@ -142,42 +215,13 @@ class LinesDeletionsIdentifier():
 						sentence += f"{outs} "
 			sentence = sentence.replace("⟦⟦", "⟦").replace("⟧⟧", "⟧")
 			print(f"Reconstructed sentence: {sentence}")
+			split_regexp = re.compile("(\s[^⟦⟧]+)")
+			sentence_splits = re.split(split_regexp, f' {sentence}')
+			# On regroupe les marques de suppression
+			sentence = "".join([f'⟦{item.replace("⟦", "").replace("⟧", "")}⟧'  if "⟦" in item  else item for item in sentence_splits])
+			print(f"Regroupé: {sentence}")
 			return sentence
 		else:
-			return line.prediction
+			return lines.prediction
 
 
-
-class SimpleCNN(nn.Module):
-	def __init__(self, num_classes):
-		super(SimpleCNN, self).__init__()
-		self.features = nn.Sequential(
-			nn.Conv2d(1, 32, kernel_size=3, padding=1),
-			nn.ReLU(),
-			nn.MaxPool2d(2),
-			nn.Conv2d(32, 64, kernel_size=3, padding=1),
-			nn.ReLU(),
-			nn.MaxPool2d(2),
-			nn.Conv2d(64, 128, kernel_size=3, padding=1),
-			nn.ReLU(),
-			nn.MaxPool2d(2),
-			nn.Conv2d(128, 128, kernel_size=3, padding=1),
-			nn.ReLU(),
-			nn.MaxPool2d(2),
-			nn.Conv2d(128, 64, kernel_size=3, padding=1),
-			nn.ReLU(),
-			nn.MaxPool2d(2),
-		)
-		self.avgpool = nn.AdaptiveAvgPool2d((4, 4))  # Accepte n'importe quelle taille
-		self.classifier = nn.Sequential(
-			nn.Flatten(),
-			nn.Linear(64 * 4 * 4, 512),
-			nn.ReLU(),
-			nn.Linear(512, num_classes),
-		)
-
-	def forward(self, x):
-		x = self.features(x)
-		x = self.avgpool(x)
-		x = self.classifier(x)
-		return x
