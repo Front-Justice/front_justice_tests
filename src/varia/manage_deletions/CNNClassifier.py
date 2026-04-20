@@ -211,7 +211,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 transform = transforms.Compose([
-    transforms.Resize(IMAGE_SIZE),
+    #transforms.Resize(IMAGE_SIZE),
     transforms.CenterCrop(IMAGE_SIZE),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5], std=[0.5]),  # Normaliser à [-1, 1]
