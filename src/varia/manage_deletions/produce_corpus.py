@@ -16,7 +16,7 @@ from kraken import rpred
 import kraken.containers as Containers
 from kraken.lib import models
 from typing import Union
-import src.varia.Lines_Classifier.lines_classifier as LC
+# import src.varia.Lines_Classifier.lines_classifier as LC
 from src.Page_Classifier.utils.utils import show_image
 import multiprocessing as mp
 
@@ -418,10 +418,10 @@ namespaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/htr_29500l.mlmodel"
 deletion_regexp = re.compile(r'.*⟦[^⟦⟧]+⟧.*')
 
-classifier = LC.LinesClassifier(build_vocab=False,
-								max_size=(1735, 161),
-								model_path="src/varia/Lines_Classifier/models/LinesClassifierRF_3classes.joblib",
-								vocab_path="src/varia/Lines_Classifier/models/LinesClassifierRF_3classes.voc")
+# classifier = LC.LinesClassifier(build_vocab=False,
+# 								max_size=(1735, 161),
+# 								model_path="src/varia/Lines_Classifier/models/LinesClassifierRF_3classes.joblib",
+# 								vocab_path="src/varia/Lines_Classifier/models/LinesClassifierRF_3classes.voc")
 
 os.makedirs(exist_ok=True, name=f"{output_dir}/lines/deleted")
 os.makedirs(exist_ok=True, name=f"{output_dir}/lines/undeleted")
