@@ -464,7 +464,7 @@ deletion_images = 0
 no_deletion_images = 0
 
 torch.set_num_threads(1)
-with mp.Pool(processes=4) as pool:
+with mp.Pool(processes=32) as pool:
 	data = [(line,) for line in all_zips]
 	pool.starmap(process_line, tqdm.tqdm(data))
 	print("Images Done.")
