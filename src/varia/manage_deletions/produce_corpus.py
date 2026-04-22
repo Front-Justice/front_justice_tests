@@ -1,7 +1,8 @@
 import os
 import re
 import uuid
-
+import torch
+import mp
 import text_alignment_tool
 import lxml.etree as ET
 import sys
@@ -18,7 +19,138 @@ from kraken.lib import models
 from typing import Union
 import src.varia.Lines_Classifier.lines_classifier as LC
 from src.Page_Classifier.utils.utils import show_image
+import multiprocessing as mp
 
+
+def process_line(line):
+	global model
+	errors = 0
+	tagrefs, gold_transcript, baseline, polygon, image_path = line
+	global paths
+	images = paths['images']
+	# corresponding_line = paths[ident]
+	# image_path = corresponding_line['path']
+	image_basename = image_path.split("/")[-1].replace('.png', '')
+	if images[image_path]['extracted'] == 0:
+		try:
+			# print(f"First line encountered. Loading image {image_path}.")
+			gs_im = Image.open(image_path).convert("RGBA")
+			im = np.array(Image.open(image_path))
+			images[image_path]['images'] = {**images[image_path], **{'loaded_im': {'gs_im': gs_im}}}
+			images[image_path]['images']['loaded_im']['im'] = im
+		except FileNotFoundError:
+			# print(f"File {image_path} not found.")
+			return
+	else:
+		gs_im = images[image_path]['images']['loaded_im']['gs_im']
+		im = images[image_path]['images']['loaded_im']['im']
+	global image_n
+	image_n += 1
+	global deletion_images
+	global no_deletion_images
+	if "⟦" and "⟧" in gold_transcript or tagrefs == "LT8439":
+		if re.match(deletion_regexp, gold_transcript):
+			# if os.path.isfile(f"{output_dir}/lines/manuscript/{image_path}_{image_n}.png"):
+			# 	pass
+			# On va filtrer les lignes manuscrites uniquement
+			converted_bl = convert_xml_polygon_to_list_of_tuples(baseline)
+			converted_pl = convert_xml_polygon_to_list_of_tuples(polygon)
+			# line_img = polygon_extraction(polygon=converted_pl, image=gs_im, keep_alpha=False, return_image=True)
+			im_as_array = np.asarray(gs_im)
+			# try:
+			# 	line_img, result = treat_line(index_and_coordinates=(None, polygon, im_as_array))
+			# except TypeError:
+			# 	images[image_path]['extracted'] += 1
+			# 	return
+			# if result in ["Mixed", "Manuscript"]:
+			# 	pass
+			# line_img.save(f"{output_dir}/lines/manuscript/{image_path}_{image_n}.png")
+			deletion_images += 1
+			# if deletion_images == 10_000:
+			# 	print("Deletion images reach 10.000.")
+			# 	exit()
+			search_regexp = re.compile(r'⟦[^⟦⟧]+⟧')
+			between_brackets = re.finditer(search_regexp, gold_transcript)
+			transcription_no_bracket = gold_transcript.replace("⟧", "").replace("⟦", "")
+			all_spans = []
+			for item in between_brackets:
+				span = item.span(0)
+				correct_span = [span[0] + 1, span[-1] - 1]
+				all_spans.append(correct_span)
+			alto_line_to_img(loaded_im=im_as_array,
+							 points=polygon,
+							 out_name=f"{output_dir}/lines/deleted/{image_basename}_{image_n}.png", show_image=False)
+			baseline = [Containers.BaselineLine(id='test', baseline=converted_bl, boundary=converted_pl)]
+			segmentation = Containers.Segmentation(type="baselines",
+												   imagename=image_basename,
+												   text_direction="horizontal-lr",
+												   lines=baseline,
+												   script_detection=False)
+			pred_it = rpred.rpred(model, gs_im, segmentation)
+			try:
+				predicted_line = next(pred_it)
+			except Exception as e:
+				images[image_path]['extracted'] += 1
+				return
+			cuts = predicted_line.cuts
+			pred = predicted_line.prediction
+			try:
+				dictionnary = align_strings(text_a=transcription_no_bracket, text_b=pred)
+			except text_alignment_tool.text_loaders.text_loader.LoaderError:
+				images[image_path]['extracted'] += 1
+				return
+			last_string_no_del = all_spans[-1][-1]
+			first_string_no_del = all_spans[0][0]
+			for item in all_spans:
+				try:
+					first_pos = dictionnary[item[0]]
+				except KeyError:
+					try:
+						first_pos = dictionnary[item[0]]
+					except KeyError:
+						try:
+							first_pos = dictionnary[item[0] + 2]
+						except KeyError:
+							continue
+				try:
+					last_pos = dictionnary[item[1]]
+				except KeyError:
+					try:
+						last_pos = dictionnary[item[1]]
+					except KeyError:
+						try:
+							last_pos = dictionnary[item[1] - 2]
+						except KeyError:
+							continue
+				im_n = 0
+				names = [f"{output_dir}/chars/deleted/{image_basename}_{im_n}_{str(uuid.uuid4())}.png"
+						 for im_n in range(len(cuts[first_pos:last_pos]))]
+				batch_alto_line_to_img_cv2(loaded_im=im,
+										   points=cuts[first_pos:last_pos],
+										   out_names=names,
+										   coords_conversion=False,
+										   horizontal_expand=30)
+
+			names = [f"{output_dir}/chars/undeleted/{image_basename}_{im_n}_{str(uuid.uuid4())}.png"
+					 for im_n in range(len(cuts[last_string_no_del:]))] + [f"{output_dir}/chars/undeleted/{image_basename}_{im_n}_2_{str(uuid.uuid4())}.png"
+					 for im_n in range(len(cuts[:first_string_no_del]))]
+			points = cuts[last_string_no_del:] + cuts[:first_string_no_del]
+			batch_alto_line_to_img_cv2(loaded_im=im, points=points,
+									   out_names=names,
+									   coords_conversion=False,
+									   horizontal_expand=30)
+
+	else:
+		# print(no_deletion_images / (deletion_images + 1))
+		if no_deletion_images / (deletion_images + 1) < 3:
+			no_deletion_images += 1
+			alto_line_to_img(loaded_im=gs_im, points=polygon,
+								 out_name=f"{output_dir}/lines/undeleted/{image_basename}_{image_n}.png", show_image=False)
+	images[image_path]['extracted'] += 1
+	if images[image_path]['extracted'] == images[image_path]['len']:
+		print(f"Unloading image {image_path}.")
+		del paths['images'][image_path]
+	return
 
 def treat_line(index_and_coordinates):
 	index, coordinates, imArray = index_and_coordinates
@@ -164,12 +296,18 @@ def align_strings(text_a, text_b):
 	return alignment_dict
 
 
-def batch_alto_line_to_img_cv2(loaded_im, points, out_names, coords_conversion=True, padding=None, keep_alpha=False):
+def batch_alto_line_to_img_cv2(loaded_im,
+							   points,
+							   out_names,
+							   coords_conversion=True,
+							   horizontal_expand=None,
+							   keep_alpha=False,
+							   vertical_crop=10):
 	# Créer un masque vide (uint8: 0-255)
 	mask = np.zeros((loaded_im.shape[0], loaded_im.shape[1]), dtype=np.uint8)
 
 	# Remplir le polygone dans le masque
-
+	all_sizes = []
 	for indiv_coord, name in list(zip(points, out_names)):
 		if coords_conversion:
 			coordinates = convert_xml_polygon_to_list_of_tuples(indiv_coord)
@@ -180,8 +318,8 @@ def batch_alto_line_to_img_cv2(loaded_im, points, out_names, coords_conversion=T
 		# Calculer la bounding box
 		x_coords = [p[0] for p in coordinates]
 		y_coords = [p[1] for p in coordinates]
-		x_min, x_max = max(0, min(x_coords) - padding), min(loaded_im.shape[1], max(x_coords) + padding)
-		y_min, y_max = max(0, min(y_coords) - padding), min(loaded_im.shape[0], max(y_coords) + padding)
+		x_min, x_max = max(0, min(x_coords) - horizontal_expand), min(loaded_im.shape[1], max(x_coords) + horizontal_expand)
+		y_min, y_max = max(0, min(y_coords) + vertical_crop), min(loaded_im.shape[0], max(y_coords))
 
 		# Recadrer l'image et le masque
 		cropped_img = loaded_im[y_min:y_max, x_min:x_max]
@@ -232,7 +370,7 @@ def batch_alto_line_to_img(loaded_im, points, out_names, coords_conversion=True,
 
 
 
-def alto_line_to_img(loaded_im, points, out_name, coords_conversion=True, padding=None):
+def alto_line_to_img(loaded_im, points, out_name, coords_conversion=True, padding=None, show_image=False):
 	if coords_conversion:
 		coordinates = convert_xml_polygon_to_list_of_tuples(points)
 	else:
@@ -260,8 +398,9 @@ def alto_line_to_img(loaded_im, points, out_name, coords_conversion=True, paddin
 	y_min = min([i[1] for i in coordinates])
 	rectangle_coordinates = (x_min, y_min, x_max, y_max)
 	cropped_img = newIm.crop(rectangle_coordinates)
-	width, height = cropped_img.size
 	cropped_img.save(f"{out_name}")
+	if show_image:
+		cropped_img.show()
 
 def convert_xml_polygon_to_list_of_tuples(coords):
 	as_list = coords.split(" ")
@@ -271,12 +410,13 @@ def convert_xml_polygon_to_list_of_tuples(coords):
 	return coordinates
 
 random.seed(1234)
-input_files = glob.glob(f"{sys.argv[1]}")
+input_files = [glob.glob(sys.argv[n]) for n in range(1, len(sys.argv) - 1)]
+file_list = []
+[file_list.extend(item) for item  in input_files]
 random.shuffle(input_files)
-output_dir = sys.argv[2]
+output_dir = sys.argv[-1]
 namespaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
 ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/htr_29500l.mlmodel"
-model = models.load_any(ocr_model, device="cuda:0")
 deletion_regexp = re.compile(r'.*⟦[^⟦⟧]+⟧.*')
 
 classifier = LC.LinesClassifier(build_vocab=False,
@@ -288,128 +428,44 @@ os.makedirs(exist_ok=True, name=f"{output_dir}/lines/deleted")
 os.makedirs(exist_ok=True, name=f"{output_dir}/lines/undeleted")
 os.makedirs(exist_ok=True, name=f"{output_dir}/chars/undeleted")
 os.makedirs(exist_ok=True, name=f"{output_dir}/chars/deleted")
-
+print(output_dir)
 deletion_images = len(glob.glob(f"{output_dir}/lines/deleted/*.png"))
 no_deletion_images = len(glob.glob(f"{output_dir}/lines/undeleted/*.png"))
-for file in tqdm.tqdm(input_files):
+all_zips = []
+global paths
+paths = {}
+for file in tqdm.tqdm(file_list):
 	basename = "/".join(file.split("/")[:-1])
 	as_tree = ET.parse(file)
 	image_path = as_tree.xpath("//alto:fileName", namespaces=namespaces)[0].text
 	absolute_path = f"{basename}/{image_path}"
-	try:
-		pred_im = Image.open(absolute_path).convert("RGBA")
-		gs_im = Image.open(absolute_path).convert("RGBA")
-		im = np.array(Image.open(absolute_path))
-	except FileNotFoundError:
-		continue
-	lines = as_tree.xpath("//alto:TextLine", namespaces=namespaces)
+	# lines = as_tree.xpath("//alto:TextLine", namespaces=namespaces)
 	# LT8439
 	tagrefs = as_tree.xpath("//alto:TextLine/@TAGREFS", namespaces=namespaces)
 	baselines = as_tree.xpath("//alto:TextLine/@BASELINE", namespaces=namespaces)
 	transcriptions = as_tree.xpath("//alto:TextLine/alto:String/@CONTENT", namespaces=namespaces)
 	polygons = as_tree.xpath("//alto:TextLine/alto:Shape/alto:Polygon/@POINTS", namespaces=namespaces)
-	zipped_content = list(zip(lines, tagrefs, transcriptions, baselines, polygons))
-	image_n = 0
-	for line, tagrefs, gold_transcript, baseline, polygon in zipped_content:
-		image_n += 1
-		if tagrefs == "LT8439":
-			continue
-			if os.path.isfile(f"{output_dir}/lines/deleted/{image_path}_{image_n}.png"):
-				pass
-			# alto_line_to_img(loaded_im=im,
-			# 				 points=polygon,
-			# 				 out_name=f"{output_dir}/lines/deleted/{image_path}_{image_n}.png")
-			deletion_images += 1
-		if "⟦" and "⟧" in gold_transcript or tagrefs == "LT8439":
-			if re.match(deletion_regexp, gold_transcript):
-				if os.path.isfile(f"{output_dir}/lines/manuscript/{image_path}_{image_n}.png"):
-					pass
-				# On va filtrer les lignes manuscrites uniquement
-				converted_bl = convert_xml_polygon_to_list_of_tuples(baseline)
-				converted_pl = convert_xml_polygon_to_list_of_tuples(polygon)
-				# line_img = polygon_extraction(polygon=converted_pl, image=gs_im, keep_alpha=False, return_image=True)
-				gs_im = np.asarray(gs_im)
-				try:
-					line_img, result = treat_line(index_and_coordinates=(None, polygon, gs_im))
-				except TypeError:
-					continue
-				if result in ["Mixed", "Manuscript"]:
-					continue
-				# line_img.save(f"{output_dir}/lines/manuscript/{image_path}_{image_n}.png")
-				deletion_images += 1
-				if deletion_images == 10_000:
-					print("Deletion images reach 10.000.")
-					exit()
-				search_regexp = re.compile(r'⟦[^⟦⟧]+⟧')
-				between_brackets = re.finditer(search_regexp, gold_transcript)
-				transcription_no_bracket = gold_transcript.replace("⟧", "").replace("⟦", "")
-				all_spans = []
-				for item in between_brackets:
-					span = item.span(0)
-					correct_span = [span[0] + 1, span[-1] - 1]
-					all_spans.append(correct_span)
-					without_brackets = gold_transcript[correct_span[0]: correct_span[1]]
-				# alto_line_to_img(loaded_im=im,
-				# 				 points=polygon,
-				# 				 out_name=f"{output_dir}/lines/deleted/{image_path}_{image_n}.png")
-				baseline = [Containers.BaselineLine(id='test', baseline=converted_bl, boundary=converted_pl)]
-				segmentation = Containers.Segmentation(type="baselines",
-													   imagename=image_path,
-													   text_direction="horizontal-lr",
-													   lines=baseline,
-													   script_detection=False)
-				pred_it = rpred.rpred(model, pred_im, segmentation)
-				line = next(pred_it)
-				cuts = line.cuts
-				pred = line.prediction
-				dictionnary = align_strings(text_a=transcription_no_bracket, text_b=pred)
-				last_string_no_del = all_spans[-1][-1]
-				first_string_no_del = all_spans[0][0]
-				for item in all_spans:
-					try:
-						first_pos = dictionnary[item[0]]
-					except KeyError:
-						try:
-							first_pos = dictionnary[item[0]]
-						except KeyError:
-							try:
-								first_pos = dictionnary[item[0] + 2]
-							except KeyError:
-								continue
-					try:
-						last_pos = dictionnary[item[1]]
-					except KeyError:
-						try:
-							last_pos = dictionnary[item[1]]
-						except KeyError:
-							try:
-								last_pos = dictionnary[item[1] - 2]
-							except KeyError:
-								continue
-					im_n = 0
-					names = [f"{output_dir}/chars/deleted/{image_path}_{im_n}_{str(uuid.uuid4())}.png"
-							 for im_n in range(len(cuts[first_pos:last_pos]))]
-					batch_alto_line_to_img_cv2(loaded_im=im,
-										   points=cuts[first_pos:last_pos],
-										   out_names=names,
-										   coords_conversion=False,
-										   padding=12)
+	all_paths = [absolute_path for i in range(len(polygons))]
+	all_ids = [uuid.uuid4() for i in range(len(polygons))]
+	# line_ids = as_tree.xpath("//alto:TextLine/@ID", namespaces=namespaces)
+	# paths = {**paths, **{ident: {'path': absolute_path, 'loaded_im': None} for ident, path in zip(all_ids, all_paths)}}
+	try:
+		paths['images'][absolute_path] = {'len': len(polygons), 'extracted': 0}
+	except KeyError:
+		paths['images'] = {absolute_path: {'len': len(polygons), 'extracted': 0}}
+	paths['images'][absolute_path]['images'] = None
+	zipped_content = list(zip(tagrefs, transcriptions, baselines, polygons, all_paths))
+	all_zips.extend(zipped_content)
+global image_n
+image_n = 0
+global model
+model = models.load_any(ocr_model, device="cpu")
+deletion_images = 0
+no_deletion_images = 0
 
-				names = [f"{output_dir}/chars/undeleted/{image_path}_{im_n}_{str(uuid.uuid4())}.png"
-						 for im_n in range(len(cuts[last_string_no_del:]))] + [f"{output_dir}/chars/undeleted/{image_path}_{im_n}_2_{str(uuid.uuid4())}.png"
-						 for im_n in range(len(cuts[:first_string_no_del]))]
-				points = cuts[last_string_no_del:] + cuts[:first_string_no_del]
-				batch_alto_line_to_img_cv2(loaded_im=im, points=points,
-									   out_names=names,
-									   coords_conversion=False,
-									   padding=12)
+torch.set_num_threads(1)
+with mp.Pool(processes=4) as pool:
+	data = [(line,) for line in all_zips]
+	pool.starmap(process_line, tqdm.tqdm(data))
+	print("Images Done.")
 
-		else:
-			continue
-			print(no_deletion_images / (deletion_images + 1))
-			if no_deletion_images / (deletion_images + 1) < 3:
-				no_deletion_images += 1
-				if os.path.isfile(f"{output_dir}/lines/undeleted/{image_path}_{image_n}.png"):
-					continue
-				alto_line_to_img(loaded_im=im, points=polygon,
-								 out_name=f"{output_dir}/lines/undeleted/{image_path}_{image_n}.png")
