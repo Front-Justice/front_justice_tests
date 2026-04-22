@@ -2,7 +2,6 @@ import os
 import re
 import uuid
 import torch
-import mp
 import text_alignment_tool
 import lxml.etree as ET
 import sys
