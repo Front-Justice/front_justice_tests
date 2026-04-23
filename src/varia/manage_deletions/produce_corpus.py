@@ -415,7 +415,7 @@ file_list = []
 random.shuffle(input_files)
 output_dir = sys.argv[-1]
 namespaces = {"alto": "http://www.loc.gov/standards/alto/ns-v4#"}
-ocr_model = "/home/mgl/Bureau/Travail/projets/Front_Justice/alternative_pipeline/scripts/src/Vision/models/htr_29500l.mlmodel"
+ocr_model = "src/Vision/models/htr_29500l.mlmodel"
 deletion_regexp = re.compile(r'.*⟦[^⟦⟧]+⟧.*')
 
 # classifier = LC.LinesClassifier(build_vocab=False,
