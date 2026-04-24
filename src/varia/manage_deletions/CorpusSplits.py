@@ -22,7 +22,8 @@ print(n_undeleted)
 print(n_deleted)
 
 for cls in os.listdir(SOURCE_DIR):
-	cls_dir = os.path.join(dir, cls)
+	print(cls)
+	cls_dir = os.path.join(SOURCE_DIR, cls)
 	if not os.path.isdir(cls_dir):
 		continue
 
