@@ -23,6 +23,7 @@ import multiprocessing as mp
 
 def process_line(line):
 	global model
+	extension = 12
 	errors = 0
 	tagrefs, gold_transcript, baseline, polygon, image_path = line
 	global paths

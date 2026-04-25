@@ -54,7 +54,7 @@ class Reconciliator:
 		self._reconciliate_date_naissance()
 		self._copy_unici()
 		self._produce_dict()
-		self._remove_baseline_and_bbox()
+		# self._remove_baseline_and_bbox()
 		print("---")
 
 
@@ -76,8 +76,6 @@ class Reconciliator:
 				age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
 			except (AttributeError, TypeError, KeyError):
 				age_theorique = None
-			print(age_theorique)
-			print(age_soldat)
 			if age_theorique == age_soldat:
 				self.age_soldat = age_soldat
 			else:
@@ -109,11 +107,9 @@ class Reconciliator:
 				filtered_dates = [item for item in filtered_dates if utils.is_anterior_or_equal(previous_date, item)]
 			except (AttributeError, TypeError):
 				pass
-			print(filtered_dates)
 			# On va filtrer par précision: le / dit la précision du
 			# dates_by_Precision = [len(date.split("/")) for date in filtered_dates]
 			# filtered_dates_by_precision = [date for date in filtered_dates if len(date.split("/")) == max(dates_by_Precision)]
-			print(filtered_dates)
 			if filtered_dates == []:
 				self.date_proces = None
 				return
@@ -122,7 +118,7 @@ class Reconciliator:
 			else:
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
-					self.date_proces = filtered_dates
+					self.date_proces = self.reconciliate_date(filtered_dates[0], filtered_dates[1])
 				else:
 					dictionnary = {}
 					for date in filtered_dates:
@@ -131,7 +127,6 @@ class Reconciliator:
 						except KeyError:
 							dictionnary[date] = 1
 					dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-					print(dict_sorted_by_freq)
 					exit(0)
 					# self.date_proces =
 
@@ -142,7 +137,7 @@ class Reconciliator:
 		except (AttributeError, TypeError):
 			try:
 				self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
-			except (AttributeError, IndexError):
+			except (AttributeError, IndexError, KeyError):
 				self.profession = None
 				return
 		try:
@@ -208,6 +203,59 @@ class Reconciliator:
 			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
 		except (TypeError, KeyError):
 			self.date_crime_ou_delit = None
+		try:
+			self.chef_accusation = self.minute_list[0]["extractions"]["chef_accusation"]["extracted"]
+		except (TypeError, KeyError):
+			self.chef_accusation = None
+		try:
+			self.antecedents = len(self.minute_list[0]["extractions"]["antécédents"]["extracted"])
+		except (TypeError, KeyError):
+			self.antecedents = None
+		try:
+			self.situation_maritale = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"])
+		except (TypeError, KeyError):
+			self.situation_maritale = None
+		try:
+			self.enfants = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"])
+		except (TypeError, KeyError):
+			self.enfants = None
+
+
+		try:
+			self.rang = self.minute_list[0]["extractions"]["soldat"]["identite"]["rang"]["extracted"]
+		except (TypeError, KeyError):
+			self.rang = None
+		try:
+			self.affectation = self.minute_list[0]["extractions"]["soldat"]["identite"]["affectation"]["extracted"]
+		except (TypeError, KeyError):
+			self.affectation = None
+		try:
+			self.numero_matricule = self.minute_list[0]["extractions"]["soldat"]["identite"]["matricule"]["extracted"]
+		except (TypeError, KeyError):
+			self.numero_matricule = None
+
+	def reconciliate_date(self, date_a, date_b):
+		splitted_a = date_a.split("/")
+		splitted_b = date_b.split("/")
+		# Dans le cas de dates de longueur identique (jj/mm/aaaa ou mm/aaaa)
+		if len(splitted_a) == len(splitted_b):
+			# Si les mois correspondent, on retourne la date avec précision au mois
+			if splitted_a[1:] == splitted_b[1:]:
+				reconciliated_date = "/".join(splitted_a)
+			else:
+				reconciliated_date = splitted_a[-1]
+		# Dans le cas contraire
+		else:
+			if len(splitted_a) > len(splitted_b):
+				return date_a
+			else:
+				return date_b
+			# Si les mois + années coincident, on retourne la date avec précision au mois
+			if splitted_a[-2:] == splitted_b[-2:]:
+				reconciliated_date = "/".join(splitted_a)
+			else:
+				reconciliated_date = splitted_a[-1]
+		return reconciliated_date
 
 
 	def _reconciliate_lieu_residence(self):
@@ -262,8 +310,6 @@ class Reconciliator:
 				self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
 			except KeyError:
 				self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
-		print(f'Page 1: {self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]}')
-		print(f'Page 2: {self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]}')
 
 
 	def _reconciliate_lieu_naissance(self):
@@ -281,10 +327,8 @@ class Reconciliator:
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
 		except TypeError:
-			print("Page 1 sans annotations")
-			self.lieu_naissance = None
-			# self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
-			return
+			distance_p1 = None
+			print("Ville page 1 non identifiée")
 
 
 		try:
@@ -301,11 +345,16 @@ class Reconciliator:
 		try:
 			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
 		except TypeError:
-			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
-			print("Page 2 sans annotations")
-			return
+			distance_p2 = None
+			print("Ville page 2 non identifiée")
 		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
+		if distance_p1 is None:
+			self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			return
+		elif distance_p2 is None:
+			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			return
 		if distance_p1 < distance_p2:
 			print("Page 1 choisie.")
 			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
@@ -484,30 +533,20 @@ class Reconciliator:
 					self.certitude_nom_du_soldat = 0.5
 				else:
 					if list(all_values).count(max_value) != 1:
-						print("Égalité entre deux noms")
 						self.nom_du_soldat = [item for item, frec in dictionnary.items() if frec == max_value]
 						self.certitude_nom_du_soldat = 0.1
 					else:
-						print("Pas d'égalité")
 						print(list(all_values))
 						print(list(all_values).count(max_value))
 						self.nom_du_soldat = dict_sorted_by_freq[0]
 						self.certitude_nom_du_soldat = 0.3
-				print(self.nom_du_soldat)
-				print(self.certitude_nom_du_soldat)
-				print("OKKKK")
-				print(dictionnary)
-				print("---")
 				return
 			if list(all_values).count(max_value) != 1:
-				print("égalité")
 				self.nom_du_soldat = [item for item, frec in dictionnary.items() if frec == max_value]
 				self.certitude_nom_du_soldat = 0.2
 			else:
 				self.nom_du_soldat = dict_sorted_by_freq[0]
 				self.certitude_nom_du_soldat = 0.9
-			print(self.nom_du_soldat)
-			print(self.certitude_nom_du_soldat)
 
 
 	def _produce_dict(self):
@@ -521,31 +560,40 @@ class Reconciliator:
 				"images": self.images_path,
 				"greffier": greffier
 			},
-			"magistrats": self.magistrats,
 			"informations_proces": {"numero_ordre": self.numero_ordre,
 									"numero_jugement": self.numero_jugement,
 									"lieu_jugement": self.lieu_jugement,
 									"date_du_proces": {"date_reconciliee": self.date_proces,
-										   "date_originelle": self.date_proces_orig}},
+										   "date_originelle": self.date_proces_orig},
+			"magistrats": self.magistrats},
 			"soldat":
 				{
+					"situation_militaire":
+						{"rang": self.rang,
+					"affectation": self.affectation,
+						 "matricule": self.numero_matricule},
 					"identite": {
 						"nom":
-							{"nom": self.nom_du_soldat,
+							{"extracted": self.nom_du_soldat,
 							 "certitude": self.certitude_nom_du_soldat},
 						"prenom":
-							{"prenom": self.prenom_du_soldat,
+							{"extracted": self.prenom_du_soldat,
 							 "certitude": self.certitude_prenom_du_soldat},
 						"age": self.age_soldat,
-						"date_naissance": self.date_naissance
+						"date_naissance": self.date_naissance,
+						"lieu_residence": self.lieu_residence,
+						"lieu_naissance": self.lieu_naissance,
+						"profession": self.profession,
+						"famille":
+						{"situation_maritale": self.situation_maritale,
+						 "enfants": self.enfants},
 						},
-					"lieu_residence": self.lieu_residence,
-					"lieu_naissance": self.lieu_naissance,
 					"description_physique": self.description_physique,
-					"profession": self.profession
+					"antecedents": self.antecedents
 				},
 			"accusation": {
-				"date_du_crime_ou_delit": self.date_crime_ou_delit
+				"date_du_crime_ou_delit": self.date_crime_ou_delit,
+				"chef_accusation": self.chef_accusation
 			},
 			"actualisations_du_jugement": self.annotations
 		}

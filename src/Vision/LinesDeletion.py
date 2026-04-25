@@ -57,9 +57,9 @@ class LinesDeletionsIdentifier():
 		self.model_lines = model_lines
 		self.model_chars = model_chars
 		self.resize_chars = transforms.Compose([
-			transforms.ToTensor(),
-			transforms.Resize((65, 65))  # Normaliser à [-1, 1]
-		])
+    transforms.Resize((55, 80)),
+    transforms.ToTensor(),  # Normaliser à [-1, 1]
+])
 		self.normalize_chars = transforms.Compose([
 			transforms.Normalize(mean=[0.5], std=[0.5]),  # Normaliser à [-1, 1]
 		])
@@ -124,11 +124,10 @@ class LinesDeletionsIdentifier():
 				# 											   keep_alpha=False,
 				# 											   return_image=True,
 				# 											   vertical_padding=12)
-				current_char = utils.polygon_extraction(char_poly,
+				current_char = utils.batch_alto_line_to_img_cv2(char_poly,
 															   image,
 															   keep_alpha=False,
-															   return_image=True,
-															   vertical_padding=12)
+															   vertical_padding=30)
 				# current_char = Image.fromarray(current_char).convert("L")
 				current_char = current_char.convert("L")
 				resized = self.resize_chars(current_char)

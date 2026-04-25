@@ -6,9 +6,9 @@ _tabversion = '3.10'
 
 _lr_method = 'LALR'
 
-_lr_signature = 'startleftANDA AN AND ANDOR ANNEE CHIFFRE_CENTAINE CHIFFRE_DIZAINE CHIFFRE_MILLIER CHIFFRE_UNITE COURANT DE JOUR MOIS RANGE SPACE\n        mois_annee_range : mois_annee RANGE mois_annee\n        \n        mois_annee : mois ANNEE\n        \n        plage : jour_mois AND jour_mois\n        \n        annee_et_annee : annee AND annee\n        \n        courant_de_groupe : COURANT annee_et_annee\n                            | COURANT ANNEE\n                            | COURANT AN annee\n                            | COURANT mois_annee\n        \n        jour_toutes_lettres : unite\n            | dizaine unite\n            | dizaine\n        \n        mois : MOIS\n        \n        jour_toutes_lettres_mois : jour_toutes_lettres mois\n        \n        unite : CHIFFRE_UNITE\n        \n        centaine : CHIFFRE_CENTAINE\n                | unite CHIFFRE_CENTAINE\n        \n        dizaine : CHIFFRE_DIZAINE unite\n                | CHIFFRE_DIZAINE\n                | CHIFFRE_DIZAINE AND unite\n        \n        millier : CHIFFRE_MILLIER\n        \n        token_an_toutes_lettres : DE AN\n                                | AN\n        \n        an_toutes_lettres : token_an_toutes_lettres millier centaine dizaine unite\n                            | token_an_toutes_lettres millier centaine dizaine\n        \n        groupe_annee : succession_mois ANNEE\n        \n        annee : AN ANNEE\n                    | ANNEE\n        \n        deux_dates_completes : jour_mois_annee AND jour_mois_annee\n        \n        date_toutes_lettres_inversee : an_toutes_lettres jour_toutes_lettres_mois\n        \n        date_toutes_lettres : jour_toutes_lettres_mois an_toutes_lettres\n        \n        date_complete : plage ANNEE\n                     | jour_mois ANNEE\n                     | jour_toutes_lettres_mois ANNEE\n                     | groupe_annee\n                     | courant_de_groupe\n                     | JOUR mois ANNEE\n                     | mois_annee\n                     | mois_andor_mois_annee\n                     | annee\n                     | range_mois ANNEE\n                     | range_jour ANNEE\n                     | annee_et_annee\n                     | andor_jour_mois_jour_mois\n                     | andor_date_complete\n                     | jour_mois_annee\n                     | deux_dates_completes\n                     | range_jour_mois ANNEE\n                     | date_toutes_lettres\n                     | date_toutes_lettres_inversee\n                     | mois_annee_range\n        \n        start : date_complete\n        \n        range_mois : mois RANGE mois\n        \n        range_jour_mois : jour_mois RANGE jour_mois\n        \n        range_jour : JOUR RANGE JOUR\n                    | JOUR RANGE JOUR mois\n        \n        jour_mois : JOUR mois\n        \n        andor_date_complete : jour_mois_annee ANDOR jour_mois_annee\n        jour_mois_annee : JOUR mois ANNEE\n        andor_jour_mois : jour_mois ANDOR jour_mois\n                                    | jour_mois jour_mois\n        \n        andor_jour_mois_jour_mois : andor_jour_mois\n                        | andor_jour_mois ANNEE\n        \n        succession_mois : mois AND mois\n        \n        mois_andor_mois : mois ANDOR mois\n                        | mois mois\n        \n        mois_andor_mois_annee : mois_andor_mois ANNEE\n        '
+_lr_signature = 'startleftANDA AN AND ANDOR ANNEE CHIFFRE_CENTAINE CHIFFRE_DIZAINE CHIFFRE_MILLIER CHIFFRE_UNITE COURANT DE JOUR MOIS RANGE SPACE\n        mois_annee_range : mois_annee RANGE mois_annee\n        \n        mois_annee : mois ANNEE\n        \n        plage : jour_mois AND jour_mois\n        \n        annee_et_annee : annee AND annee\n        \n        courant_de_groupe : COURANT annee_et_annee\n                            | COURANT ANNEE\n                            | COURANT AN annee\n                            | COURANT mois_annee\n        \n        jour_toutes_lettres : unite\n            | dizaine unite\n            | dizaine\n        \n        mois : MOIS\n        \n        jour_toutes_lettres_mois : jour_toutes_lettres mois\n        \n        unite : CHIFFRE_UNITE\n        \n        centaine : CHIFFRE_CENTAINE\n                | unite CHIFFRE_CENTAINE\n        \n        dizaine : CHIFFRE_DIZAINE unite\n                | CHIFFRE_DIZAINE\n                | CHIFFRE_DIZAINE AND unite\n        \n        millier : CHIFFRE_MILLIER\n        \n        token_an_toutes_lettres : DE AN\n                                | AN\n        \n        an_toutes_lettres : token_an_toutes_lettres millier centaine dizaine unite\n                            | token_an_toutes_lettres millier centaine dizaine\n        \n        groupe_annee : succession_mois ANNEE\n        \n        annee : AN ANNEE\n                    | ANNEE\n                    | AN an_toutes_lettres\n        \n        deux_dates_completes : jour_mois_annee AND jour_mois_annee\n        \n        date_toutes_lettres_inversee : an_toutes_lettres jour_toutes_lettres_mois\n        \n        date_toutes_lettres : jour_toutes_lettres_mois an_toutes_lettres\n        \n        date_complete : plage ANNEE\n                     | jour_mois ANNEE\n                     | jour_toutes_lettres_mois ANNEE\n                     | groupe_annee\n                     | courant_de_groupe\n                     | JOUR mois ANNEE\n                     | mois_annee\n                     | mois_andor_mois_annee\n                     | annee\n                     | an_toutes_lettres\n                     | range_mois ANNEE\n                     | range_jour ANNEE\n                     | annee_et_annee\n                     | andor_jour_mois_jour_mois\n                     | andor_date_complete\n                     | jour_mois_annee\n                     | deux_dates_completes\n                     | range_jour_mois ANNEE\n                     | date_toutes_lettres\n                     | date_toutes_lettres_inversee\n                     | mois_annee_range\n        \n        start : date_complete\n        \n        range_mois : mois RANGE mois\n        \n        range_jour_mois : jour_mois RANGE jour_mois\n        \n        range_jour : JOUR RANGE JOUR\n                    | JOUR RANGE JOUR mois\n        \n        jour_mois : JOUR mois\n        \n        andor_date_complete : jour_mois_annee ANDOR jour_mois_annee\n        jour_mois_annee : JOUR mois ANNEE\n        andor_jour_mois : jour_mois ANDOR jour_mois\n                                    | jour_mois jour_mois\n        \n        andor_jour_mois_jour_mois : andor_jour_mois\n                        | andor_jour_mois ANNEE\n        \n        succession_mois : mois AND mois\n        \n        mois_andor_mois : mois ANDOR mois\n                        | mois mois\n        \n        mois_andor_mois_annee : mois_andor_mois ANNEE\n        '
     
-_lr_action_items = {'JOUR':([0,5,34,42,43,44,49,50,60,61,],[9,45,-12,45,45,45,-56,86,94,94,]),'COURANT':([0,],[27,]),'AN':([0,6,27,34,38,57,63,67,],[28,48,67,-12,80,92,-13,92,]),'ANNEE':([0,3,5,6,10,14,15,21,26,27,28,29,30,34,40,49,51,57,63,67,70,81,82,83,84,86,87,88,89,92,102,103,],[4,39,41,46,52,58,59,62,64,66,71,72,73,-12,-60,85,-65,4,-13,97,52,-3,-53,-59,-56,-54,-52,-63,-64,71,-55,106,]),'MOIS':([0,9,10,25,27,32,33,34,36,37,45,53,54,55,56,75,78,86,94,101,],[34,34,34,34,34,-9,-11,-12,-14,-18,34,34,34,34,34,-10,-17,34,34,-19,]),'CHIFFRE_UNITE':([0,31,33,36,37,76,77,78,79,101,104,107,],[36,36,36,-14,36,36,-20,-17,36,-19,36,-23,]),'CHIFFRE_DIZAINE':([0,31,36,37,78,98,100,101,104,105,107,],[37,37,-14,-18,-17,37,-15,-19,-24,-16,-23,]),'DE':([0,6,34,63,],[38,38,-12,-13,]),'$end':([1,2,4,7,8,11,12,13,16,17,18,19,20,22,23,24,30,34,36,37,39,40,41,46,47,52,58,59,62,63,64,65,66,69,71,72,73,74,78,83,84,85,90,91,93,95,96,97,101,104,106,107,],[0,-51,-27,-34,-35,-37,-38,-39,-42,-43,-44,-45,-46,-48,-49,-50,-61,-12,-14,-18,-31,-60,-32,-33,-30,-2,-40,-41,-47,-13,-25,-5,-6,-8,-26,-66,-62,-29,-17,-59,-56,-36,-1,-4,-57,-28,-7,-27,-19,-24,-58,-23,]),'AND':([4,5,10,13,19,34,37,49,66,68,71,85,97,],[-27,42,54,57,61,-12,79,-56,-27,57,-26,-58,-26,]),'RANGE':([5,9,10,11,34,49,52,],[43,50,53,56,-12,-56,-2,]),'ANDOR':([5,10,19,34,49,85,],[44,55,60,-12,-56,-58,]),'CHIFFRE_MILLIER':([28,35,48,80,],[-22,77,-22,-21,]),'CHIFFRE_CENTAINE':([36,76,77,99,],[-14,100,-20,105,]),}
+_lr_action_items = {'JOUR':([0,5,35,42,43,44,49,50,61,62,],[9,45,-12,45,45,45,-58,87,95,95,]),'COURANT':([0,],[28,]),'AN':([0,6,28,29,35,36,57,64,68,93,],[29,48,68,48,-12,79,93,-13,29,48,]),'ANNEE':([0,3,5,6,10,15,16,22,27,28,29,30,34,35,40,49,51,57,64,68,71,82,83,84,85,87,88,89,90,93,103,104,],[4,39,41,46,52,59,60,63,65,67,72,74,78,-12,-62,86,-67,4,-13,98,52,-3,-55,-61,-58,-56,-54,-65,-66,72,-57,107,]),'MOIS':([0,9,10,26,28,32,33,35,37,38,45,53,54,55,56,77,80,87,95,102,],[35,35,35,35,35,-11,-9,-12,-14,-18,35,35,35,35,35,-10,-17,35,35,-19,]),'DE':([0,6,29,35,64,68,93,],[36,36,36,-12,-13,36,36,]),'CHIFFRE_UNITE':([0,14,32,37,38,75,76,80,81,102,105,108,],[37,37,37,-14,37,37,-20,-17,37,-19,37,-23,]),'CHIFFRE_DIZAINE':([0,14,37,38,80,99,101,102,105,106,108,],[38,38,-14,-18,-17,38,-15,-19,-24,-16,-23,]),'$end':([1,2,4,7,8,11,12,13,14,17,18,19,20,21,23,24,25,34,35,37,38,39,40,41,46,47,52,58,59,60,63,64,65,66,67,70,72,73,74,78,80,84,85,86,91,92,94,96,97,98,102,105,107,108,],[0,-53,-27,-35,-36,-38,-39,-40,-41,-44,-45,-46,-47,-48,-50,-51,-52,-63,-12,-14,-18,-32,-62,-33,-34,-31,-2,-30,-42,-43,-49,-13,-25,-5,-6,-8,-26,-28,-68,-64,-17,-61,-58,-37,-1,-4,-59,-29,-7,-27,-19,-24,-60,-23,]),'AND':([4,5,10,13,20,35,37,38,49,67,69,72,73,80,86,98,102,105,108,],[-27,42,54,57,62,-12,-14,81,-58,-27,57,-26,-28,-17,-60,-26,-19,-24,-23,]),'RANGE':([5,9,10,11,35,49,52,],[43,50,53,56,-12,-58,-2,]),'ANDOR':([5,10,20,35,49,86,],[44,55,61,-12,-58,-60,]),'CHIFFRE_MILLIER':([29,31,48,79,],[-22,76,-22,-21,]),'CHIFFRE_CENTAINE':([37,75,76,100,],[-14,101,-20,106,]),}
 
 _lr_action = {}
 for _k, _v in _lr_action_items.items():
@@ -17,7 +17,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'start':([0,],[1,]),'date_complete':([0,],[2,]),'plage':([0,],[3,]),'jour_mois':([0,5,42,43,44,],[5,40,81,82,83,]),'jour_toutes_lettres_mois':([0,31,],[6,74,]),'groupe_annee':([0,],[7,]),'courant_de_groupe':([0,],[8,]),'mois':([0,9,10,25,27,45,53,54,55,56,86,94,],[10,49,51,63,70,84,87,88,89,70,102,103,]),'mois_annee':([0,27,56,],[11,69,90,]),'mois_andor_mois_annee':([0,],[12,]),'annee':([0,27,57,67,],[13,68,91,96,]),'range_mois':([0,],[14,]),'range_jour':([0,],[15,]),'annee_et_annee':([0,27,],[16,65,]),'andor_jour_mois_jour_mois':([0,],[17,]),'andor_date_complete':([0,],[18,]),'jour_mois_annee':([0,60,61,],[19,93,95,]),'deux_dates_completes':([0,],[20,]),'range_jour_mois':([0,],[21,]),'date_toutes_lettres':([0,],[22,]),'date_toutes_lettres_inversee':([0,],[23,]),'mois_annee_range':([0,],[24,]),'jour_toutes_lettres':([0,31,],[25,25,]),'succession_mois':([0,],[26,]),'mois_andor_mois':([0,],[29,]),'andor_jour_mois':([0,],[30,]),'an_toutes_lettres':([0,6,],[31,47,]),'unite':([0,31,33,37,76,79,104,],[32,32,75,78,99,101,107,]),'dizaine':([0,31,98,],[33,33,104,]),'token_an_toutes_lettres':([0,6,],[35,35,]),'millier':([35,],[76,]),'centaine':([76,],[98,]),}
+_lr_goto_items = {'start':([0,],[1,]),'date_complete':([0,],[2,]),'plage':([0,],[3,]),'jour_mois':([0,5,42,43,44,],[5,40,82,83,84,]),'jour_toutes_lettres_mois':([0,14,],[6,58,]),'groupe_annee':([0,],[7,]),'courant_de_groupe':([0,],[8,]),'mois':([0,9,10,26,28,45,53,54,55,56,87,95,],[10,49,51,64,71,85,88,89,90,71,103,104,]),'mois_annee':([0,28,56,],[11,70,91,]),'mois_andor_mois_annee':([0,],[12,]),'annee':([0,28,57,68,],[13,69,92,97,]),'an_toutes_lettres':([0,6,29,68,93,],[14,47,73,73,73,]),'range_mois':([0,],[15,]),'range_jour':([0,],[16,]),'annee_et_annee':([0,28,],[17,66,]),'andor_jour_mois_jour_mois':([0,],[18,]),'andor_date_complete':([0,],[19,]),'jour_mois_annee':([0,61,62,],[20,94,96,]),'deux_dates_completes':([0,],[21,]),'range_jour_mois':([0,],[22,]),'date_toutes_lettres':([0,],[23,]),'date_toutes_lettres_inversee':([0,],[24,]),'mois_annee_range':([0,],[25,]),'jour_toutes_lettres':([0,14,],[26,26,]),'succession_mois':([0,],[27,]),'mois_andor_mois':([0,],[30,]),'token_an_toutes_lettres':([0,6,29,68,93,],[31,31,31,31,31,]),'dizaine':([0,14,99,],[32,32,105,]),'unite':([0,14,32,38,75,81,105,],[33,33,77,80,100,102,108,]),'andor_jour_mois':([0,],[34,]),'millier':([31,],[75,]),'centaine':([75,],[99,]),}
 
 _lr_goto = {}
 for _k, _v in _lr_goto_items.items():
@@ -54,43 +54,45 @@ _lr_productions = [
   ('groupe_annee -> succession_mois ANNEE','groupe_annee',2,'p_succession_mois_annees','parser.py',157),
   ('annee -> AN ANNEE','annee',2,'p_annee','parser.py',163),
   ('annee -> ANNEE','annee',1,'p_annee','parser.py',164),
-  ('deux_dates_completes -> jour_mois_annee AND jour_mois_annee','deux_dates_completes',3,'p_date_complete_date_complete','parser.py',173),
-  ('date_toutes_lettres_inversee -> an_toutes_lettres jour_toutes_lettres_mois','date_toutes_lettres_inversee',2,'p_date_complete_toutes_lettres_inversee','parser.py',180),
-  ('date_toutes_lettres -> jour_toutes_lettres_mois an_toutes_lettres','date_toutes_lettres',2,'p_date_complete_toutes_lettres','parser.py',186),
-  ('date_complete -> plage ANNEE','date_complete',2,'p_date_complete','parser.py',193),
-  ('date_complete -> jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',194),
-  ('date_complete -> jour_toutes_lettres_mois ANNEE','date_complete',2,'p_date_complete','parser.py',195),
-  ('date_complete -> groupe_annee','date_complete',1,'p_date_complete','parser.py',196),
-  ('date_complete -> courant_de_groupe','date_complete',1,'p_date_complete','parser.py',197),
-  ('date_complete -> JOUR mois ANNEE','date_complete',3,'p_date_complete','parser.py',198),
-  ('date_complete -> mois_annee','date_complete',1,'p_date_complete','parser.py',199),
-  ('date_complete -> mois_andor_mois_annee','date_complete',1,'p_date_complete','parser.py',200),
-  ('date_complete -> annee','date_complete',1,'p_date_complete','parser.py',201),
-  ('date_complete -> range_mois ANNEE','date_complete',2,'p_date_complete','parser.py',202),
-  ('date_complete -> range_jour ANNEE','date_complete',2,'p_date_complete','parser.py',203),
-  ('date_complete -> annee_et_annee','date_complete',1,'p_date_complete','parser.py',204),
-  ('date_complete -> andor_jour_mois_jour_mois','date_complete',1,'p_date_complete','parser.py',205),
-  ('date_complete -> andor_date_complete','date_complete',1,'p_date_complete','parser.py',206),
-  ('date_complete -> jour_mois_annee','date_complete',1,'p_date_complete','parser.py',207),
-  ('date_complete -> deux_dates_completes','date_complete',1,'p_date_complete','parser.py',208),
-  ('date_complete -> range_jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',209),
-  ('date_complete -> date_toutes_lettres','date_complete',1,'p_date_complete','parser.py',210),
-  ('date_complete -> date_toutes_lettres_inversee','date_complete',1,'p_date_complete','parser.py',211),
-  ('date_complete -> mois_annee_range','date_complete',1,'p_date_complete','parser.py',212),
-  ('start -> date_complete','start',1,'p_start','parser.py',227),
-  ('range_mois -> mois RANGE mois','range_mois',3,'p_range_mois','parser.py',233),
-  ('range_jour_mois -> jour_mois RANGE jour_mois','range_jour_mois',3,'p_range_jour_mois','parser.py',241),
-  ('range_jour -> JOUR RANGE JOUR','range_jour',3,'p_range_jour','parser.py',248),
-  ('range_jour -> JOUR RANGE JOUR mois','range_jour',4,'p_range_jour','parser.py',249),
-  ('jour_mois -> JOUR mois','jour_mois',2,'p_jour_mois','parser.py',261),
-  ('andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee','andor_date_complete',3,'p_andor_date_complete','parser.py',267),
-  ('jour_mois_annee -> JOUR mois ANNEE','jour_mois_annee',3,'p_jour_mois_annee','parser.py',273),
-  ('andor_jour_mois -> jour_mois ANDOR jour_mois','andor_jour_mois',3,'p_andor_jour_mois_jour_mois','parser.py',278),
-  ('andor_jour_mois -> jour_mois jour_mois','andor_jour_mois',2,'p_andor_jour_mois_jour_mois','parser.py',279),
-  ('andor_jour_mois_jour_mois -> andor_jour_mois','andor_jour_mois_jour_mois',1,'p_andor_jour_mois','parser.py',289),
-  ('andor_jour_mois_jour_mois -> andor_jour_mois ANNEE','andor_jour_mois_jour_mois',2,'p_andor_jour_mois','parser.py',290),
-  ('succession_mois -> mois AND mois','succession_mois',3,'p_succession_mois','parser.py',299),
-  ('mois_andor_mois -> mois ANDOR mois','mois_andor_mois',3,'p_mois_andor_mois','parser.py',307),
-  ('mois_andor_mois -> mois mois','mois_andor_mois',2,'p_mois_andor_mois','parser.py',308),
-  ('mois_andor_mois_annee -> mois_andor_mois ANNEE','mois_andor_mois_annee',2,'p_mois_andor_mois_annee','parser.py',321),
+  ('annee -> AN an_toutes_lettres','annee',2,'p_annee','parser.py',165),
+  ('deux_dates_completes -> jour_mois_annee AND jour_mois_annee','deux_dates_completes',3,'p_date_complete_date_complete','parser.py',174),
+  ('date_toutes_lettres_inversee -> an_toutes_lettres jour_toutes_lettres_mois','date_toutes_lettres_inversee',2,'p_date_complete_toutes_lettres_inversee','parser.py',181),
+  ('date_toutes_lettres -> jour_toutes_lettres_mois an_toutes_lettres','date_toutes_lettres',2,'p_date_complete_toutes_lettres','parser.py',187),
+  ('date_complete -> plage ANNEE','date_complete',2,'p_date_complete','parser.py',194),
+  ('date_complete -> jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',195),
+  ('date_complete -> jour_toutes_lettres_mois ANNEE','date_complete',2,'p_date_complete','parser.py',196),
+  ('date_complete -> groupe_annee','date_complete',1,'p_date_complete','parser.py',197),
+  ('date_complete -> courant_de_groupe','date_complete',1,'p_date_complete','parser.py',198),
+  ('date_complete -> JOUR mois ANNEE','date_complete',3,'p_date_complete','parser.py',199),
+  ('date_complete -> mois_annee','date_complete',1,'p_date_complete','parser.py',200),
+  ('date_complete -> mois_andor_mois_annee','date_complete',1,'p_date_complete','parser.py',201),
+  ('date_complete -> annee','date_complete',1,'p_date_complete','parser.py',202),
+  ('date_complete -> an_toutes_lettres','date_complete',1,'p_date_complete','parser.py',203),
+  ('date_complete -> range_mois ANNEE','date_complete',2,'p_date_complete','parser.py',204),
+  ('date_complete -> range_jour ANNEE','date_complete',2,'p_date_complete','parser.py',205),
+  ('date_complete -> annee_et_annee','date_complete',1,'p_date_complete','parser.py',206),
+  ('date_complete -> andor_jour_mois_jour_mois','date_complete',1,'p_date_complete','parser.py',207),
+  ('date_complete -> andor_date_complete','date_complete',1,'p_date_complete','parser.py',208),
+  ('date_complete -> jour_mois_annee','date_complete',1,'p_date_complete','parser.py',209),
+  ('date_complete -> deux_dates_completes','date_complete',1,'p_date_complete','parser.py',210),
+  ('date_complete -> range_jour_mois ANNEE','date_complete',2,'p_date_complete','parser.py',211),
+  ('date_complete -> date_toutes_lettres','date_complete',1,'p_date_complete','parser.py',212),
+  ('date_complete -> date_toutes_lettres_inversee','date_complete',1,'p_date_complete','parser.py',213),
+  ('date_complete -> mois_annee_range','date_complete',1,'p_date_complete','parser.py',214),
+  ('start -> date_complete','start',1,'p_start','parser.py',229),
+  ('range_mois -> mois RANGE mois','range_mois',3,'p_range_mois','parser.py',235),
+  ('range_jour_mois -> jour_mois RANGE jour_mois','range_jour_mois',3,'p_range_jour_mois','parser.py',243),
+  ('range_jour -> JOUR RANGE JOUR','range_jour',3,'p_range_jour','parser.py',250),
+  ('range_jour -> JOUR RANGE JOUR mois','range_jour',4,'p_range_jour','parser.py',251),
+  ('jour_mois -> JOUR mois','jour_mois',2,'p_jour_mois','parser.py',263),
+  ('andor_date_complete -> jour_mois_annee ANDOR jour_mois_annee','andor_date_complete',3,'p_andor_date_complete','parser.py',269),
+  ('jour_mois_annee -> JOUR mois ANNEE','jour_mois_annee',3,'p_jour_mois_annee','parser.py',275),
+  ('andor_jour_mois -> jour_mois ANDOR jour_mois','andor_jour_mois',3,'p_andor_jour_mois_jour_mois','parser.py',280),
+  ('andor_jour_mois -> jour_mois jour_mois','andor_jour_mois',2,'p_andor_jour_mois_jour_mois','parser.py',281),
+  ('andor_jour_mois_jour_mois -> andor_jour_mois','andor_jour_mois_jour_mois',1,'p_andor_jour_mois','parser.py',291),
+  ('andor_jour_mois_jour_mois -> andor_jour_mois ANNEE','andor_jour_mois_jour_mois',2,'p_andor_jour_mois','parser.py',292),
+  ('succession_mois -> mois AND mois','succession_mois',3,'p_succession_mois','parser.py',301),
+  ('mois_andor_mois -> mois ANDOR mois','mois_andor_mois',3,'p_mois_andor_mois','parser.py',309),
+  ('mois_andor_mois -> mois mois','mois_andor_mois',2,'p_mois_andor_mois','parser.py',310),
+  ('mois_andor_mois_annee -> mois_andor_mois ANNEE','mois_andor_mois_annee',2,'p_mois_andor_mois_annee','parser.py',323),
 ]

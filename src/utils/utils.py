@@ -603,6 +603,9 @@ def opencv_polygon_extraction(polygon, image:Union[Image.Image,np.array], keep_a
 			cropped_img.show()
 		return None
 
+
+
+
 def polygon_extraction(polygon, image:Union[Image.Image,np.array], keep_alpha:bool=True, return_image:bool=False, vertical_padding=None):
 	"""
 	Cette fonction extrait un polygone d'une image et la montre
@@ -655,6 +658,35 @@ def polygon_extraction(polygon, image:Union[Image.Image,np.array], keep_alpha:bo
 		return cropped_img
 	else:
 		cropped_img.show()
+
+
+def batch_alto_line_to_img_cv2(coordinates, loaded_im, vertical_padding=None, keep_alpha=False):
+	# Créer un masque vide (uint8: 0-255)
+	mask = np.zeros((loaded_im.shape[0], loaded_im.shape[1]), dtype=np.uint8)
+
+	# Remplir le polygone dans le masque
+
+
+	cv2.fillPoly(mask, [np.array(coordinates, dtype=np.int32)], 255)
+	# Calculer la bounding box
+	x_coords = [p[0] for p in coordinates]
+	y_coords = [p[1] for p in coordinates]
+	x_min, x_max = max(0, min(x_coords) - vertical_padding), min(loaded_im.shape[1], max(x_coords) + vertical_padding)
+	y_min, y_max = max(0, min(y_coords) - vertical_padding), min(loaded_im.shape[0], max(y_coords) + vertical_padding)
+
+	# Recadrer l'image et le masque
+	cropped_img = loaded_im[y_min:y_max, x_min:x_max]
+	cropped_mask = mask[y_min:y_max, x_min:x_max]
+
+	# Ajouter le canal alpha si nécessaire
+	if keep_alpha:
+		if cropped_img.shape[2] == 3:  # RGB → RGBA
+			cropped_img = cv2.cvtColor(cropped_img, cv2.COLOR_RGB2RGBA)
+		cropped_img[:, :, 3] = cropped_mask  # Appliquer le masque comme alpha
+
+	as_img = Image.fromarray(cropped_img)
+	return as_img
+
 
 
 def extend_baseline_and_retranscribe(line: OCRLine,
@@ -1135,7 +1167,7 @@ def strip_punctuation(string: str | None, debug=False) -> str | None:
 
 def convert_to_csv(extractions: dict, outpath: str):
 	extracted_data = []
-	header = ["Numero_image",
+	header = ["Numero_minute",
 			  "Id",
 			  "Date du procès",
 			  "Institution engagée",
@@ -1190,320 +1222,358 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Chef d'accusation",
 			  "Antécédents"]
 	for idx_minute, minute in extractions.items():
-		for idx_page, page in enumerate(minute):
-			if page['classe'] != "page_1":
-				continue
-			try:
-				page['extractions']
-			except KeyError:
-				continue
-			interm = []
-			# Image
-			interm.append(page['image_path'])
+		interm = []
+		# Image
+		interm.append(idx_minute)
 
-			# ID
-			interm.append(random_string())
-			# Date du procès
-			try:
-				date_proces = page['extractions']['date_proces']['normalized']['when']
-			except TypeError:
-				date_proces = "UNK"
-			interm.append(date_proces)
+		# ID
+		interm.append(random_string())
+		# Date du procès
+		try:
+			date_proces = minute['informations_proces']['date_du_proces']['date_reconciliee']
+		except TypeError:
+			date_proces = "UNK"
+		interm.append(date_proces)
 
-			# Lieu du procès
-			try:
-				institution = page['extractions']['lieu_jugement']['institution']
-			except TypeError:
-				institution = "UNK"
-			except KeyError:
-				institution = "UNK"
-			interm.append(institution)
+		# Lieu du procès
+		try:
+			institution = minute['informations_proces']['lieu_jugement']['institution']
+		except TypeError:
+			institution = "UNK"
+		except KeyError:
+			institution = "UNK"
+		interm.append(institution)
 
-			try:
-				lieu_proces = page['extractions']['lieu_jugement']['siège']
-			except TypeError:
-				lieu_proces = "UNK"
-			except KeyError:
-				institution = "UNK"
-			interm.append(lieu_proces)
+		try:
+			lieu_proces = minute['informations_proces']['lieu_jugement']['siège']
+		except TypeError:
+			lieu_proces = "UNK"
+		except KeyError:
+			institution = "UNK"
+		interm.append(lieu_proces)
 
-			# Numéro de jugement
-			try:
-				numero_jugement = page['extractions']['numero_jugement']['extracted']
-			except TypeError:
-				numero_jugement = "UNK"
-			except KeyError:
-				numero_jugement = "UNK"
-			interm.append(numero_jugement)
+		# Numéro de jugement
+		try:
+			numero_jugement = minute['informations_proces']['numero_jugement']['extracted']
+		except TypeError:
+			numero_jugement = "UNK"
+		except KeyError:
+			numero_jugement = "UNK"
+		interm.append(numero_jugement)
 
-			# Numéro d'ordre
-			try:
-				numero_ordre = page['extractions']['numero_ordre']['extracted']
-			except TypeError:
-				numero_ordre = "UNK"
-			except KeyError:
-				numero_ordre = "UNK"
-			interm.append(numero_ordre)
+		# Numéro d'ordre
+		try:
+			numero_ordre = minute['informations_proces']['numero_ordre']['extracted']
+		except TypeError:
+			numero_ordre = "UNK"
+		except KeyError:
+			numero_ordre = "UNK"
+		interm.append(numero_ordre)
 
-			# Président du jury (rôle non extrait)
-			try:
-				president = page['extractions']['magistrats']['president']['extracted']['persName']
-			except KeyError:
-				president = "UNK"
-			interm.append(president)
+		# Président du jury (rôle non extrait)
+		try:
+			president = minute['informations_proces']['magistrats']['president']['extracted']['persName']
+		except KeyError:
+			president = "UNK"
+		interm.append(president)
 
-			# Jurés (on n'extrait pas les rôles)
-			try:
-				jures = page['extractions']['magistrats']['jures']
-				for i in range(4):
-					try:
-						extracted_jure = jures[i]['extracted']['persName']
-					except (TypeError, IndexError):
-						extracted_jure = "UNK"
-					interm.append(extracted_jure)
-			except KeyError:
-				interm.extend(["UNK" for _ in range(4)])
+		# Jurés (on n'extrait pas les rôles)
+		try:
+			jures = minute['informations_proces']['magistrats']['jures']
+			for i in range(4):
+				try:
+					extracted_jure = jures[i]['extracted']['persName']
+				except (TypeError, IndexError):
+					extracted_jure = "UNK"
+				interm.append(extracted_jure)
+		except KeyError:
+			interm.extend(["UNK" for _ in range(4)])
 
-			# Greffier (on n'extrait pas les rôles)
-			try:
-				greffier = page['extractions']['magistrats']['greffier']['extracted']['persName']
-			except KeyError:
-				greffier = "UNK"
-			interm.append(greffier)
+		# Greffier (on n'extrait pas les rôles)
+		try:
+			greffier = minute['informations_proces']['magistrats']['greffier']['extracted']['persName']
+		except KeyError:
+			greffier = "UNK"
+		interm.append(greffier)
 
-			# Commissaire du gouvernement (on n'extrait pas les rôles)
-			try:
-				commissaire = page['extractions']['magistrats']['commissaire']['extracted']['persName']
-			except KeyError:
-				commissaire = "UNK"
-			interm.append(commissaire)
+		# Commissaire du gouvernement (on n'extrait pas les rôles)
+		try:
+			commissaire = minute['informations_proces']['magistrats']['commissaire']['extracted']['persName']
+		except KeyError:
+			commissaire = "UNK"
+		interm.append(commissaire)
 
-			# Général
-			try:
-				general = page['extractions']['magistrats']['general']['extracted']
-			except KeyError:
-				general = "UNK"
-			interm.append(general)
+		# Général
+		try:
+			general = minute['informations_proces']['magistrats']['general']['extracted']
+		except KeyError:
+			general = "UNK"
+		interm.append(general)
 
-			# Date du crime
-			try:
-				date_crime = page['extractions']['date_du_crime_ou_delit']['date_normalisee']
-			except KeyError:
-				date_crime = "UNK"
-			except TypeError:
-				date_crime = "UNK"
-			if isinstance(date_crime, dict):
-				date_crime = json.dumps(date_crime)
-			interm.append(date_crime)
+		# Date du crime
+		try:
+			date_crime = minute['accusation']['date_du_crime_ou_delit']
+		except KeyError:
+			date_crime = "UNK"
+		except TypeError:
+			date_crime = "UNK"
+		if isinstance(date_crime, dict):
+			date_crime = json.dumps(date_crime)
+		interm.append(date_crime)
 
-			# Nom et prénom du soldat
-			try:
-				prenoms_soldat = page['extractions']['soldat']['identite']['prenom']['extracted']
-				nom_soldat = page['extractions']['soldat']['identite']['nom']['extracted']
-			except TypeError:
-				nom_soldat = "Plusieurs soldats"
-				prenoms_soldat = "Plusieurs soldats"
-				interm.append(nom_soldat)
-				interm.append(prenoms_soldat)
-				extracted_data.append(interm)
-				continue
+		# Nom et prénom du soldat
+		try:
+			prenoms_soldat = minute['soldat']['identite']['prenom']['extracted']
+			nom_soldat = minute['soldat']['identite']['nom']['extracted']
+		except TypeError:
+			nom_soldat = "Plusieurs soldats"
+			prenoms_soldat = "Plusieurs soldats"
 			interm.append(nom_soldat)
 			interm.append(prenoms_soldat)
+			extracted_data.append(interm)
+			continue
+		if isinstance(nom_soldat, list):
+			nom_soldat = " ou ".join(nom_soldat)
+		if isinstance(prenoms_soldat, list):
+			prenoms_soldat = " ou ".join(nom_soldat)
+		interm.append(nom_soldat)
+		interm.append(prenoms_soldat)
 
-			# Date de naissance et âge du soldat
-			try:
-				date_naissance = page['extractions']['soldat']['identite']['date_naissance']['extracted'][
-					'when']
-			except (TypeError, KeyError):
-				date_naissance = "UNK"
-			try:
-				age = page['extractions']['soldat']["identite"]["age"]
-				age = age if age else "UNK"
-			except KeyError:
-				age = "UNK"
-			interm.append(date_naissance)
-			interm.append(age)
+		# Date de naissance et âge du soldat
+		try:
+			date_naissance = minute['soldat']['identite']['date_naissance']
+		except (TypeError, KeyError):
+			date_naissance = "UNK"
+		try:
+			age = minute['soldat']["identite"]["age"]
+			age = age if age else "UNK"
+		except KeyError:
+			age = "UNK"
+		interm.append(date_naissance)
+		interm.append(age)
 
-			try:
-				taille = page['extractions']['soldat']["description_physique"]["taille"]["extracted"]
-			except KeyError:
-				taille = "UNK"
-			try:
-				cheveux = page['extractions']['soldat']["description_physique"]["cheveux"]["extracted"]
-			except KeyError:
-				cheveux = "UNK"
-			try:
-				front = page['extractions']['soldat']["description_physique"]["front"]["extracted"]
-			except KeyError:
-				front = "UNK"
-			try:
-				yeux = page['extractions']['soldat']["description_physique"]["yeux"]["extracted"]
-			except KeyError:
-				yeux = "UNK"
-			try:
-				nez = page['extractions']['soldat']["description_physique"]["nez"]["extracted"]
-			except KeyError:
-				nez = "UNK"
-			try:
-				visage = page['extractions']['soldat']["description_physique"]["visage"]["extracted"]
-			except KeyError:
-				visage = "UNK"
-			try:
-				renseignements_complementaires = \
-					page['extractions']['soldat']["description_physique"]["renseignements_complementaires"]["extracted"]
-			except KeyError:
-				renseignements_complementaires = "UNK"
-			try:
-				marques_particulieres = page['extractions']['soldat']["description_physique"]["marques_particulieres"][
-					"extracted"]
-			except KeyError:
-				marques_particulieres = "UNK"
-			interm.append(taille)
-			interm.append(cheveux)
-			interm.append(front)
-			interm.append(yeux)
-			interm.append(nez)
-			interm.append(visage)
-			interm.append(renseignements_complementaires)
-			interm.append(marques_particulieres)
+		try:
+			taille = minute['soldat']["description_physique"]["taille"]["extracted"]
+		except KeyError:
+			taille = "UNK"
+		try:
+			cheveux = minute['soldat']["description_physique"]["cheveux"]["extracted"]
+		except KeyError:
+			cheveux = "UNK"
+		try:
+			front = minute['soldat']["description_physique"]["front"]["extracted"]
+		except KeyError:
+			front = "UNK"
+		try:
+			yeux = minute['soldat']["description_physique"]["yeux"]["extracted"]
+		except KeyError:
+			yeux = "UNK"
+		try:
+			nez = minute['soldat']["description_physique"]["nez"]["extracted"]
+		except KeyError:
+			nez = "UNK"
+		try:
+			visage = minute['soldat']["description_physique"]["visage"]["extracted"]
+		except KeyError:
+			visage = "UNK"
+		try:
+			renseignements_complementaires = \
+				minute['soldat']["description_physique"]["renseignements_complementaires"]["extracted"]
+		except KeyError:
+			renseignements_complementaires = "UNK"
+		try:
+			marques_particulieres = minute['soldat']["description_physique"]["marques_particulières"][
+				"extracted"]
+		except KeyError:
+			marques_particulieres = "UNK"
+		interm.append(taille)
+		interm.append(cheveux)
+		interm.append(front)
+		interm.append(yeux)
+		interm.append(nez)
+		interm.append(visage)
+		interm.append(renseignements_complementaires)
+		interm.append(marques_particulieres)
 
-			# Lieu de naissance
+		# Lieu de naissance
+		if minute['soldat']['identite']['lieu_naissance']:
 			try:
-				ville_naissance_transcrite = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
+				ville_naissance_transcrite = minute['soldat']['identite']['lieu_naissance']['ville'][
 					'extracted']
-				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
+				ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
 					'nom_actuel']
-				ville_naissance_1999 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1999']
-				ville_naissance_1801 = page['extractions']['soldat']["identite"]['lieu_naissance']['ville']['nom_1801']
 			except TypeError:
-				if page['extractions']['soldat']["identite"]['lieu_naissance']['ville'] is None:
+				if minute['soldat']['identite']['lieu_naissance']['ville'] is None:
 					ville_naissance_actuelle = "UNK"
 					ville_naissance_transcrite = "UNK"
 			except KeyError:
-				ville_naissance_actuelle = page['extractions']['soldat']["identite"]['lieu_naissance']['ville'][
-					'extracted']
+				try:
+					ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
+						'extracted']
+				except KeyError:
+					ville_naissance_actuelle = "UNK"
 				ville_naissance_1999 = "UNK"
 				ville_naissance_1801 = "UNK"
 			try:
-				latitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"][
+				latitude_ville_naissance = minute['soldat']['identite']['lieu_naissance']["coordonnées"][
 					"lat"]
-				longitude_ville_naissance = page['extractions']['soldat']["identite"]['lieu_naissance']["coordonnées"][
+				longitude_ville_naissance = minute['soldat']['identite']['lieu_naissance']["coordonnées"][
 					"lon"]
 			except KeyError:
 				latitude_ville_naissance, longitude_ville_naissance = "UNK", "UNK"
-			arrondissement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
+			try:
+				arrondissement_naissance = minute['soldat']['identite']['lieu_naissance'][
 				'arrondissement']['extracted']
-			departement_naissance = page['extractions']['soldat']["identite"]['lieu_naissance'][
-				'departement']['extracted']
-			departement_naissance_transcrit = page['extractions']['soldat']["identite"]['lieu_naissance'][
-				'departement']['corrected']
-			interm.append(ville_naissance_transcrite)
-			interm.append(ville_naissance_actuelle)
-			interm.append(ville_naissance_1999)
-			interm.append(ville_naissance_1801)
-			interm.append(latitude_ville_naissance)
-			interm.append(longitude_ville_naissance)
-			interm.append(arrondissement_naissance)
-			interm.append(departement_naissance)
-			interm.append(departement_naissance_transcrit)
+			except KeyError:
+				arrondissement_naissance = None
+			try:
+				departement_naissance = minute['soldat']['identite']['lieu_naissance'][
+					'departement']['extracted']
+			except KeyError:
+				departement_naissance = None
+			try:
+				departement_naissance_transcrit = minute['soldat']['identite']['lieu_naissance'][
+					'departement']['corrected']
+			except KeyError:
+				departement_naissance_transcrit = None
+			try:
+				ville_naissance_1999 = minute['soldat']['identite']['lieu_naissance']['ville']['nom_1999']
+			except (TypeError, KeyError):
+				ville_naissance_1999 = None
+			try:
+				ville_naissance_1801 = minute['soldat']['identite']['lieu_naissance']['ville']['nom_1801']
+			except (TypeError, KeyError):
+				ville_naissance_1801 = None
+		else:
+			ville_naissance_transcrite = None
+			ville_naissance_actuelle = None
+			ville_naissance_1999 = None
+			ville_naissance_1801 = None
+			latitude_ville_naissance = None
+			longitude_ville_naissance = None
+			arrondissement_naissance = None
+			departement_naissance = None
+			departement_naissance_transcrit = None
+		interm.append(ville_naissance_transcrite)
+		interm.append(ville_naissance_actuelle)
+		interm.append(ville_naissance_1999)
+		interm.append(ville_naissance_1801)
+		interm.append(latitude_ville_naissance)
+		interm.append(longitude_ville_naissance)
+		interm.append(arrondissement_naissance)
+		interm.append(departement_naissance)
+		interm.append(departement_naissance_transcrit)
 
-			# Lieu de résidence
-			ville_residence_transcrite = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
+		# Lieu de résidence
+		try:
+			ville_residence_transcrite = minute['soldat']['identite']['lieu_residence']['ville'][
 				'extracted']
-			try:
-				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
-					'nom_actuel']
-				ville_residence_1999 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1999']
-				ville_residence_1801 = page['extractions']['soldat']["identite"]['lieu_residence']['ville']['nom_1801']
-			except TypeError:
-				if page['extractions']['soldat']["identite"]['lieu_residence']['ville'] is None:
-					ville_residence_actuelle = "UNK"
-					ville_residence_1999 = "UNK"
-					ville_residence_1801 = "UNK"
-			except KeyError:
-				ville_residence_actuelle = page['extractions']['soldat']["identite"]['lieu_residence']['ville'][
-					'extracted']
-				ville_residence_1999 = ville_residence_actuelle
-				ville_residence_1801 = ville_residence_actuelle
+		except TypeError:
+			ville_residence_transcrite = None
+		try:
+			ville_residence_actuelle = minute['soldat']['identite']['lieu_residence']['ville'][
+				'nom_actuel']
+			ville_residence_1999 = minute['soldat']['identite']['lieu_residence']['ville']['nom_1999']
+			ville_residence_1801 = minute['soldat']['identite']['lieu_residence']['ville']['nom_1801']
+		except TypeError:
+			ville_residence_actuelle = "UNK"
+			ville_residence_1999 = "UNK"
+			ville_residence_1801 = "UNK"
+		except KeyError:
+			ville_residence_actuelle = minute['soldat']['identite']['lieu_residence']['ville'][
+				'extracted']
+			ville_residence_1999 = ville_residence_actuelle
+			ville_residence_1801 = ville_residence_actuelle
 
-			try:
-				latitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"][
-					"lat"]
-				longitude_ville_residence = page['extractions']['soldat']["identite"]['lieu_residence']["coordonnées"][
-					"lon"]
-			except (KeyError, TypeError):
-				latitude_ville_residence, longitude_ville_residence = "UNK", "UNK"
-			arrondissement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
+		try:
+			latitude_ville_residence = minute['soldat']['identite']['lieu_residence']["coordonnées"][
+				"lat"]
+			longitude_ville_residence = minute['soldat']['identite']['lieu_residence']["coordonnées"][
+				"lon"]
+		except (KeyError, TypeError):
+			latitude_ville_residence, longitude_ville_residence = "UNK", "UNK"
+		try:
+			arrondissement_residence = minute['soldat']['identite']['lieu_residence'][
 				'arrondissement']['extracted']
-			departement_residence_transcrit = page['extractions']['soldat']["identite"]['lieu_residence'][
-				'departement']['extracted']
-			departement_residence = page['extractions']['soldat']["identite"]['lieu_residence'][
-				'departement']['corrected']
-			interm.append(ville_residence_transcrite)
-			interm.append(ville_residence_actuelle)
-			interm.append(ville_residence_1999)
-			interm.append(ville_residence_1801)
-			interm.append(latitude_ville_residence)
-			interm.append(longitude_ville_residence)
-			interm.append(arrondissement_residence)
-			interm.append(departement_residence)
-			interm.append(departement_residence_transcrit)
+		except TypeError:
+			arrondissement_residence = "UNK"
+		try:
+			departement_residence_transcrit = minute['soldat']['identite']['lieu_residence'][
+			'departement']['extracted']
+		except (KeyError, TypeError):
+			departement_residence_transcrit = "UNK"
+		try:
+			departement_residence = minute['soldat']['identite']['lieu_residence'][
+			'departement']['corrected']
+		except TypeError:
+			departement_residence = "UNK"
+		interm.append(ville_residence_transcrite)
+		interm.append(ville_residence_actuelle)
+		interm.append(ville_residence_1999)
+		interm.append(ville_residence_1801)
+		interm.append(latitude_ville_residence)
+		interm.append(longitude_ville_residence)
+		interm.append(arrondissement_residence)
+		interm.append(departement_residence_transcrit)
+		interm.append(departement_residence)
 
-			# Femme et enfants
-			situation_maritale = page['extractions']['soldat']["identite"]['situation_maritale']
-			if "situation" in situation_maritale:
-				if situation_maritale['situation']['extracted'] == "célibataire":
-					situation_maritale = "célibataire"
-				elif situation_maritale['situation']['extracted'] == "marié":
-					situation_maritale = "marié"
-				elif situation_maritale['situation']['extracted'] == "veuf":
-					situation_maritale = "veuf"
-			else:
-				situation_maritale = "célibataire"
-			interm.append(situation_maritale)
-			try:
-				enfants = page['extractions']['soldat']["identite"]['situation_maritale']['enfants']['extracted']
-				interm.append(enfants)
-			except KeyError:
-				interm.append(0)
+		# Femme et enfants
+		situation_maritale = minute['soldat']["identite"]["famille"]['situation_maritale']
+		if situation_maritale:
+			pass
+		else:
+			situation_maritale = "célibataire"
+		interm.append(situation_maritale)
+		try:
+			enfants = minute['soldat']["identite"]["famille"]['enfants']['extracted']
+			interm.append(enfants)
+		except (KeyError, TypeError):
+			interm.append(0)
 
-			# Profession
-			try:
-				profession = page['extractions']['soldat']["identite"]['profession']['extracted']
-				interm.append(profession)
-			except KeyError:
-				interm.append(None)
-			# Rang du soldat
-			rang = page['extractions']['soldat']["identite"]['rang']['extracted']
-			interm.append(rang)
+		# Profession
+		try:
+			profession = minute['soldat']["identite"]['profession']
+			if isinstance(profession, list):
+				profession = " ou ".join(profession)
+			interm.append(profession)
+		except KeyError:
+			interm.append(None)
+		# Rang du soldat
+		try:
+			rang = minute['soldat']["situation_militaire"]['rang']
+		except (TypeError, KeyError):
+			rang = None
+		interm.append(rang)
 
-			# Affectation du soldat
-			affectation = page['extractions']['soldat']["identite"]['affectation']['extracted']
-			interm.append(affectation)
+		# Affectation du soldat
 
-			# Numéro de matricule
-			try:
-				matricule = page['extractions']['soldat']["identite"]['matricule']['extracted']
-			except:
-				matricule = None
-			interm.append(matricule)
+		try:
+			affectation = minute['soldat']["situation_militaire"]['affectation']
+		except (TypeError, KeyError):
+			affectation = None
+		interm.append(affectation)
 
-			# Chef d'accusation
-			try:
-				chef_accusation = page['extractions']['chef_accusation']['extracted']
-			except KeyError:
-				chef_accusation = "UNK"
-			interm.append(chef_accusation)
+		# Numéro de matricule
+		try:
+			matricule = minute['soldat']["situation_militaire"]['matricule']
+		except:
+			matricule = None
+		interm.append(matricule)
 
-			# Antécédent (juste le nombre)
-			try:
-				antecedents = page['extractions']['antécédents']['extracted']
-			except KeyError:
-				antecedents = "UNK"
-			if antecedents != "Néant":
-				antecedents = len(antecedents)
-			interm.append(antecedents)
-			extracted_data.append(interm)
+		# Chef d'accusation
+		try:
+			chef_accusation = minute['accusation']['chef_accusation']
+		except KeyError:
+			chef_accusation = "UNK"
+		interm.append(chef_accusation)
+
+		# Antécédent (juste le nombre)
+		try:
+			antecedents = minute['soldat']['antecedents']
+		except KeyError:
+			antecedents = "UNK"
+		interm.append(antecedents)
+		extracted_data.append(interm)
 
 	df = pd.DataFrame(extracted_data, columns=header)
 	examples_number = df.shape[1]
@@ -2152,8 +2222,9 @@ def longest_common_substring(string1, string2):
 	return answer
 
 
-def get_baseline_from_string(line: list[OCRLine] | OCRLine,
+def get_baseline_from_string(line: OCRRecord | OCRLine,
 							 target_string: str,
+							 image_path: str,
 							 loaded_image: Image.Image = None,
 							 show_image: bool = False) -> tuple[tuple[int, int], tuple[int, int]] | None:
 	"""
@@ -2197,6 +2268,8 @@ def get_baseline_from_string(line: list[OCRLine] | OCRLine,
 				assert loaded_image is not None, "Merci d'ajouter l'image si vous voulez la montrer."
 				cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
 				cropped.show()
+		baselines = {"coords": baselines,
+					 "image_path": image_path}
 		return baselines
 	else:
 		print(type(line))
@@ -2228,7 +2301,8 @@ def get_baseline_from_string(line: list[OCRLine] | OCRLine,
 		# On calcule y1 et y2
 		y_1 = round(a * x_1 + b)
 		y_2 = round(a * x_2 + b)
-		target_baseline = [[x_1, y_1], [x_2, y_2]]
+		target_baseline = {"coords": [[x_1, y_1], [x_2, y_2]],
+						   "image_path": image_path}
 
 		if show_image:
 			cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))

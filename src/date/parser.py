@@ -162,6 +162,7 @@ class Parser(lexer.Lexer):
         '''
         annee : AN ANNEE
                     | ANNEE
+                    | AN an_toutes_lettres
         '''
         if len(p) == 3:
             p[0] = {"annee": int(p[2])}
@@ -199,6 +200,7 @@ class Parser(lexer.Lexer):
                      | mois_annee
                      | mois_andor_mois_annee
                      | annee
+                     | an_toutes_lettres
                      | range_mois ANNEE
                      | range_jour ANNEE
                      | annee_et_annee

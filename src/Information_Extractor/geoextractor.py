@@ -113,6 +113,9 @@ class GeoExtractor():
 			search = re.search(arrondissement_regexp, arrondissement)
 		except TypeError:
 			return {
+				"nom_actuel": "Paris",
+				"nom_1999": "Paris",
+				"nom_1801": "Paris",
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
@@ -125,6 +128,9 @@ class GeoExtractor():
 		# comme un point sur un des arrondissement, mais un point dans Paris sans + de précision
 		except AttributeError:
 			return {
+				"nom_actuel": "Paris",
+				"nom_1999": "Paris",
+				"nom_1801": "Paris",
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
@@ -134,6 +140,9 @@ class GeoExtractor():
 			corresponding_entry = next(item for item in self.arrondissement_dict if int(item["numero_arrondissement"]) == int(arrondissement_extrait))
 		except StopIteration:
 			return {
+				"nom_actuel": "Paris",
+				"nom_1999": "Paris",
+				"nom_1801": "Paris",
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
@@ -141,6 +150,9 @@ class GeoExtractor():
 			}
 		coordinates = corresponding_entry['geo_point_2d']
 		return {
+				"nom_actuel": "Paris",
+				"nom_1999": "Paris",
+				"nom_1801": "Paris",
 			"departement": "Seine",
 			"arrondissement": arrondissement_extrait,
 			"lon": coordinates["lon"],

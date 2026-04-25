@@ -320,8 +320,9 @@ def test():
 	"trente et un octobre de l'an mil neuf cent dixsept",
 	"juin juillet 1917",
 	"an mil neuf cent dix sept le dix huit août",
-	"mai 1916 à mai 1917"]
-	# dates_examples = [dates_examples[-1]]
+	"mai 1916 à mai 1917",
+	"an mil neuf cent dix sept"]
+	dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")
 		print(example)

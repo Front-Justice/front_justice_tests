@@ -55,7 +55,10 @@ def extraction_geographique(lieu: str, dictionnaire_informations: dict, ner_pipe
 	return dictionnaire_informations
 
 
-def extraire_entite_baseline(entities_list: list, nom_entite: str, target_lines: list):
+def extraire_entite_baseline(entities_list: list,
+							 nom_entite: str,
+							 target_lines: OCRRecord,
+							 image_path: str):
 	"""
 	Cette fonction extrait d'un dictionnaire contenant les entités reconnues par le NER
 	une entité en particulier.
@@ -72,14 +75,16 @@ def extraire_entite_baseline(entities_list: list, nom_entite: str, target_lines:
 	if len(entites_extraites) == 1:
 		target_baseline = utils.get_baseline_from_string(line=target_lines,
 														 target_string=entites_extraites[0]["string"],
-														 show_image=False)
+														 show_image=False,
+														 image_path=image_path)
 		return [{"extracted": entites_extraites[0]['string'], "baseline": target_baseline}]
 	else:
 		extractions = []
 		for entite in entites_extraites:
 			target_baseline = utils.get_baseline_from_string(line=target_lines,
 															 target_string=entite["string"],
-															 show_image=False)
+															 show_image=False,
+															 image_path=image_path)
 			extractions.append({"extracted": entite['string'], "baseline": target_baseline})
 		return extractions
 
@@ -281,7 +286,10 @@ def extraire_cheveux(lignes_description_physique,
 			"prediction": ligne_cheveux.prediction}
 
 
-def extraire_feature(entities_list, lignes: OCRRecord, feature) -> dict:
+def extraire_feature(entities_list,
+					 lignes: OCRRecord,
+					 feature: str,
+					 image_path: str) -> dict:
 	"""
 	Cette fonction extrait une feature précise d'un résultat de NER, et retrouve la ligne de base
 	qui contient
@@ -300,7 +308,8 @@ def extraire_feature(entities_list, lignes: OCRRecord, feature) -> dict:
 	entite_et_baseline = extraire_entite_baseline(
 		entities_list=entities_list,
 		nom_entite=feature,
-		target_lines=lignes
+		target_lines=lignes,
+		image_path=image_path
 	)
 	if entite_et_baseline and len(entite_et_baseline) == 1:
 		certainty = 0.8
@@ -321,348 +330,8 @@ def extraire_feature(entities_list, lignes: OCRRecord, feature) -> dict:
 	}
 
 
-def extraire_profession(entities_as_dictionnary, lignes_description_du_soldat):
-	entite_et_baseline = extraire_entite_baseline(
-		dictionnaire=entities_as_dictionnary,
-		nom_entite="profession",
-		target_lines=lignes_description_du_soldat
-	)
-	if entite_et_baseline and len(entite_et_baseline) == 1:
-		certainty = 0.8
-	elif not entite_et_baseline:
-		certainty = 0.5
-	else:
-		certainty = None
 
-	if entite_et_baseline:
-		profession, target_baseline_profession = (entite_et_baseline[0]["extracted"],
-												  entite_et_baseline[0]["baseline"])
-	else:
-		profession, target_baseline_profession = None, None
-	return {
-		"extracted": profession,
-		"baseline": target_baseline_profession,
-		"certainty": certainty
-	}
-
-
-def extraire_front(lignes_description_physique,
-				   lignes_description_du_soldat_as_string):
-	"""
-	Cette fonction extrait l'information sur les cheveux de l'inculpé.
-	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-	:return: Un dictionnaire de la forme
-	{
-		"extracted": "ordinaire",
-		"matching": "front ordinaire"
-		"baseline": [[1416,3746],
-					[2582,3735]],
-		"prediction": "Taille d'un mètre 550 millimètres, cheveux châtain, front ordinaire"
-	}
-	La baseline correspond à l'information extraite uniquement.
-	"""
-	chaine_front = "front"
-	ligne_front, debug, index_front = utils.match_line_by_substring(lignes_description_physique, chaine_front,
-																	return_index=True)
-
-	front, matching_front = utils.approximate_word_split(ligne_front.prediction, "front",
-														 sensibility=0.7, return_word=True)
-
-	try:
-		starting_index = ligne_front.prediction.find(matching_front)
-	except TypeError:
-		return {"extracted": None,
-				"matching": None,
-				"baseline": ligne_front.baseline,
-				"prediction": ligne_front.prediction}
-
-	matching_string = ligne_front.prediction[starting_index:]
-	specific_baseline = utils.get_baseline_from_string(ligne_front, matching_string)
-	extracted_front = utils.strip_punctuation(matching_string.replace(matching_front, ""))
-	if extracted_front == "":
-		extracted_front = None
-		matching_spans = None
-	else:
-		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_front)
-	return {"extracted": extracted_front,
-			"matching": matching_string,
-			"baseline": specific_baseline,
-			"matching_spans": matching_spans,
-			"prediction": ligne_front.prediction}
-
-
-def extraire_visage(lignes_description_physique,
-					lignes_description_du_soldat_as_string):
-	"""
-	Cette fonction extrait l'information sur le visage de l'inculpé.
-	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-	:return: Un dictionnaire de la forme
-	{
-		"extracted": "ordinaire",
-		"matching": "front ordinaire"
-		"baseline": [[1416,3746],
-					[2582,3735]],
-		"prediction": "Taille d'un mètre 550 millimètres, cheveux châtain, front ordinaire"
-	}
-	La baseline correspond à l'information extraite uniquement.
-	"""
-	chaine_visage = "visage"
-	ligne_visage, debug, index_visage = utils.match_line_by_substring(lignes_description_physique, chaine_visage,
-																	  return_index=True)
-
-	visage, matching_visage = utils.approximate_word_split(ligne_visage.prediction, "visage",
-														   sensibility=0.8, return_word=True)
-
-	try:
-		starting_index = ligne_visage.prediction.find(matching_visage)
-	except TypeError:
-		return {"extracted": None,
-				"prediction": ligne_visage.prediction}
-
-	matching_string = ligne_visage.prediction[starting_index:]
-	specific_baseline = utils.get_baseline_from_string(ligne_visage, matching_string)
-	extracted_visage = utils.strip_punctuation(matching_string.replace(matching_visage, ""))
-	if extracted_visage == "":
-		extracted_visage = None
-		matching_spans = None
-	else:
-		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_visage)
-	return {"extracted": extracted_visage,
-			"matching": matching_string,
-			"baseline": specific_baseline,
-			"matching_spans": matching_spans,
-			"prediction": ligne_visage.prediction}
-
-
-def extraire_yeux(lignes_description_physique,
-				  lignes_description_du_soldat_as_string):
-	"""
-	Cette fonction extrait l'information sur les yeux de l'inculpé.
-	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-	:return: Un dictionnaire de la forme
-	{
-		"extracted": "gris bleux",
-		"matching": "yeux gris bleux, "
-		"baseline": [[1416,3746],
-					[2582,3735]],
-		"prediction": "yeux gris bleux, nez ordinoire, visage lonq et plein"
-	}
-	La baseline correspond à l'information extraite uniquement.
-	"""
-	chaine_yeux = "yeux"
-	ligne_yeux, debug, index_yeux = utils.match_line_by_substring(lignes_description_physique, chaine_yeux,
-																  return_index=True)
-
-	yeux, matching_yeux = utils.approximate_word_split(ligne_yeux.prediction, "yeux",
-													   sensibility=0.8, return_word=True)
-	nez, matching_nez = utils.approximate_word_split(ligne_yeux.prediction, "nez",
-													 sensibility=0.8, return_word=True)
-
-	try:
-		starting_index = ligne_yeux.prediction.find(matching_yeux)
-	except TypeError:
-		return {"extracted": None,
-				"matching": None,
-				"baseline": ligne_yeux.baseline,
-				"prediction": ligne_yeux.prediction}
-
-	# Dans certains cas l'information est sur une ligne isolée et le yeux apparaît sur une autre ligne
-	try:
-		ending_index = ligne_yeux.prediction.find(f"{matching_nez}")
-	except TypeError:
-		matching_yeux = ""
-		ending_index = len(ligne_yeux.prediction)
-
-	matching_string = ligne_yeux.prediction[starting_index:ending_index]
-	specific_baseline = utils.get_baseline_from_string(ligne_yeux, matching_string)
-	extracted_yeux = utils.strip_punctuation(matching_string.replace(matching_yeux, ""))
-	if extracted_yeux == "":
-		extracted_yeux = None
-		matching_spans = None
-	else:
-		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_yeux)
-	return {"extracted": extracted_yeux,
-			"matching": matching_string,
-			"baseline": specific_baseline,
-			"matching_spans": matching_spans,
-			"prediction": ligne_yeux.prediction}
-
-
-def extraire_affectation_soldat(lignes_description_physique):
-	derniere_ligne = lignes_description_physique[-1]
-	if utils.check_word_in_sentence(derniere_ligne.prediction,
-									target_word=['Inculpé', 'Accusé'],
-									sensibility=0.6,
-									debug=False)[0] is True:
-		ligne_affectation = None
-	elif len(derniere_ligne.prediction) < 10:
-		ligne_affectation = None
-	else:
-		ligne_affectation = derniere_ligne.prediction
-	return {"prediction": ligne_affectation,
-			"extracted": ligne_affectation}
-
-
-def extraire_marques_particulieres(lignes_description_physique, matricule) -> dict:
-	"""
-		Cette fonction extrait l'information sur les marques particulières du soldat
-		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-		:return: Un dictionnaire de la forme
-		{
-			"extracted": "RàS",
-			"baseline": [[1416,3746],
-						[2582,3735]],
-			"prediction": "Renseignements physionomiques complémentaires:  Numero matricule: 17.615."
-		}
-		La baseline correspond à l'information extraite uniquement.
-		"""
-	chaine_marques = "Marques particulières"
-	clean_regexp = re.compile("^\s?:?\s?")
-	ligne_marques, debug, index_marques = utils.match_line_by_substring(lignes_description_physique, chaine_marques,
-																		return_index=True)
-	try:
-		particulieres, matching_particulieres = utils.approximate_word_split(ligne_marques.prediction,
-																			 "particulières",
-																			 sensibility=0.9,
-																			 return_word=True)
-	except TypeError:
-		return {"extracted": None,
-				"baseline": ligne_marques.baseline,
-				"prediction": ligne_marques.prediction}
-
-	try:
-		corresp_string = particulieres[-1]
-	except TypeError:
-		return {"extracted": None,
-				"baseline": ligne_marques.baseline,
-				"prediction": ligne_marques.prediction}
-	clean = re.sub(clean_regexp, "", corresp_string)
-
-	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
-	try:
-		clean = clean.lower().replace(matricule["matching"], "")
-	except TypeError:
-		pass
-	clean = clean.strip()
-	clean = utils.clean_small_string(clean)
-	if clean == "":
-		clean = "RàS"
-	elif utils.check_neant(clean) is True:
-		clean = "RàS"
-
-	return {"extracted": clean,
-			"baseline": ligne_marques.baseline,
-			"prediction": ligne_marques.prediction}
-
-
-def extraire_renseignements_complementaires(lignes_description_physique, matricule):
-	"""
-		Cette fonction extrait l'information sur les marques particulières
-		:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-		:return: Un dictionnaire de la forme
-		{
-			"extracted": "RàS",
-			"baseline": [[1416,3746],
-						[2582,3735]],
-			"prediction": "Renseignements physionomiques complémentaires:  Numero matricule: 17.615."
-		}
-		La baseline correspond à l'information extraite uniquement.
-		"""
-	chaine_renseignements = "Renseignements physionomiques complémentaires"
-	clean_regexp = re.compile("^\s?:?\s?")
-
-	ligne_renseignements, debug, index_renseignements = utils.match_line_by_substring(lignes_description_physique,
-																					  chaine_renseignements,
-																					  return_index=True)
-	try:
-		complementaire, matching_complementaire = utils.approximate_word_split(ligne_renseignements.prediction,
-																			   "complémentaires",
-																			   sensibility=0.9,
-																			   return_word=True)
-	except TypeError:
-		return {"extracted": None,
-				"baseline": ligne_renseignements.baseline,
-				"prediction": ligne_renseignements.prediction}
-
-	try:
-		corresp_string = complementaire[-1]
-	except TypeError:
-		return {"extracted": None,
-				"baseline": ligne_renseignements.baseline,
-				"prediction": ligne_renseignements.prediction}
-	clean = re.sub(clean_regexp, "", corresp_string)
-
-	# On vérifie si ce n'est pas l'information de matricule qui est indiqué (comme souvent), et on l'enlève
-	try:
-		clean = clean.lower().replace(matricule["matching"], "")
-	except TypeError:
-		pass
-	clean = clean.strip()
-	clean = utils.clean_small_string(clean)
-	if clean == "":
-		clean = "RàS"
-	elif utils.check_neant(clean) is True:
-		clean = "RàS"
-
-	return {"extracted": clean,
-			"baseline": ligne_renseignements.baseline,
-			"prediction": ligne_renseignements.prediction}
-
-
-def extraire_nez(lignes_description_physique,
-				 lignes_description_du_soldat_as_string):
-	"""
-	Cette fonction extrait l'information sur le nez de l'inculpé.
-	:param lignes_description_physique: La liste de lignes sous la forme d'un dictionnaire {prediction, baseline, cuts}
-	:return: Un dictionnaire de la forme
-	{
-		"extracted": "grand",
-		"matching": "nez grand "
-		"baseline": [[1416,3746],
-					[2582,3735]],
-		"prediction": "yeux noirs, nez grand visage ovale"
-	}
-	La baseline correspond à l'information extraite uniquement.
-	"""
-	chaine_nez = "nez"
-	ligne_nez, debug, index_nez = utils.match_line_by_substring(lignes_description_physique, chaine_nez,
-																return_index=True)
-
-	nez, matching_nez = utils.approximate_word_split(ligne_nez.prediction, "nez",
-													 sensibility=0.8, return_word=True)
-	visage, matching_visage = utils.approximate_word_split(ligne_nez.prediction, "visage",
-														   sensibility=0.8, return_word=True)
-
-	try:
-		starting_index = ligne_nez.prediction.find(matching_nez)
-	except TypeError:
-		return {"extracted": None,
-				"matching": None,
-				"baseline": ligne_nez.baseline,
-				"prediction": ligne_nez.prediction}
-	# Dans certains cas l'information est sur une ligne isolée et le nez apparaît sur une autre ligne
-	try:
-		ending_index = ligne_nez.prediction.find(f"{matching_visage}")
-	except TypeError:
-		matching_nez = ""
-		ending_index = len(ligne_nez.prediction)
-
-	matching_string = ligne_nez.prediction[starting_index:ending_index]
-	specific_baseline = utils.get_baseline_from_string(ligne_nez, matching_string)
-	extracted_nez = utils.strip_punctuation(matching_string.replace(matching_nez, ""))
-	if extracted_nez == "":
-		extracted_nez = None
-		matching_spans = None
-	else:
-		matching_spans = utils.retrieve_substring_span(lignes_description_du_soldat_as_string, extracted_nez)
-	return {"extracted": extracted_nez,
-			"matching": matching_string,
-			"baseline": specific_baseline,
-			"matching_spans": matching_spans,
-			"prediction": ligne_nez.prediction}
-
-
-def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
+def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 	"""
 	Cette fonction extrait les informations concernant le greffier à partir de la ligne complète:
 	"M. Arnould, Off. d'Adm^n Greffier près ledit Conseil;"
@@ -693,7 +362,8 @@ def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
 			nom_et_statut = debut_de_chaine.replace("M.", "")
 	nom_et_fonction_du_greffier = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
 	baseline = utils.get_baseline_from_string(line=ligne_greffier,
-											  target_string=nom_et_statut)
+											  target_string=nom_et_statut,
+											  image_path=image_path)
 	if commis is True:
 		nom_et_fonction_du_greffier["commis"] = True
 	else:
@@ -706,7 +376,7 @@ def extraire_greffier(lignes_zone_magistrat: list, ner_pipeline):
 	return greffier_dict
 
 
-def extraire_date_naissance(entity_dict, lignes):
+def extraire_date_naissance(entity_dict, lignes, image_path):
 	"""
 	Cette fonction extrait la date de naissance et les baselines
 	:param entity_dict:
@@ -716,7 +386,8 @@ def extraire_date_naissance(entity_dict, lignes):
 	date_naissance = extraire_feature(
 		entity_dict,
 		lignes,
-		"date_naissance"
+		"date_naissance",
+				image_path=image_path
 	)
 
 	if date_naissance["extracted"] is not None:
@@ -733,7 +404,7 @@ def extraire_date_naissance(entity_dict, lignes):
 	return date_naissance
 
 
-def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
+def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 	"""
 	Cette fonction extrait le lieu de naissance et les baselines
 	:param entity_dict:
@@ -745,25 +416,26 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 	lieu_naissance["departement"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"departement_naissance"
+		"departement_naissance",
+		image_path=image_path
 	)
 
-	lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(lieu_naissance["departement"]["extracted"])
-
+	lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(
+		lieu_naissance["departement"]["extracted"])
 
 	lieu_naissance["ville"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"ville_naissance"
+		"ville_naissance",
+		image_path=image_path
 	)
-
 
 	lieu_naissance["arrondissement"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"arrondissement_naissance"
+		"arrondissement_naissance",
+		image_path=image_path
 	)
-
 
 	ville = lieu_naissance["ville"]["extracted"]
 	arrondissement = lieu_naissance["arrondissement"]["extracted"]
@@ -785,7 +457,7 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 		pass
 	except TypeError:
 		lieu_naissance["ville"] = None
-		return  lieu_naissance
+		return lieu_naissance
 	lieu_naissance["coordonnées"] = {
 		"lon": result["lon"],
 		"lat": result["lat"]
@@ -793,7 +465,7 @@ def extraire_lieu_naissance(entity_dict, lignes, geoextractor):
 	return lieu_naissance
 
 
-def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
+def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_naissance):
 	"""
 	Cette fonction extrait le lieu de naissance et les baselines
 	:param entity_dict:
@@ -806,26 +478,29 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
 	lieu_residence["departement"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"departement_residence"
+		"departement_residence",
+		image_path=image_path
 	)
 
 	lieu_residence["ville"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"ville_residence"
+		"ville_residence",
+		image_path=image_path
 	)
-
 
 	lieu_residence["arrondissement"] = extraire_feature(
 		entity_dict,
 		lignes,
-		"arrondissement_residence"
+		"arrondissement_residence",
+		image_path=image_path
 	)
 
 	adresse = extraire_feature(
 		entity_dict,
 		lignes,
-		"adresse_residence"
+		"adresse_residence",
+		image_path=image_path
 	)
 
 	ville = lieu_residence["ville"]["extracted"]
@@ -865,7 +540,7 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, lieu_naissance):
 	return lieu_residence
 
 
-def extraire_sit_maritale(entity_dict, lignes):
+def extraire_sit_maritale(entity_dict, image_path, lignes):
 	"""
 	Cette fonction extrait la situation maritale
 	:param entity_dict:
@@ -877,13 +552,15 @@ def extraire_sit_maritale(entity_dict, lignes):
 	situation_courante = extraire_feature(
 		entity_dict,
 		lignes,
-		"situation_maritale"
+		"situation_maritale",
+		image_path=image_path
 	)
 
 	enfants = extraire_feature(
 		entity_dict,
 		lignes,
-		"enfants"
+		"enfants",
+		image_path=image_path
 	)
 	if enfants["extracted"] is not None:
 		try:
@@ -913,7 +590,6 @@ def extraire_sit_maritale(entity_dict, lignes):
 			enfants["extracted"] = nombre_enfants
 		except TypeError:
 			enfants["extracted"] = None
-
 
 	situation_maritale["enfants"] = enfants
 
@@ -1048,7 +724,7 @@ def extraire_situation_maritale(string) -> tuple:
 	return check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants
 
 
-def extraire_commissaire(lignes_zone_magistrat: list, ner_pipeline):
+def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
 	"""
 	Cette fonction extrait les informations concernant le commissaire à partir de la ligne complète:
 	"M. Le Clerc, S.Eicmtu^e Slsttut de Commissaire du Gouvernement;"
@@ -1081,7 +757,8 @@ def extraire_commissaire(lignes_zone_magistrat: list, ner_pipeline):
 		nom_et_statut = debut_de_chaine.replace("M.", "")
 	nom_et_fonction_du_commissaire = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
 	baseline = utils.get_baseline_from_string(line=ligne_commissaire,
-											  target_string=nom_et_statut)
+											  target_string=nom_et_statut,
+											  image_path=image_path)
 	if substitut is True:
 		nom_et_fonction_du_commissaire["substitut"] = True
 	else:
@@ -1093,7 +770,8 @@ def extraire_commissaire(lignes_zone_magistrat: list, ner_pipeline):
 	return commissaire_dict
 
 
-def extraire_general(lignes_zone_magistrat: OCRRecord, ner_pipeline):
+def extraire_general(lignes_zone_magistrat: OCRRecord,
+					 image_path):
 	"""
 	Cette fonction extrait les informations concernant le militaire gradé nommant les magistrats:
 	"tous nommés par le (1) Général Commandant la 2^e Armée"
@@ -1111,7 +789,8 @@ def extraire_general(lignes_zone_magistrat: OCRRecord, ner_pipeline):
 		print("Ligne mal reconnue")
 		return {"grade": None}
 	baseline = utils.get_baseline_from_string(line=ligne_grade,
-											  target_string=grade_extrait)
+											  target_string=grade_extrait,
+											  image_path=image_path)
 	nom_et_fonction_du_grade = {"extracted": grade_extrait}
 	nom_et_fonction_du_grade["baseline"] = baseline
 	nom_et_fonction_du_grade["prediction"] = prediction

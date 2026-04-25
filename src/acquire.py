@@ -1,24 +1,35 @@
 import argparse
 import copy
 import os
-import time
 import PIL.Image
 import tqdm
 import torch
 import multiprocessing as mp
+import glob
+import PIL.Image as Image
+import json
+import time
+
 import utils.utils as utils
 import Page_Classifier.page_classifier as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
 import Information_Extractor.reconciliation as reconciliation
-import glob
-import PIL.Image as Image
-import json
-
 import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
 import src.Vision.LinesDeletion as Deletions
 
+class Logger:
+	"""Logger simple pour garder une trace de toutes les opérations."""
+	def __init__(self, log_file_path):
+		self.log_file_path = log_file_path
+		# On efface le fichier de log à l'initialisation.
+		with open(self.log_file_path, "w") as log_file:
+			log_file.truncate(0)
+
+	def log(self, message):
+		with open(self.log_file_path, "a") as log_file:
+			log_file.write(message)
 
 class Pipeline:
 	"""
@@ -43,6 +54,7 @@ class Pipeline:
 		self.page_classifier = PC.PageClassifier(build_vocab=False,
 												 model=page_classifier_model,
 												 vocab=page_classifier_vocab)
+		self.logger = Logger(log_file_path="logs/logs.txt")
 		self.current_image = None
 		self.current_image_path = None
 		self.current_page_transcription = None
@@ -53,7 +65,7 @@ class Pipeline:
 		self.pages_classees = []
 		self.images_basedir = images_dir.replace("/", "_")
 		self.LinesDeletionsIdentifier = Deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
-																		   model_chars="src/Vision/models/chars_deletion.pth")
+																		   model_chars="/home/mgl/Téléchargements/chars_deletion_v5.pth")
 
 
 		# Les modèles de zones
@@ -75,7 +87,7 @@ class Pipeline:
 			4: "src/Vision/models/modele_page_4.mlmodel",
 			"autre": "src/Vision/models/modele_ligne_page_1.mlmodel",
 		}
-		self.kraken_ocr_model = "src/Vision/models/htr_29500l.mlmodel"
+		self.kraken_ocr_model = "src/Vision/models/modele_31000l.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
 		self.party_model = "src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
@@ -94,7 +106,8 @@ class Pipeline:
 										   debug=debug,
 										   use_party=use_party,
 										   device=device,
-										   minutier=self.minutes)
+										   minutier=self.minutes,
+										   logger=self.logger)
 
 	def reaffecter_dictionnaire(self, minute_courante):
 		"""
@@ -245,13 +258,14 @@ class Pipeline:
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
-			loaded_image=loaded_image)
+			loaded_image=loaded_image,
+		image_path=page["image_path"])
 
 
 		current_dict["defenseur"] = self.extractor.extraire_identite_defenseur(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
-			image=page["image_path"],
+			image_path=page["image_path"],
 			loaded_image=loaded_image)
 
 
@@ -273,6 +287,7 @@ class Pipeline:
 		current_dict["questions"], identite = self.extractor.extraire_questions_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
+			image_path=page["image_path"],
 			loaded_image=loaded_image)
 		if identite:
 			current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
@@ -327,6 +342,7 @@ class Pipeline:
 		current_dict["decision_tribunal"], current_dict["identite"] = self.extractor.extraire_decision_tribunal_p3(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_3,
+			image_path=page["image_path"],
 			loaded_image=loaded_image)
 
 		zone_dict = {"zones_identifiees": zones_page_3.to_json(), "zones_manquantes": zones_manquantes}
@@ -370,12 +386,14 @@ class Pipeline:
 																		   show_image=False)
 
 		current_dict["date_proces_1"] = self.extractor.extraire_date_1_p4(ocr_prediction=self.current_page_transcription)
-		current_dict["identite"] = self.extractor.extraire_noms_p4(ocr_prediction=self.current_page_transcription)
+		current_dict["identite"] = self.extractor.extraire_noms_p4(ocr_prediction=self.current_page_transcription,
+																   image_path=page['image_path'])
 
 		if "tableau_frais" not in zones_manquantes:
 			current_dict["tableau_frais"], nom_2 = self.extractor.extraire_tableau_p4(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_4,
+				image_path=page["image_path"],
 				loaded_image=loaded_image)
 
 		try:
@@ -421,8 +439,9 @@ class Pipeline:
 				extract_polygons=True
 																		)
 			t1 = time.time()
-			image = PIL.Image.open(page["image_path"])
 			for line in self.current_page_transcription:
+				line.prediction_with_deletion = None
+				continue
 				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
 				line.prediction_with_deletion = sentence
 			t2 = time.time()
@@ -437,8 +456,9 @@ class Pipeline:
 			t1 = time.time()
 			image = PIL.Image.open(page["image_path"])
 			for line in self.current_page_transcription:
+				line.prediction_with_deletion = None
+				continue
 				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
-			line.prediction_with_deletion = sentence
 			t2 = time.time()
 			elapsed = t2 - t1
 			print(f"Fait en {elapsed} secondes")
@@ -538,16 +558,19 @@ class Pipeline:
 			current_dict["date_proces"] = self.extractor.extraire_date_du_proces_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
-				loaded_image=loaded_image)
+				loaded_image=loaded_image,
+			    image_path=page["image_path"])
 
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
 			current_dict['soldat'] = None
 			return zone_dict, current_dict
 		else:
+			print("On extrait la description du soldat.")
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1)
+				annotations=zones_page_1,
+			image_path=page["image_path"])
 			# Production de corpus, à supprimer
 
 		try:
@@ -586,7 +609,7 @@ class Pipeline:
 			current_dict["numero_ordre"] = self.extractor.extraire_numero_ordre(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
-				image=page["image_path"],
+				image_path=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
 
@@ -654,6 +677,7 @@ class Pipeline:
 				image=page["image_path"],
 				show_images=False,
 				loaded_image=loaded_image)
+
 		return zone_dict, current_dict
 
 
@@ -675,7 +699,6 @@ class Pipeline:
 		self.minutes_reconciliees = None
 		image_index = 0
 		previous_pages = None
-		print(self.minutes)
 		for minute_id, pages in self.minutes.items():
 			for page in pages:
 				if start_after > image_index:
@@ -703,9 +726,9 @@ class Pipeline:
 					zones_ajouts, ajouts = self.process_additions(page=page)
 					if ajouts is None:
 						ajouts = {"ajouts": None}
-					# utils.save_as_dict(self.minutes, self.minutes_annotation_file)
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
+					print(annotations["soldat"]["description_physique"]["cheveux"])
 				elif page['classe'] == "page_2":
 					zones, annotations = self.traitement_p_2(page=page)
 				elif page['classe'] == "page_3":
@@ -717,7 +740,7 @@ class Pipeline:
 				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
 				self.reaffecter_dictionnaire(pages)
-			if not target:
+			if target is None:
 				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
 				previous_pages = copy.copy(pages)
 				reconciliator.reconciliate_minute()
@@ -835,20 +858,38 @@ def main(images_dir:str,
 	print("Starting.")
 	minute_annotee = {}
 	minute_reconciliee = {}
+	minute_annotee = utils.load_json_to_dict("results/results.json")
+	# minute_reconciliee = utils.load_json_to_dict("results/results_reconciliated.json")
+	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
+	# exit(0)
+	previous_pages = None
+	import src.Information_Extractor.reconciliation as reconciliation
+	for idx, minute in minute_annotee.items():
+		reconciliator = reconciliation.Reconciliator(minute_list=minute, previous_minute=previous_pages)
+		reconciliator.reconciliate_minute()
+		reconc = reconciliator.reconciliated_minute
+		minute_reconciliee[idx] = reconc
+
+	utils.serialize_dict(minute_reconciliee, "results/results_reconciliated.json")
+	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
+	exit()
+	minute_reconciliee = {}
 	if workers != 1:
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
-			for annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
+			for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				minute_annotee = {**minute_annotee, **annotations}
-				# minute_reconciliee = {**minute_reconciliee, **reconciliation}
+				minute_reconciliee[minute_n] = reconciliation
 	else:
 		for idx, minute in minutes.items():
-			annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
+			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
-			# minute_reconciliee = {**minute_reconciliee, **reconciliation}
-	utils.serialize_dict(minute_annotee, "test.json")
-	# utils.serialize_dict(minute_annotee, "test_reconcilie.json")
+			minute_reconciliee[minute_n] = reconciliation
+	print("serializing dict.")
+	utils.serialize_dict(minute_annotee, f"results/results.json")
+	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated.json")
+	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
 	return images_number, minutes_number
 
 def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe:bool):
@@ -877,7 +918,8 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe
 						images_dir=images_dir,
 						current_minute = minute)
 	pipeline.workflow(minute)
-	return pipeline.minutes, pipeline.minutes_reconciliees
+	minute_number = list(minute.keys())[0]
+	return minute_number, pipeline.minutes, pipeline.minutes_reconciliees
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()
