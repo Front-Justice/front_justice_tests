@@ -291,7 +291,10 @@ class Pipeline:
 			image_path=page["image_path"],
 			loaded_image=loaded_image)
 		if identite:
-			current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
+			try:
+				current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
+			except TypeError:
+				current_dict["soldat"]["identite"] = identite
 		zone_dict = {"zones_identifiees": zones_page_2.to_json(), "zones_manquantes": zones_manquantes}
 		return zone_dict, current_dict
 
@@ -744,8 +747,9 @@ class Pipeline:
 			if target is None:
 				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
 				previous_pages = copy.copy(pages)
-				reconciliator.reconciliate_minute()
-				self.minutes_reconciliees = reconciliator.reconciliated_minute
+				# reconciliator.reconciliate_minute()
+				# self.minutes_reconciliees = reconciliator.reconciliated_minute
+				self.minutes_reconciliees = {}
 
 
 def regroupement_minutes(pages_classees):
