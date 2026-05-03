@@ -294,7 +294,7 @@ class Pipeline:
 			try:
 				current_dict["soldat"]["identite"] = {**current_dict["soldat"]["identite"], **identite}
 			except TypeError:
-				current_dict["soldat"]["identite"] = identite
+				current_dict["soldat"] = {"identite": identite}
 		zone_dict = {"zones_identifiees": zones_page_2.to_json(), "zones_manquantes": zones_manquantes}
 		return zone_dict, current_dict
 
