@@ -65,7 +65,7 @@ class Pipeline:
 		self.pages_classees = []
 		self.images_basedir = images_dir.replace("/", "_")
 		self.LinesDeletionsIdentifier = Deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
-																		   model_chars="/home/mgl/Téléchargements/chars_deletion_v5.pth")
+																		   model_chars="src/Vision/models/chars_deletion_v5.pth")
 
 
 		# Les modèles de zones
