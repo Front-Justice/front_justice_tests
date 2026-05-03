@@ -31,7 +31,6 @@ class PageClassifier():
 		if build_vocab:
 			self.vocab, self.reverse_vocab = self.build_classes_vocab(path="src/Page_Classifier/data/corpus/page_*")
 			joblib.dump(self.vocab, vocab)
-			exit(0)
 		self.model_path = model
 		self.corpus_path = corpus_path
 		self.vocab_path = vocab
@@ -195,7 +194,7 @@ if __name__ == '__main__':
 								corpus_path="src/Page_Classifier/data/corpus.data",
 								model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
 								vocab="src/Page_Classifier/models/vocab_SVC.joblib")
-	RF_classifier = PageClassifier(build_vocab=False,
+	RF_classifier = PageClassifier(build_vocab=True,
 								corpus_path="src/Page_Classifier/data/corpus.data",
 								model="src/Page_Classifier/models/PageClassifier_RF.joblib",
 								vocab="src/Page_Classifier/models/vocab_RF.joblib")
@@ -207,21 +206,23 @@ if __name__ == '__main__':
 	else:
 		out_dir = "src/Page_Classifier/data/predictions/"
 	print("Random Forest:")
-	# RF_classifier.test()
+	RF_classifier.train()
+	RF_classifier.test()
+	exit(0)
 	print("---\nSVC test:")
 	# SVC_classifier.test()
 	# exit(0)
-	for image in tqdm.tqdm(images):
-		if len(glob.glob(f"{out_dir}/*/{image.split('/')[-1]}")) > 0:
-			print("Already treated.")
-			continue
-		prediction = RF_classifier.predict(image=image)
-		try:
-			os.mkdir(f"{out_dir}")
-		except FileExistsError:
-			pass
-		try:
-			os.mkdir(f"{out_dir}/{prediction}")
-		except FileExistsError:
-			pass
-		shutil.copyfile(image, f"{out_dir}/{prediction}/{image.split('/')[-1]}")
+	# for image in tqdm.tqdm(images):
+	# 	if len(glob.glob(f"{out_dir}/*/{image.split('/')[-1]}")) > 0:
+	# 		print("Already treated.")
+	# 		continue
+	# 	prediction = RF_classifier.predict(image=image)
+	# 	try:
+	# 		os.mkdir(f"{out_dir}")
+	# 	except FileExistsError:
+	# 		pass
+	# 	try:
+	# 		os.mkdir(f"{out_dir}/{prediction}")
+	# 	except FileExistsError:
+	# 		pass
+	# 	shutil.copyfile(image, f"{out_dir}/{prediction}/{image.split('/')[-1]}")
