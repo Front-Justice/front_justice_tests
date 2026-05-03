@@ -190,10 +190,10 @@ class PageClassifier():
 
 
 if __name__ == '__main__':
-	SVC_classifier = PageClassifier(build_vocab=False,
-								corpus_path="src/Page_Classifier/data/corpus.data",
-								model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
-								vocab="src/Page_Classifier/models/vocab_SVC.joblib")
+	# SVC_classifier = PageClassifier(build_vocab=False,
+	# 							corpus_path="src/Page_Classifier/data/corpus.data",
+	# 							model="src/Page_Classifier/models/PageClassifier_SVC.joblib",
+	# 							vocab="src/Page_Classifier/models/vocab_SVC.joblib")
 	RF_classifier = PageClassifier(build_vocab=True,
 								corpus_path="src/Page_Classifier/data/corpus.data",
 								model="src/Page_Classifier/models/PageClassifier_RF.joblib",
