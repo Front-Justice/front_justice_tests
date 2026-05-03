@@ -1037,6 +1037,10 @@ class Extractor:
 																		ocr_prediction=ocr_prediction,
 																		intersect_ratio=[.8],
 																		select_highest_prob_zone=True)
+		if lignes_decision is None:
+			return {"prediction": None,
+					"extracted": None,
+					"bbox": zone_decision}, None
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
 			lignes_decision_as_string = f"0 {lignes_decision_as_string}"
