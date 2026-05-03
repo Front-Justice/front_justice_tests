@@ -198,7 +198,7 @@ if __name__ == '__main__':
 								corpus_path="src/Page_Classifier/data/corpus.data",
 								model="src/Page_Classifier/models/PageClassifier_RF.joblib",
 								vocab="src/Page_Classifier/models/vocab_RF.joblib")
-	print(SVC_classifier.vocab)
+	# print(SVC_classifier.vocab)
 	if len(sys.argv) > 1:
 		images = glob.glob(f"{sys.argv[1]}*.jpg")
 		assert images != [], "No images found."
