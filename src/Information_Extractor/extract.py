@@ -53,12 +53,12 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
-		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
+		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
+		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
 		print(device)
 		self.ner_model.to(device)
 		self.logger = logger
-		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=False)
 		self.date_recognition_pipeline = pipeline('ner',
 												  model=self.ner_model,
 												  tokenizer=self.tokenizer,
@@ -70,7 +70,7 @@ class Extractor:
 		entity_spotting_model = ("src/Information_Extractor/models/entity_spotting")
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=False)
 		self.entity_spotting_pipeline = pipeline('ner',
 												 model=entity_spotting_model,
 												 tokenizer=tokenizer,
@@ -457,6 +457,7 @@ class Extractor:
 																					select_highest_prob_zone=True)
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
+		lignes_description_soldat_raw = f"1 {lignes_description_soldat_raw}"
 		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
@@ -764,6 +765,7 @@ class Extractor:
 			return {"prediction": lignes_questions_as_string,
 				"extracted": questions,
 				"bbox": zone_questions}, None
+		ligne_nom_du_soldat = f"1 {ligne_nom_du_soldat}"
 		NER = self.entity_spotting_pipeline(ligne_nom_du_soldat)
 		nom_soldat = {"nom_2": extractions.extraire_feature(entities_list=NER, lignes=lignes_questions,
 									 feature="nom_du_soldat",
@@ -850,6 +852,7 @@ class Extractor:
 		"""
 		# La première occurrence arrive sur les deux premières lignes de la page
 		deux_premieres_lignes = ocr_prediction[:2].join_transcription()
+		deux_premieres_lignes = f"1 {deux_premieres_lignes}"
 		NER = self.entity_spotting_pipeline(deux_premieres_lignes)
 		nom = {"nom_1": extractions.extraire_feature(lignes=ocr_prediction[:2],
 											entities_list=NER,
@@ -861,7 +864,9 @@ class Extractor:
 													string_to_match="le présent jugement a été lu",
 													return_index=True)
 		target_lines = ocr_prediction[index:index+2]
-		NER = self.entity_spotting_pipeline(target_lines.join_transcription())
+		target = target_lines.join_transcription()
+		target = f"1 {target}"
+		NER = self.entity_spotting_pipeline(target)
 		nom["nom_2"] = extractions.extraire_feature(lignes=target_lines,
 											entities_list=NER,
 											feature="nom_du_soldat",
@@ -928,6 +933,7 @@ class Extractor:
 												   string_to_match="Vu la procédure instruite",
 													return_index=True)
 		ligne_nom = " ".join([lignes_tableau[index].prediction, lignes_tableau[index + 1].prediction])
+		ligne_nom = f"1 {ligne_nom}"
 		NER = self.entity_spotting_pipeline(ligne_nom)
 		nom = extractions.extraire_feature(entities_list=NER,
 										   lignes=lignes_tableau,
@@ -1033,19 +1039,55 @@ class Extractor:
 																		select_highest_prob_zone=True)
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
+			lignes_decision_as_string = f"0 {lignes_decision_as_string}"
 			entities = self.entity_spotting_pipeline(lignes_decision_as_string)
+
 			nom_du_soldat = {"nom": extractions.extraire_feature(entities_list=entities,
 														  lignes=lignes_decision,
 														  feature="nom_du_soldat",
 																 image_path=image_path)}
-		except AttributeError:
+			if "condamnation" in [item['entity_group'] for item in entities]:
+				decision = "condamnation"
+				peine = extractions.extraire_feature(entities_list=entities,
+														  lignes=lignes_decision,
+														  feature="peine",
+																 image_path=image_path)
+				unanimite = extractions.extraire_feature(entities_list=entities,
+														  lignes=lignes_decision,
+														  feature="unanimité",
+																 image_path=image_path)
+				majorite = extractions.extraire_feature(entities_list=entities,
+														  lignes=lignes_decision,
+														  feature="majorité",
+																 image_path=image_path)
+				sursis = extractions.extraire_feature(entities_list=entities,
+														  lignes=lignes_decision,
+														  feature="sursis",
+																 image_path=image_path)
+			elif "acquittement" in [item['entity_group'] for item in entities]:
+				decision = "acquittement"
+				peine = None
+				unanimite = None
+				majorite = None
+				sursis = None
+			else:
+				decision = "UNK"
+				peine = None
+				unanimite = None
+				majorite = None
+				sursis = None
+			extracted = {"decision": decision,
+						   "peine": peine,
+						   "vote": majorite if majorite['extracted'] != None else unanimite,
+						   "sursis": True if sursis["extracted"] != None else False}
+		except TypeError:
 			return {"prediction": None,
 					"extracted": None,
 					"bbox": zone_decision}, None
 
 
 		return {"prediction": lignes_decision_as_string,
-				"extracted": lignes_decision_as_string,
+				"extracted": extracted,
 				"bbox": zone_decision}, nom_du_soldat
 
 
@@ -1281,18 +1323,27 @@ class Extractor:
 			lignes_fusionnees = lignes_fusionnees.lower()
 			resultat = self.date_recognition_pipeline(lignes_fusionnees.lower())
 			# TODO: reprendre ça, il peut y avoir plusieurs dates
-			try:
-				extracted_date = [item for item in resultat if item['entity_group'] == 'DATE'][-1]['word']
-			except IndexError:
-				extracted_date = None
-			if extracted_date is not None:
+			normalized_dates = []
+			dates = [item for item in resultat if item['entity_group'] == 'DATE']
+			for current_date in dates:
+				extracted_date = current_date['word']
 				try:
 					corrected_date = utils.correct_date(extracted_date)
 					normalized_date = date.process_date(corrected_date, debug=False)
 				except TypeError:
 					normalized_date = None
+				normalized_dates.append(normalized_date)
+			if len(normalized_dates) == 1:
+				extracted_date = {"date_1": normalized_dates[0]}
+			elif len(normalized_dates) == 0:
+				extracted_date = None
 			else:
-				normalized_date = None
+				date_1 = normalized_dates[0]
+				date_2 = normalized_dates[-1]
+				extracted_date = {
+					"date_1": date_1,
+					"date_2": date_2
+				}
 			list_of_informations = [
 				"Remise du restant de la peine",
 				"Remise partielle de peine",
@@ -1318,7 +1369,7 @@ class Extractor:
 
 			# TODO: cas où il y a plusieurs annotations différentes
 			list_of_results.append({
-				"date": normalized_date,
+				"date": extracted_date,
 				"information": information_contenue,
 				"prediction": lignes_fusionnees,
 				"bbox": annotations[0].coordinates,
@@ -1605,6 +1656,7 @@ class Extractor:
 
 
 		description_du_soldat["prediction"] = target_lines
+		target_lines = f"1 {target_lines}"
 		entities = self.entity_spotting_pipeline(target_lines)
 
 		# On commence par le nom du soldat
@@ -2025,7 +2077,7 @@ class Extractor:
 											   image_path=image_path)
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
-			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, ner_pipeline=self.date_recognition_pipeline)
+			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, image_path=image_path)
 		print("Magistrats: OK")
 		return {"president": {"extracted": processed_president,
 							  "baseline": [line.baseline for line in president],

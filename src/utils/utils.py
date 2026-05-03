@@ -1220,7 +1220,12 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Affectation du soldat",
 			  "Numéro de matricule",
 			  "Chef d'accusation",
-			  "Antécédents"]
+			  "Antécédents",
+			  "Condamnation",
+			  "Sursis",
+			  "Vote",
+			  "Peine",
+			  "Frais du procès"]
 	for idx_minute, minute in extractions.items():
 		interm = []
 		# Image
@@ -1573,6 +1578,41 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except KeyError:
 			antecedents = "UNK"
 		interm.append(antecedents)
+
+		# Décision du tribunal
+		try:
+			condamnation = minute['decision_tribunal']["jugement"]["decision"]
+		except (KeyError, TypeError):
+			condamnation = "UNK"
+
+		try:
+			sursis = minute['decision_tribunal']["jugement"]["sursis"]
+		except KeyError:
+			sursis = "UNK"
+		except TypeError:
+			sursis = False
+
+		try:
+			vote = minute['decision_tribunal']["jugement"]["vote"]["extracted"]
+		except (KeyError, TypeError):
+			vote = "UNK"
+		try:
+			peine = minute['decision_tribunal']["jugement"]["peine"]["extracted"]
+		except (KeyError, TypeError):
+			peine = "UNK"
+
+		interm.append(condamnation)
+		interm.append(sursis)
+		interm.append(vote)
+		interm.append(peine)
+
+		# Frais
+		try:
+			frais = minute['decision_tribunal']['frais']
+		except KeyError:
+			frais = "UNK"
+		interm.append(frais)
+
 		extracted_data.append(interm)
 
 	df = pd.DataFrame(extracted_data, columns=header)
@@ -2140,7 +2180,7 @@ def sum_to_float(input: string) -> float:
 	Cette fonction prend une somme (de frais par exemple) en toutes lettres et la convertit en flottant
 	:return: le flottant correspondant
 	"""
-	print(input)
+	input = input.lower().strip()
 	split_francs = approximate_sentence_split(sentence=input, substring="francs")
 	try:
 		entiers = split_francs[0].strip()
@@ -2151,7 +2191,8 @@ def sum_to_float(input: string) -> float:
 		centimes = approximate_sentence_split(split_francs[-1], substring="centimes")[0].strip()
 	except TypeError:
 		return {"value": entiers,
-				"certainty": "low"}
+				"certainty": "low",
+				"somme": input}
 	centimes = correct_numbers_in_string(centimes)
 	print(entiers)
 	print(centimes)

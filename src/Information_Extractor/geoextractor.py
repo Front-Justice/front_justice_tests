@@ -174,6 +174,22 @@ class GeoExtractor():
 							}
 		"""
 		match = False
+		if ville in ["Constantine", "Oran", "Alger"] or departement in ["Constantine", "Oran", "Alger"]:
+			if ville == "Constantine" or departement == "Constantine":
+				latitude = 36.35
+				longitude =  6.60
+			if ville == "Alger" or departement == "Alger":
+				latitude = 36.75
+				longitude = 3.04
+			if ville == "Oran" or departement == "Oran":
+				latitude = 35.70
+				longitude = 0.63
+			return {
+						"lat": latitude,
+						"lon": longitude,
+						"nom_actuel": ville,
+						"departement": departement
+					}
 		if ville == "Paris":
 			return self.paris(arrondissement)
 		if ville:

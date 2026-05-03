@@ -35,11 +35,14 @@ class Reconciliator:
 		self.numero_jugement = None
 		self.lieu_jugement = None
 		self.date_proces = None
+		self.decision_tribunal = None
 		self.images_path = None
 		self.annotations = None
 		self.profession = None
 		self.date_proces_orig = None
 		self.date_naissance = None
+		self.questions = None
+		self.condamnation_pecuniaire = None
 		self.age = None
 
 	def reconciliate_minute(self):
@@ -50,6 +53,7 @@ class Reconciliator:
 		self._reconciliate_lieu_naissance()
 		self._retrieve_annotations()
 		self._retrieve_profession()
+		self._reconciliate_questions()
 		self._reconciliate_trial_date()
 		self._reconciliate_date_naissance()
 		self._copy_unici()
@@ -57,7 +61,17 @@ class Reconciliator:
 		# self._remove_baseline_and_bbox()
 		print("---")
 
+	def _reconciliate_questions(self):
+		try:
+			questions_page_2 = self.minute_list[1]["extractions"]["questions"]["extracted"]
+		except KeyError:
+			questions_page_2 = ""
+		try:
+			questions_page_3 = self.minute_list[2]["extractions"]["questions"]["extracted"]
+		except KeyError:
+			questions_page_3 = ""
 
+		self.questions = f"{questions_page_2} {questions_page_3}".strip()
 	def _reconciliate_date_naissance(self):
 		try:
 			date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
@@ -127,7 +141,8 @@ class Reconciliator:
 						except KeyError:
 							dictionnary[date] = 1
 					dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-					exit(0)
+					print("Problemo")
+					self.date_proces = None
 					# self.date_proces =
 
 
@@ -137,6 +152,7 @@ class Reconciliator:
 		except (AttributeError, TypeError):
 			try:
 				self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+				return
 			except (AttributeError, IndexError, KeyError):
 				self.profession = None
 				return
@@ -179,6 +195,10 @@ class Reconciliator:
 		Cette fonction récupèrer l'information qui ne se répète pas.
 		:return:
 		"""
+		try:
+			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]["extracted"]
+		except TypeError:
+			self.decision_tribunal = None
 		try:
 			self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
 		except TypeError:
@@ -234,7 +254,24 @@ class Reconciliator:
 		except (TypeError, KeyError):
 			self.numero_matricule = None
 
-	def reconciliate_date(self, date_a, date_b):
+		try:
+			self.condamnation_pecuniaire = self.minute_list[3]["extractions"]["dernier_paragraphe"]["extracted"]["value"]
+		except (TypeError, KeyError):
+			self.condamnation_pecuniaire = None
+		if self.condamnation_pecuniaire:
+			# Si la conversion ne fonctionne pas, on va récupérer la somme du tableau.
+			try:
+				float(self.condamnation_pecuniaire)
+			except ValueError:
+				self.condamnation_pecuniaire = self.minute_list[3]["extractions"]["tableau_frais"]["extracted"]["frais_totaux"]["totaux_transcrits"]
+
+	def reconciliate_date(self, date_a: str, date_b: str):
+		"""
+		Réconcilie deux dates, en passant à une précision inférieure si les jours divergent mais que mois et année sont identiques.
+		:param date_a: date sous la forme jj/mm/aaaa
+		:param date_b: date sous la forme jj/mm/aaaa
+		:return: la date réconciliée
+		"""
 		splitted_a = date_a.split("/")
 		splitted_b = date_b.split("/")
 		# Dans le cas de dates de longueur identique (jj/mm/aaaa ou mm/aaaa)
@@ -593,7 +630,12 @@ class Reconciliator:
 				},
 			"accusation": {
 				"date_du_crime_ou_delit": self.date_crime_ou_delit,
-				"chef_accusation": self.chef_accusation
+				"chef_accusation": self.chef_accusation,
+				"questions_posees": self.questions
+			},
+			"decision_tribunal": {
+				"frais": self.condamnation_pecuniaire,
+				"jugement": self.decision_tribunal
 			},
 			"actualisations_du_jugement": self.annotations
 		}

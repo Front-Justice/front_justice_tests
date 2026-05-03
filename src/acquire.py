@@ -87,8 +87,9 @@ class Pipeline:
 			4: "src/Vision/models/modele_page_4.mlmodel",
 			"autre": "src/Vision/models/modele_ligne_page_1.mlmodel",
 		}
-		self.kraken_ocr_model = "src/Vision/models/modele_31000l.mlmodel"
+		self.kraken_ocr_model = "src/Vision/models/32000l_v2.mlmodel"
 		self.kraken_gloses_model = "src/Vision/models/strate_2_3000l.mlmodel"
+		self.kraken_gloses_model = self.kraken_ocr_model
 		self.party_model = "src/Vision/models/model.safetensors"
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
@@ -858,21 +859,22 @@ def main(images_dir:str,
 	print("Starting.")
 	minute_annotee = {}
 	minute_reconciliee = {}
-	minute_annotee = utils.load_json_to_dict("results/results.json")
+	# minute_annotee = utils.load_json_to_dict("results/results.json")
 	# minute_reconciliee = utils.load_json_to_dict("results/results_reconciliated.json")
 	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
 	# exit(0)
-	previous_pages = None
-	import src.Information_Extractor.reconciliation as reconciliation
-	for idx, minute in minute_annotee.items():
-		reconciliator = reconciliation.Reconciliator(minute_list=minute, previous_minute=previous_pages)
-		reconciliator.reconciliate_minute()
-		reconc = reconciliator.reconciliated_minute
-		minute_reconciliee[idx] = reconc
-
-	utils.serialize_dict(minute_reconciliee, "results/results_reconciliated.json")
-	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
-	exit()
+	# # exit(0)
+	# previous_pages = None
+	# import src.Information_Extractor.reconciliation as reconciliation
+	# for idx, minute in minute_annotee.items():
+	# 	reconciliator = reconciliation.Reconciliator(minute_list=minute, previous_minute=previous_pages)
+	# 	reconciliator.reconciliate_minute()
+	# 	reconc = reconciliator.reconciliated_minute
+	# 	minute_reconciliee[idx] = reconc
+	# #
+	# utils.serialize_dict(minute_reconciliee, "results/results_reconciliated.json")
+	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
+	# exit(0)
 	minute_reconciliee = {}
 	if workers != 1:
 		torch.set_num_threads(1)
