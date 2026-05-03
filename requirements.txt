@@ -84,7 +84,6 @@ opencv-python-headless==4.13.0.92
 packaging==24.2
 pandas==1.5.3
 paramiko==4.0.0
-party @ file:///home/mgl/Bureau/Travail/scripts_et_programmes/party
 pi_heif==1.3.0
 pillow==12.1.0
 pillow-jxl-plugin==1.3.7
