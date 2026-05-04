@@ -723,7 +723,7 @@ class Extractor:
 																return_match=True)
 				target = f"{match} {split[-1]}"
 			except TypeError:
-				target = prediction_as_string
+				return None, None
 			notes_bas_page_1 = "(1) et à décharge (s'il y en a)"
 			notes_bas_page_2 = "(2) Indiquer si des témoins ont été entendus"
 			split_bas_page_1 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_1)
