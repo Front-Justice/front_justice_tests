@@ -456,7 +456,7 @@ class Extractor:
 																					intersect_ratio=[.8],
 																					select_highest_prob_zone=True)
 		if not lignes_description_du_soldat:
-			return None:
+			return None
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		lignes_description_soldat_raw = f"1 {lignes_description_soldat_raw}"
