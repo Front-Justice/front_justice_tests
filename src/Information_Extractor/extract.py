@@ -717,10 +717,13 @@ class Extractor:
 		if "questions" not in [item.label for item in annotations]:
 			ocr_prediction = utils.vertical_order_lines(ocr_prediction)
 			prediction_as_string = ocr_prediction.join_transcription()
-			split, match = utils.approximate_sentence_split(sentence=prediction_as_string,
-															substring=" Le Conseil délibérant à huis clos, le Président",
-															return_match=True)
-			target = f"{match} {split[-1]}"
+			try:
+				split, match = utils.approximate_sentence_split(sentence=prediction_as_string,
+																substring=" Le Conseil délibérant à huis clos, le Président",
+																return_match=True)
+				target = f"{match} {split[-1]}"
+			except TypeError:
+				target = prediction_as_string
 			notes_bas_page_1 = "(1) et à décharge (s'il y en a)"
 			notes_bas_page_2 = "(2) Indiquer si des témoins ont été entendus"
 			split_bas_page_1 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_1)
