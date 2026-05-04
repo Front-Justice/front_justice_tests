@@ -456,7 +456,7 @@ class Extractor:
 																					intersect_ratio=[.8],
 																					select_highest_prob_zone=True)
 		if not lignes_description_du_soldat:
-			return None
+			return None:
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		lignes_description_soldat_raw = f"1 {lignes_description_soldat_raw}"
@@ -729,12 +729,12 @@ class Extractor:
 				target = split_bas_page_2[0]
 				return {"prediction": target,
 						"extracted": None,
-						"bbox": None}
+						"bbox": None}, None
 			else:
 				target = split_bas_page_1[0]
 				return {"prediction": target,
 						"extracted": None,
-						"bbox": None}
+						"bbox": None}, None
 		lignes_questions, zone_questions = self.extract_lines_from_zone(annotations=annotations,
 																		target_zone=["questions"],
 																		show_images=False,
