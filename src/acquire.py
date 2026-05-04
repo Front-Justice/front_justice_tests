@@ -732,7 +732,6 @@ class Pipeline:
 						ajouts = {"ajouts": None}
 				if page["classe"] == "page_1":
 					zones, annotations = self.traitement_p_1(page=page, show_image=False)
-					print(annotations["soldat"]["description_physique"]["cheveux"])
 				elif page['classe'] == "page_2":
 					zones, annotations = self.traitement_p_2(page=page)
 				elif page['classe'] == "page_3":
