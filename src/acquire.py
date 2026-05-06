@@ -399,6 +399,8 @@ class Pipeline:
 				annotations=zones_page_4,
 				image_path=page["image_path"],
 				loaded_image=loaded_image)
+		else:
+			nom_2 = {}
 
 		try:
 			current_dict["identite"] = {**current_dict["identite"], **nom_2}
