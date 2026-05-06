@@ -1005,9 +1005,9 @@ class Extractor:
 			phrase_date = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
 		except TypeError:
 			date_line, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match="Fait en la Chambre du Conseil de Guerre")
-			if date_line:
+			try:
 				phrase_date = utils.approximate_sentence_split(sentence=date_line.prediction, substring="Fait en la Chambre")[-1]
-			else:
+			except TypeError:
 				return {"predicted": lignes_recapitulatif_as_string,
 						"extracted": total,
 						"bbox": zone_tableau}, None
