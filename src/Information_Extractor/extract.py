@@ -991,7 +991,7 @@ class Extractor:
 		except TypeError:
 			return {"prediction": lignes_recapitulatif_as_string,
 					"frais": None,
-					"bbox": zone_tableau}
+					"bbox": zone_tableau}, None
 		somme_toutes_lettres = somme_toutes_lettres.strip()
 		total = utils.sum_to_float(somme_toutes_lettres)
 		
