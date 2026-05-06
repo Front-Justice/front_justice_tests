@@ -729,10 +729,15 @@ class Extractor:
 			split_bas_page_1 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_1)
 			if not split_bas_page_1:
 				split_bas_page_2 = utils.approximate_sentence_split(sentence=target, substring=notes_bas_page_2)
-				target = split_bas_page_2[0]
-				return {"prediction": target,
-						"extracted": None,
-						"bbox": None}, None
+				try:
+					target = split_bas_page_2[0]
+					return {"prediction": target,
+							"extracted": None,
+							"bbox": None}, None
+				except TypeError:
+					return {"prediction": split[-1],
+							"extracted": None,
+							"bbox": None}, None
 			else:
 				target = split_bas_page_1[0]
 				return {"prediction": target,
