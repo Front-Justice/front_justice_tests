@@ -986,7 +986,12 @@ class Extractor:
 			return {"prediction": lignes_recapitulatif_as_string,
 					"frais": None,
 					"bbox": zone_tableau}, None
-		somme_toutes_lettres = utils.approximate_sentence_split(sentence=after_somme, substring=" du montant de laquelle")[0]
+		try:
+			somme_toutes_lettres = utils.approximate_sentence_split(sentence=after_somme, substring=" du montant de laquelle")[0]
+		except TypeError:
+			return {"prediction": lignes_recapitulatif_as_string,
+					"frais": None,
+					"bbox": zone_tableau}
 		somme_toutes_lettres = somme_toutes_lettres.strip()
 		total = utils.sum_to_float(somme_toutes_lettres)
 		
