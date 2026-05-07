@@ -751,8 +751,8 @@ class Pipeline:
 			if target is None:
 				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
 				previous_pages = copy.copy(pages)
-				# reconciliator.reconciliate_minute()
-				# self.minutes_reconciliees = reconciliator.reconciliated_minute
+				reconciliator.reconciliate_minute()
+				self.minutes_reconciliees = reconciliator.reconciliated_minute
 				self.minutes_reconciliees = {}
 
 
