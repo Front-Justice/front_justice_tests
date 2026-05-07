@@ -39,8 +39,10 @@ class PageClassifier():
 			if build_vocab is False:
 				self.vocab = joblib.load(vocab)
 		except FileNotFoundError:
+			print("Some file not found.")
 			self.model = model
 			self.vocab = vocab
+			print("Exiting.")
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
@@ -95,6 +97,8 @@ class PageClassifier():
 	def build_classes_vocab(self, path):
 		vocab = {idx: dir.split("/")[-1] for idx, dir in enumerate(glob.glob(path))}
 		reverse_vocab = {value: key for key, value in vocab.items()}
+		print(vocab)
+		print(reverse_vocab)
 		return vocab, reverse_vocab
 
 	def load_image(self, image_path, produce_labels=False, show_image=False):
