@@ -566,6 +566,8 @@ class Pipeline:
 				annotations=zones_page_1,
 				loaded_image=loaded_image,
 			    image_path=page["image_path"])
+		else:
+			current_dict["date_proces"] = None
 
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
