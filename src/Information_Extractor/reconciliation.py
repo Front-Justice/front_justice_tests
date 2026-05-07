@@ -46,6 +46,9 @@ class Reconciliator:
 		self.age = None
 
 	def reconciliate_minute(self):
+		if self._check_minute_consistency() is False:
+			self.reconciliated_minute = {}
+			return
 		self._add_images_path()
 		self._reconciliate_nom_soldat()
 		self._reconciliate_prenom_soldat()
@@ -60,6 +63,15 @@ class Reconciliator:
 		self._produce_dict()
 		# self._remove_baseline_and_bbox()
 		print("---")
+
+	def _check_minute_consistency(self):
+		classes = [item["classe"].split("_")[-1] for item in self.minute_list if item["classe"] != "page_autre"]
+		if range(int(classes)) == range(1, 5):
+			print("Minute correctement ordonnée")
+			return True
+		else:
+			print("Quelque chose ne va pas avec la minute")
+			return False
 
 	def _reconciliate_questions(self):
 		try:
