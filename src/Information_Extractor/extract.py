@@ -1668,6 +1668,7 @@ class Extractor:
 																				 loaded_image=None,
 																				 ocr_prediction=ocr_prediction,
 																				 intersect_ratio=0.1)
+		print(lignes_description_du_soldat)
 		try:
 			lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		except AttributeError:
@@ -1714,6 +1715,11 @@ class Extractor:
 			# plusieurs_soldats = True
 			# bbox_nom_soldat = None
 			print("Plusieurs soldats.")
+			description_du_soldat["identite"] = {
+				"nom": {"extracted": None,
+						"bbox": None,
+						"baseline": None}
+			}
 		else:
 			# bbox_nom_soldat = None
 			print("Aucun soldat identifié par YOLO.")
