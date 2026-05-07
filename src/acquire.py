@@ -806,6 +806,8 @@ def classification_images(images, page_classifier_model, page_classifier_vocab):
 	page_classifier = PC.PageClassifier(build_vocab=False,
 											 model=page_classifier_model,
 											 vocab=page_classifier_vocab)
+	print(page_classifier_vocab)
+	exit(0)
 	for image in tqdm.tqdm(images):
 		dossier, ident = utils.get_name_from_path(image)
 		# On vérifie s'il n'y a pas de problème de disparition d'image
