@@ -753,7 +753,7 @@ class Pipeline:
 				previous_pages = copy.copy(pages)
 				reconciliator.reconciliate_minute()
 				self.minutes_reconciliees = reconciliator.reconciliated_minute
-				self.minutes_reconciliees = {}
+				# self.minutes_reconciliees = {}
 
 
 def regroupement_minutes(pages_classees):
