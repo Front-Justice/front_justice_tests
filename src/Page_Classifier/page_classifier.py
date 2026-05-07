@@ -42,7 +42,6 @@ class PageClassifier():
 			print("Some file not found.")
 			self.model = model
 			self.vocab = vocab
-			print("Exiting.")
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
