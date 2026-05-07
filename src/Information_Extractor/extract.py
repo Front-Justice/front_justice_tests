@@ -1667,7 +1667,8 @@ class Extractor:
 																				 show_images=False,
 																				 loaded_image=None,
 																				 ocr_prediction=ocr_prediction,
-																				 intersect_ratio=0.1)
+																				 intersect_ratio=0.1,
+																				 select_highest_prob_zone=True)
 		print(lignes_description_du_soldat)
 		try:
 			lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
