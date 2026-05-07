@@ -847,8 +847,6 @@ def main(images_dir:str,
 	if start_after:
 		images = [item for item in images  if int(item.split("/")[-1].replace(".jpg", "")) > start_after]
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0]))
-		print(images)
-		exit(0)
 	else:
 		target = None
 	try:
