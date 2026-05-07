@@ -589,6 +589,7 @@ class Pipeline:
 			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
 																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
 		except (TypeError, KeyError, ValueError):
+			print(current_dict)
 			current_dict["soldat"]["identite"]["age"] = None
 
 
