@@ -844,6 +844,8 @@ def main(images_dir:str,
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
+	if start_after:
+		images = [item for item in images  if int(item.split("/")[-1].replace("*.jpg", "")) > start_after]
 	else:
 		target = None
 	try:
