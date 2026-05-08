@@ -209,27 +209,27 @@ class Reconciliator:
 		"""
 		try:
 			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]["extracted"]
-		except TypeError:
+		except (TypeError, KeyError):
 			self.decision_tribunal = None
 		try:
 			self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
-		except TypeError:
+		except (TypeError, KeyError):
 			self.description_physique = None
 		try:
 			self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
-		except KeyError:
+		except (TypeError, KeyError):
 			self.magistrats = None
 		try:
 			self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
-		except KeyError:
+		except (TypeError, KeyError):
 			self.numero_ordre = None
 		try:
 			self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
-		except KeyError:
+		except (TypeError, KeyError):
 			self.numero_ordre = None
 		try:
 			self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
-		except KeyError:
+		except (TypeError, KeyError):
 			self.lieu_jugement = None
 		try:
 			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
