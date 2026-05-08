@@ -76,22 +76,22 @@ class Reconciliator:
 	def _reconciliate_questions(self):
 		try:
 			questions_page_2 = self.minute_list[1]["extractions"]["questions"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			questions_page_2 = ""
 		try:
 			questions_page_3 = self.minute_list[2]["extractions"]["questions"]["extracted"]
-		except KeyError:
+		except (KeyError, TypeError):
 			questions_page_3 = ""
 
 		self.questions = f"{questions_page_2} {questions_page_3}".strip()
 	def _reconciliate_date_naissance(self):
 		try:
 			date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
-		except TypeError:
+		except  (KeyError, TypeError):
 			date_page_1 = None
 		try:
 			self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
-		except TypeError:
+		except  (KeyError, TypeError):
 			self.date_naissance = None
 		try:
 			age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
