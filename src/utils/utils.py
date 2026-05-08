@@ -1283,7 +1283,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 				except (TypeError, IndexError):
 					extracted_jure = "UNK"
 				interm.append(extracted_jure)
-		except KeyError:
+		except (KeyError, TypeError):
 			interm.extend(["UNK" for _ in range(4)])
 
 		# Greffier (on n'extrait pas les rôles)
