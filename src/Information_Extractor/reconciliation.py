@@ -66,7 +66,7 @@ class Reconciliator:
 
 	def _check_minute_consistency(self):
 		classes = [item["classe"].split("_")[-1] for item in self.minute_list if item["classe"] != "page_autre"]
-		if range(int(classes)) == range(1, 5):
+		if range(int(classes[0]), int(classes[-1])) == range(1, 5):
 			print("Minute correctement ordonnée")
 			return True
 		else:
