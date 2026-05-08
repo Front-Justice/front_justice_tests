@@ -321,13 +321,13 @@ class Reconciliator:
 				nom_ville_identifie_p1 = None
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
-		except TypeError:
+		except (KeyError, TypeError):
 			print("Page 1 sans annotations")
 			self.lieu_residence = None
 			return
 		try:
 			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
-		except KeyError:
+		except (KeyError, TypeError):
 			self.lieu_residence = None
 
 
@@ -344,7 +344,7 @@ class Reconciliator:
 				nom_ville_identifie_p2 = None
 		try:
 			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
-		except TypeError:
+		except (KeyError, TypeError):
 			self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
 			print("Page 2 sans annotations")
 			return
