@@ -871,9 +871,9 @@ def main(images_dir:str,
 	minute_annotee = {}
 	minute_reconciliee = {}
 	# minute_annotee = utils.load_json_to_dict("results/results.json")
-	minute_reconciliee = utils.load_json_to_dict("results/results_reconciliated.json")
-	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
-	exit(0)
+	# minute_reconciliee = utils.load_json_to_dict("results/results_reconciliated.json")
+	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
+	# exit(0)
 	# exit(0)
 	# # exit(0)
 	# previous_pages = None
