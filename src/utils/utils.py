@@ -1397,10 +1397,9 @@ def convert_to_csv(extractions: dict, outpath: str):
 					'extracted']
 				ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
 					'nom_actuel']
-			except  (KeyError, TypeError):
-				if minute['soldat']['identite']['lieu_naissance']['ville'] is None:
-					ville_naissance_actuelle = "UNK"
-					ville_naissance_transcrite = "UNK"
+			except (KeyError, TypeError):
+				ville_naissance_actuelle = "UNK"
+				ville_naissance_transcrite = "UNK"
 			except  (KeyError, TypeError):
 				try:
 					ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
