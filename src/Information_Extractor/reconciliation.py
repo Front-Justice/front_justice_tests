@@ -76,11 +76,11 @@ class Reconciliator:
 	def _reconciliate_questions(self):
 		try:
 			questions_page_2 = self.minute_list[1]["extractions"]["questions"]["extracted"]
-		except  (KeyError, TypeError):
+		except  (KeyError, TypeError, IndexError):
 			questions_page_2 = ""
 		try:
 			questions_page_3 = self.minute_list[2]["extractions"]["questions"]["extracted"]
-		except (KeyError, TypeError):
+		except (KeyError, TypeError, IndexError):
 			questions_page_3 = ""
 
 		self.questions = f"{questions_page_2} {questions_page_3}".strip()
