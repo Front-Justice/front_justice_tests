@@ -433,12 +433,12 @@ class Reconciliator:
 		if len(self.minute_list) == 1:
 			try:
 				self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
-			except TypeError:
+			except (TypeError, KeyError):
 				self.prenom_du_soldat = None
 			return
 		try:
 			prenoms_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
-		except KeyError:
+		except (KeyError, TypeError):
 			prenoms_page_1 = None
 		try:
 			prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
@@ -447,11 +447,11 @@ class Reconciliator:
 		delimiter = re.compile(r"[.;\s\-]+")
 		try:
 			liste_prenoms_page_1 = re.split(delimiter, prenoms_page_1)
-		except TypeError:
+		except (TypeError, KeyError):
 			liste_prenoms_page_1 = None
 		try:
 			liste_prenoms_page_2 = re.split(delimiter, prenoms_page_2)
-		except TypeError:
+		except (TypeError, KeyError):
 			liste_prenoms_page_2 = None
 		if liste_prenoms_page_1 is None and liste_prenoms_page_2:
 			self.prenom_du_soldat = liste_prenoms_page_2
