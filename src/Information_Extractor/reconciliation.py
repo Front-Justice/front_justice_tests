@@ -112,7 +112,7 @@ class Reconciliator:
 	def _reconciliate_trial_date(self):
 		try:
 			date_page_1 = self.minute_list[0]["extractions"]["date_proces"]["normalized"]["when"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			date_page_1 = None
 		try:
 			date_a_page_4 = self.minute_list[3]["extractions"]["date_proces_1"]["normalized"]["when"]
@@ -209,66 +209,66 @@ class Reconciliator:
 		"""
 		try:
 			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]["extracted"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.decision_tribunal = None
 		try:
 			self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.description_physique = None
 		try:
 			self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.magistrats = None
 		try:
 			self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.numero_ordre = None
 		try:
 			self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.numero_ordre = None
 		try:
 			self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.lieu_jugement = None
 		try:
 			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.date_crime_ou_delit = None
 		try:
 			self.chef_accusation = self.minute_list[0]["extractions"]["chef_accusation"]["extracted"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.chef_accusation = None
 		try:
 			self.antecedents = len(self.minute_list[0]["extractions"]["antécédents"]["extracted"])
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.antecedents = None
 		try:
 			self.situation_maritale = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"])
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.situation_maritale = None
 		try:
 			self.enfants = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"])
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.enfants = None
 
 
 		try:
 			self.rang = self.minute_list[0]["extractions"]["soldat"]["identite"]["rang"]["extracted"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.rang = None
 		try:
 			self.affectation = self.minute_list[0]["extractions"]["soldat"]["identite"]["affectation"]["extracted"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.affectation = None
 		try:
 			self.numero_matricule = self.minute_list[0]["extractions"]["soldat"]["identite"]["matricule"]["extracted"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.numero_matricule = None
 
 		try:
 			self.condamnation_pecuniaire = self.minute_list[3]["extractions"]["dernier_paragraphe"]["extracted"]["value"]
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			self.condamnation_pecuniaire = None
 		if self.condamnation_pecuniaire:
 			# Si la conversion ne fonctionne pas, on va récupérer la somme du tableau.
@@ -433,7 +433,7 @@ class Reconciliator:
 		if len(self.minute_list) == 1:
 			try:
 				self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
-			except (TypeError, KeyError):
+			except (TypeError, KeyError, IndexError):
 				self.prenom_du_soldat = None
 			return
 		try:
@@ -442,16 +442,16 @@ class Reconciliator:
 			prenoms_page_1 = None
 		try:
 			prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			prenoms_page_2 = None
 		delimiter = re.compile(r"[.;\s\-]+")
 		try:
 			liste_prenoms_page_1 = re.split(delimiter, prenoms_page_1)
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			liste_prenoms_page_1 = None
 		try:
 			liste_prenoms_page_2 = re.split(delimiter, prenoms_page_2)
-		except (TypeError, KeyError):
+		except (TypeError, KeyError, IndexError):
 			liste_prenoms_page_2 = None
 		if liste_prenoms_page_1 is None and liste_prenoms_page_2:
 			self.prenom_du_soldat = liste_prenoms_page_2
