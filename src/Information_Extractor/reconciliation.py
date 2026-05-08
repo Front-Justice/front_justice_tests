@@ -399,7 +399,10 @@ class Reconciliator:
 		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
 		if distance_p1 is None:
-			self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			try:
+				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			except KeyError:
+				self.lieu_naissance = "UNK"
 			return
 		elif distance_p2 is None:
 			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
