@@ -401,7 +401,7 @@ class Reconciliator:
 		if distance_p1 is None:
 			try:
 				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
-			except KeyError:
+			except (KeyError, TypeError):
 				self.lieu_naissance = "UNK"
 			return
 		elif distance_p2 is None:
@@ -414,7 +414,7 @@ class Reconciliator:
 			print("Page 2 choisie.")
 			try:
 				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
-			except KeyError:
+			except (KeyError, TypeError):
 				self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
 		print(f'Page 1: {self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
 		print(f'Page 2: {self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')

@@ -860,6 +860,8 @@ def main(images_dir:str,
 	minutes_dir = f"results/{images_basedir}_minutes.json"
 	if os.path.isfile(minutes_dir) and not target:
 		minutes = utils.load_json_to_dict(minutes_dir)
+		if start_after:
+			minutes = {key:value for key, value in minutes.items() if int(value["image_path"].split("/")[-1].replace(".jpg", "")) > start_after}
 	else:
 		pages_classees = classification_images(images=images,
 							  page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
