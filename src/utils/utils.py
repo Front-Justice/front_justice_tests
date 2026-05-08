@@ -1236,33 +1236,27 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Date du procès
 		try:
 			date_proces = minute['informations_proces']['date_du_proces']['date_reconciliee']
-		except TypeError:
+		except (TypeError, KeyError):
 			date_proces = "UNK"
 		interm.append(date_proces)
 
 		# Lieu du procès
 		try:
 			institution = minute['informations_proces']['lieu_jugement']['institution']
-		except TypeError:
-			institution = "UNK"
-		except KeyError:
+		except (TypeError, KeyError):
 			institution = "UNK"
 		interm.append(institution)
 
 		try:
 			lieu_proces = minute['informations_proces']['lieu_jugement']['siège']
-		except TypeError:
+		except (TypeError, KeyError):
 			lieu_proces = "UNK"
-		except KeyError:
-			institution = "UNK"
 		interm.append(lieu_proces)
 
 		# Numéro de jugement
 		try:
 			numero_jugement = minute['informations_proces']['numero_jugement']['extracted']
-		except TypeError:
-			numero_jugement = "UNK"
-		except KeyError:
+		except (TypeError, KeyError):
 			numero_jugement = "UNK"
 		interm.append(numero_jugement)
 
