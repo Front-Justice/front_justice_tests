@@ -1269,16 +1269,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Numéro d'ordre
 		try:
 			numero_ordre = minute['informations_proces']['numero_ordre']['extracted']
-		except TypeError:
-			numero_ordre = "UNK"
-		except KeyError:
+		except  (KeyError, TypeError):
 			numero_ordre = "UNK"
 		interm.append(numero_ordre)
 
 		# Président du jury (rôle non extrait)
 		try:
 			president = minute['informations_proces']['magistrats']['president']['extracted']['persName']
-		except KeyError:
+		except (KeyError, TypeError):
 			president = "UNK"
 		interm.append(president)
 
@@ -1297,30 +1295,28 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Greffier (on n'extrait pas les rôles)
 		try:
 			greffier = minute['informations_proces']['magistrats']['greffier']['extracted']['persName']
-		except KeyError:
+		except  (KeyError, TypeError):
 			greffier = "UNK"
 		interm.append(greffier)
 
 		# Commissaire du gouvernement (on n'extrait pas les rôles)
 		try:
 			commissaire = minute['informations_proces']['magistrats']['commissaire']['extracted']['persName']
-		except KeyError:
+		except  (KeyError, TypeError):
 			commissaire = "UNK"
 		interm.append(commissaire)
 
 		# Général
 		try:
 			general = minute['informations_proces']['magistrats']['general']['extracted']
-		except KeyError:
+		except  (KeyError, TypeError):
 			general = "UNK"
 		interm.append(general)
 
 		# Date du crime
 		try:
 			date_crime = minute['accusation']['date_du_crime_ou_delit']
-		except KeyError:
-			date_crime = "UNK"
-		except TypeError:
+		except  (KeyError, TypeError):
 			date_crime = "UNK"
 		if isinstance(date_crime, dict):
 			date_crime = json.dumps(date_crime)
@@ -1330,7 +1326,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			prenoms_soldat = minute['soldat']['identite']['prenom']['extracted']
 			nom_soldat = minute['soldat']['identite']['nom']['extracted']
-		except TypeError:
+		except  (KeyError, TypeError):
 			nom_soldat = "Plusieurs soldats"
 			prenoms_soldat = "Plusieurs soldats"
 			interm.append(nom_soldat)
@@ -1352,44 +1348,44 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			age = minute['soldat']["identite"]["age"]
 			age = age if age else "UNK"
-		except KeyError:
+		except  (KeyError, TypeError):
 			age = "UNK"
 		interm.append(date_naissance)
 		interm.append(age)
 
 		try:
 			taille = minute['soldat']["description_physique"]["taille"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			taille = "UNK"
 		try:
 			cheveux = minute['soldat']["description_physique"]["cheveux"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			cheveux = "UNK"
 		try:
 			front = minute['soldat']["description_physique"]["front"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			front = "UNK"
 		try:
 			yeux = minute['soldat']["description_physique"]["yeux"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			yeux = "UNK"
 		try:
 			nez = minute['soldat']["description_physique"]["nez"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			nez = "UNK"
 		try:
 			visage = minute['soldat']["description_physique"]["visage"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			visage = "UNK"
 		try:
 			renseignements_complementaires = \
 				minute['soldat']["description_physique"]["renseignements_complementaires"]["extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			renseignements_complementaires = "UNK"
 		try:
 			marques_particulieres = minute['soldat']["description_physique"]["marques_particulières"][
 				"extracted"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			marques_particulieres = "UNK"
 		interm.append(taille)
 		interm.append(cheveux)
@@ -1407,15 +1403,15 @@ def convert_to_csv(extractions: dict, outpath: str):
 					'extracted']
 				ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
 					'nom_actuel']
-			except TypeError:
+			except  (KeyError, TypeError):
 				if minute['soldat']['identite']['lieu_naissance']['ville'] is None:
 					ville_naissance_actuelle = "UNK"
 					ville_naissance_transcrite = "UNK"
-			except KeyError:
+			except  (KeyError, TypeError):
 				try:
 					ville_naissance_actuelle = minute['soldat']['identite']['lieu_naissance']['ville'][
 						'extracted']
-				except KeyError:
+				except  (KeyError, TypeError):
 					ville_naissance_actuelle = "UNK"
 				ville_naissance_1999 = "UNK"
 				ville_naissance_1801 = "UNK"
@@ -1424,22 +1420,22 @@ def convert_to_csv(extractions: dict, outpath: str):
 					"lat"]
 				longitude_ville_naissance = minute['soldat']['identite']['lieu_naissance']["coordonnées"][
 					"lon"]
-			except KeyError:
+			except  (KeyError, TypeError):
 				latitude_ville_naissance, longitude_ville_naissance = "UNK", "UNK"
 			try:
 				arrondissement_naissance = minute['soldat']['identite']['lieu_naissance'][
 				'arrondissement']['extracted']
-			except KeyError:
+			except  (KeyError, TypeError):
 				arrondissement_naissance = None
 			try:
 				departement_naissance = minute['soldat']['identite']['lieu_naissance'][
 					'departement']['extracted']
-			except KeyError:
+			except  (KeyError, TypeError):
 				departement_naissance = None
 			try:
 				departement_naissance_transcrit = minute['soldat']['identite']['lieu_naissance'][
 					'departement']['corrected']
-			except KeyError:
+			except  (KeyError, TypeError):
 				departement_naissance_transcrit = None
 			try:
 				ville_naissance_1999 = minute['soldat']['identite']['lieu_naissance']['ville']['nom_1999']
@@ -1473,18 +1469,18 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			ville_residence_transcrite = minute['soldat']['identite']['lieu_residence']['ville'][
 				'extracted']
-		except TypeError:
+		except  (KeyError, TypeError):
 			ville_residence_transcrite = None
 		try:
 			ville_residence_actuelle = minute['soldat']['identite']['lieu_residence']['ville'][
 				'nom_actuel']
 			ville_residence_1999 = minute['soldat']['identite']['lieu_residence']['ville']['nom_1999']
 			ville_residence_1801 = minute['soldat']['identite']['lieu_residence']['ville']['nom_1801']
-		except TypeError:
+		except  (KeyError, TypeError):
 			ville_residence_actuelle = "UNK"
 			ville_residence_1999 = "UNK"
 			ville_residence_1801 = "UNK"
-		except KeyError:
+		except  (KeyError, TypeError):
 			ville_residence_actuelle = minute['soldat']['identite']['lieu_residence']['ville'][
 				'extracted']
 			ville_residence_1999 = ville_residence_actuelle
@@ -1500,7 +1496,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			arrondissement_residence = minute['soldat']['identite']['lieu_residence'][
 				'arrondissement']['extracted']
-		except TypeError:
+		except  (KeyError, TypeError):
 			arrondissement_residence = "UNK"
 		try:
 			departement_residence_transcrit = minute['soldat']['identite']['lieu_residence'][
@@ -1510,7 +1506,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			departement_residence = minute['soldat']['identite']['lieu_residence'][
 			'departement']['corrected']
-		except TypeError:
+		except  (KeyError, TypeError):
 			departement_residence = "UNK"
 		interm.append(ville_residence_transcrite)
 		interm.append(ville_residence_actuelle)
@@ -1541,7 +1537,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			if isinstance(profession, list):
 				profession = " ou ".join(profession)
 			interm.append(profession)
-		except KeyError:
+		except  (KeyError, TypeError):
 			interm.append(None)
 		# Rang du soldat
 		try:
@@ -1568,14 +1564,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Chef d'accusation
 		try:
 			chef_accusation = minute['accusation']['chef_accusation']
-		except KeyError:
+		except  (KeyError, TypeError):
 			chef_accusation = "UNK"
 		interm.append(chef_accusation)
 
 		# Antécédent (juste le nombre)
 		try:
 			antecedents = minute['soldat']['antecedents']
-		except KeyError:
+		except  (KeyError, TypeError):
 			antecedents = "UNK"
 		interm.append(antecedents)
 
@@ -1587,9 +1583,9 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		try:
 			sursis = minute['decision_tribunal']["jugement"]["sursis"]
-		except KeyError:
+		except  (KeyError, TypeError):
 			sursis = "UNK"
-		except TypeError:
+		except  (KeyError, TypeError):
 			sursis = False
 
 		try:
@@ -1609,7 +1605,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Frais
 		try:
 			frais = minute['decision_tribunal']['frais']
-		except KeyError:
+		except  (KeyError, TypeError):
 			frais = "UNK"
 		interm.append(frais)
 
