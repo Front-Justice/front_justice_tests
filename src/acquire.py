@@ -792,7 +792,7 @@ def regroupement_minutes(pages_classees):
 	return minutes
 	# utils.save_as_dict(minutes, out_dir)
 
-def classification_images(images, page_classifier_model, page_classifier_vocab):
+def classification_images(images, page_classifier_model, page_classifier_vocab, workers):
 	"""
 	Cette fonction classe toutes les images à l'aide d'un Random Forest
 	:param page_classifier_vocab: le chemin vers le vocabulaire (mapping classes/labels)
@@ -807,17 +807,26 @@ def classification_images(images, page_classifier_model, page_classifier_vocab):
 	page_classifier = PC.PageClassifier(build_vocab=False,
 											 model=page_classifier_model,
 											 vocab=page_classifier_vocab)
+	data = []
 	for image in tqdm.tqdm(images):
 		dossier, ident = utils.get_name_from_path(image)
 		# On vérifie s'il n'y a pas de problème de disparition d'image
 		check_image_consistency(ident, images_name_list)
-		images_name_list.append(ident)
-		current_page_type = page_classifier.predict(image=image)
-		pages_classees.append(((dossier, ident, image), current_page_type))
-		if image == images[-1]:
-			print("Dossier terminé")
-	print(pages_classees)
+		data.append((dossier, ident, image, page_classifier))
+		# images_name_list.append(ident)
+		# current_page_type = page_classifier.predict(image=image)
+		# pages_classees.append(((dossier, ident, image), current_page_type))
+		# if image == images[-1]:
+		# 	print("Dossier terminé")
+	pages_classees = []
+	with mp.Pool(processes=workers) as pool:
+		for (dossier, ident, image), current_page_type in pool.starmap(predict, data):
+			pages_classees.append(((dossier, ident, image), current_page_type))
+	pages_classees.sort(key=lambda x:int(x[0][1]))
 	return pages_classees
+
+def predict(dossier, ident, image, page_classifier):
+	return (dossier, ident, image), page_classifier.predict(image=image)
 
 def check_image_consistency(current_image, images_name_list):
 	"""
@@ -863,7 +872,8 @@ def main(images_dir:str,
 	else:
 		pages_classees = classification_images(images=images,
 							  page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
-							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib")
+							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
+											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
 	minutes_number = len(minutes)
