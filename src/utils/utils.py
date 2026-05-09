@@ -2376,3 +2376,12 @@ def get_string_between_two_words(target_string: str, word_a: str, word_b: str) -
 	except TypeError:
 		return None
 	return before_second_delimiter
+
+def filter_pages(pages: list, page_class: str):
+	"""
+	Cette fonction retourne la page d'une classe donnée. Suppose que la minute soit correctement classée
+	:param pages: la liste des pages d'une minute
+	:param page_class: la classe visée
+	:return:
+	"""
+	return next(item for item in pages if item["classe"] == page_class)
