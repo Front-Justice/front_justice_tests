@@ -908,6 +908,7 @@ def main(images_dir:str,
 					minute_reconciliee[minute_n] =
 			except Exception as e:
 				print(f"Error: {e}")
+				exit(0)
 	else:
 		for idx, minute in minutes.items():
 			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
