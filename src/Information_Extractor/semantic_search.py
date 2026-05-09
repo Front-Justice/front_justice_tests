@@ -10,7 +10,6 @@ def retrieve_most_similar_sentence(sentence:str, queries:list, embedder):
 	:param queries:
 	:return: La phrase la plus proche
 	"""
-
 	queries_embeddings = embedder.encode(queries, convert_to_tensor=True)
 	top_k = min(5, len(queries))
 	query_embedding = embedder.encode(sentence, convert_to_tensor=True)

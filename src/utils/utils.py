@@ -1223,8 +1223,12 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Antécédents",
 			  "Condamnation",
 			  "Sursis",
-			  "Vote",
-			  "Peine",
+			  "Vote transcrit",
+			  "Vote extrait",
+			  "Voix (vote majoritaire)",
+			  "Peine transcrite",
+			  "Type de peine",
+			  "Nombre de mois",
 			  "Frais du procès"]
 	for idx_minute, minute in extractions.items():
 		interm = []
@@ -1582,18 +1586,40 @@ def convert_to_csv(extractions: dict, outpath: str):
 			sursis = False
 
 		try:
-			vote = minute['decision_tribunal']["jugement"]["vote"]["extracted"]
+			vote = minute['decision_tribunal']["jugement"]["vote"]
 		except (KeyError, TypeError):
 			vote = "UNK"
+
 		try:
-			peine = minute['decision_tribunal']["jugement"]["peine"]["extracted"]
+			transcription_vote = minute['decision_tribunal']["jugement"]["voix"]["predicted"]
 		except (KeyError, TypeError):
-			peine = "UNK"
+			transcription_vote = "UNK"
+
+		try:
+			voix = minute['decision_tribunal']["jugement"]["voix"]["extracted"]
+		except (KeyError, TypeError):
+			voix = None
+		try:
+			peine_transcrite = minute['decision_tribunal']["jugement"]["peine"]["predicted"]["extracted"]
+		except (KeyError, TypeError):
+			peine_transcrite = "UNK"
+		try:
+			type_peine = minute['decision_tribunal']["jugement"]["peine"]["extracted"]["type"]
+		except (KeyError, TypeError):
+			type_peine = "UNK"
+		try:
+			duree_peine = minute['decision_tribunal']["jugement"]["peine"]["extracted"]["duree"]
+		except (KeyError, TypeError):
+			duree_peine = "UNK"
 
 		interm.append(condamnation)
 		interm.append(sursis)
+		interm.append(transcription_vote)
 		interm.append(vote)
-		interm.append(peine)
+		interm.append(voix)
+		interm.append(peine_transcrite)
+		interm.append(type_peine)
+		interm.append(duree_peine)
 
 		# Frais
 		try:

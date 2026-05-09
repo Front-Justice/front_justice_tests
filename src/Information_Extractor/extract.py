@@ -6,6 +6,7 @@ import math
 import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from sentence_transformers import SentenceTransformer
+import src.Information_Extractor.semantic_search as semantic_search
 import glob
 import re
 from src.utils.utils import OCRRecord, YOLOZone
@@ -1063,56 +1064,138 @@ class Extractor:
 					"bbox": zone_decision}, None
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
-			lignes_decision_as_string = f"0 {lignes_decision_as_string}"
-			entities = self.entity_spotting_pipeline(lignes_decision_as_string)
-
-			nom_du_soldat = {"nom": extractions.extraire_feature(entities_list=entities,
-														  lignes=lignes_decision,
-														  feature="nom_du_soldat",
-																 image_path=image_path)}
-			if "condamnation" in [item['entity_group'] for item in entities]:
-				decision = "condamnation"
-				peine = extractions.extraire_feature(entities_list=entities,
-														  lignes=lignes_decision,
-														  feature="peine",
-																 image_path=image_path)
-				unanimite = extractions.extraire_feature(entities_list=entities,
-														  lignes=lignes_decision,
-														  feature="unanimité",
-																 image_path=image_path)
-				majorite = extractions.extraire_feature(entities_list=entities,
-														  lignes=lignes_decision,
-														  feature="majorité",
-																 image_path=image_path)
-				sursis = extractions.extraire_feature(entities_list=entities,
-														  lignes=lignes_decision,
-														  feature="sursis",
-																 image_path=image_path)
-			elif "acquittement" in [item['entity_group'] for item in entities]:
-				decision = "acquittement"
-				peine = None
-				unanimite = None
-				majorite = None
-				sursis = None
-			else:
-				decision = "UNK"
-				peine = None
-				unanimite = None
-				majorite = None
-				sursis = None
-			extracted = {"decision": decision,
-						   "peine": peine,
-						   "vote": majorite if majorite['extracted'] != None else unanimite,
-						   "sursis": True if sursis["extracted"] != None else False}
 		except TypeError:
 			return {"prediction": None,
-					"extracted": None,
-					"bbox": zone_decision}, None
+				"extracted": None,
+				"bbox": zone_decision}, None
+
+		# On doit ajouter 0 comme une métadonnée pour le modèle.
+		lignes_decision_as_string = f"0 {lignes_decision_as_string}"
+		entities = self.entity_spotting_pipeline(lignes_decision_as_string)
+
+		nom_du_soldat = {"nom": extractions.extraire_feature(entities_list=entities,
+													  lignes=lignes_decision,
+													  feature="nom_du_soldat",
+															 image_path=image_path)}
+		if "condamnation" in [item['entity_group'] for item in entities]:
+			decision = "condamnation"
+			peine = extractions.extraire_feature(entities_list=entities,
+													  lignes=lignes_decision,
+													  feature="peine",
+															 image_path=image_path)
+			type_de_peine = [
+				"travaux publics",
+				"prison",
+				"peine de mort"
+			]
+			duree_de_la_peine = {
+				1/30: "un jour",
+				2/30: "deux jours",
+				3/30: "trois jours",
+				7/30: "sept jours",
+				15/30: "quinze jours",
+				1: "un mois",
+				2: "deux mois",
+				3: "trois mois",
+				4: "quatre mois",
+				5: "cinq mois",
+				6: "six mois",
+				7: "sept mois",
+				8: "huis mois",
+				9: "neuf mois",
+				10: "dix mois",
+				11: "onze mois",
+				12: "un an",
+				24: "deux ans",
+				36: "trois ans",
+				48: "quatre ans",
+				60: "cinq ans",
+				72: "six ans",
+				84: "sept ans"
+			}
+			if peine and peine["extracted"] != "":
+				type_peine = semantic_search.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
+																			 embedder=self.sentence_camembert)
+			else:
+				type_peine = None
+			if type_peine and type_peine != "peine de mort" and peine["extracted"] != "":
+				duree_peine = semantic_search.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
+																		 embedder=self.sentence_camembert)
+				duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
+			else:
+				duree_peine = None
+
+			peine = {
+				"predicted": peine,
+				"extracted":
+					{"duree": duree_peine,
+					 "type": type_peine}
+			}
+
+
+
+
+			unanimite = extractions.extraire_feature(entities_list=entities,
+													  lignes=lignes_decision,
+													  feature="unanimité",
+															 image_path=image_path)
+
+
+			# On traite la majorité, de la même manière
+			majorite = extractions.extraire_feature(entities_list=entities,
+													  lignes=lignes_decision,
+													  feature="majorité",
+															 image_path=image_path)
+			if majorite and majorite['extracted'] != "" and majorite["extracted"] is not None:
+				types_majorite = {
+					"3/2": "trois voix contre deux",
+					"4/1":"quatre voix contre une"
+				}
+				type_de_majorite = semantic_search.retrieve_most_similar_sentence(sentence=majorite["extracted"],
+																			 queries=[item for item in
+																					  types_majorite.values()],
+																			 embedder=self.sentence_camembert)
+				vote = {
+					"predicted": majorite['extracted'],
+					"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
+				}
+
+			else:
+				vote = None
+
+
+			sursis = extractions.extraire_feature(entities_list=entities,
+													  lignes=lignes_decision,
+													  feature="sursis",
+															 image_path=image_path)
+			extracted = {"decision": decision,
+						 "peine": peine,
+						 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
+						 "voix": vote if majorite else None,
+						 "sursis": True if sursis and sursis["extracted"] != None else False}
+
+		elif "acquittement" in [item['entity_group'] for item in entities]:
+			decision = "acquittement"
+			peine = None
+			unanimite = None
+			majorite = None
+			sursis = None
+			extracted = {"decision": decision,
+						 "peine": peine,
+						 "vote": None,
+						 "voix": None,
+						 "sursis": None}
+		else:
+			extracted = {"decision": "UNK",
+						 "peine": "UNK",
+						 "vote": "UNK",
+						 "voix": "UNK",
+						 "sursis": "UNK"}
+
 
 
 		return {"prediction": lignes_decision_as_string,
-				"extracted": extracted,
-				"bbox": zone_decision}, nom_du_soldat
+				"bbox": zone_decision, **extracted}, nom_du_soldat
 
 
 

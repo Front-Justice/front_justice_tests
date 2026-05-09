@@ -208,7 +208,7 @@ class Reconciliator:
 		:return:
 		"""
 		try:
-			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]["extracted"]
+			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]
 		except (TypeError, KeyError, IndexError):
 			self.decision_tribunal = None
 		try:
@@ -436,8 +436,6 @@ class Reconciliator:
 			try:
 				self.prenom_du_soldat = page_1['extractions']['soldat']['identite']['prenom']['extracted']
 			except (TypeError, KeyError, IndexError):
-				print("Error A. Exiting.")
-				exit(0)
 				self.prenom_du_soldat = None
 			return
 		try:
@@ -459,20 +457,16 @@ class Reconciliator:
 			liste_prenoms_page_2 = None
 		if liste_prenoms_page_1 is None and liste_prenoms_page_2:
 			self.prenom_du_soldat = liste_prenoms_page_2
-			print("Error B. Exiting.")
-			exit(0)
 			return
 		elif liste_prenoms_page_2 is None and liste_prenoms_page_1:
 			self.prenom_du_soldat = liste_prenoms_page_1
-			print("Error C. Exiting.")
-			exit(0)
 			return
 
-		if len(liste_prenoms_page_1) != len(liste_prenoms_page_2):
-			print(liste_prenoms_page_2)
-			print(liste_prenoms_page_1)
-			print("Oups")
-			exit(0)
+		# if len(liste_prenoms_page_1) != len(liste_prenoms_page_2):
+		# 	print(liste_prenoms_page_2)
+		# 	print(liste_prenoms_page_1)
+		# 	print("Oups")
+		# 	exit(0)
 
 
 		# On va zipper pour comparer un à un les multiples prénoms
