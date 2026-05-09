@@ -430,18 +430,22 @@ class Reconciliator:
 		dans la liste de noms), 0.1 dans les autres cas
 		:return: None
 		"""
+		page_1 = utils.filter_pages(self.minute_list, "page_1")
+		page_2 = utils.filter_pages(self.minute_list, "page_2")
 		if len(self.minute_list) == 1:
 			try:
-				self.prenom_du_soldat = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
+				self.prenom_du_soldat = page_1['extractions']['soldat']['identite']['prenom']['extracted']
 			except (TypeError, KeyError, IndexError):
+				print("Error A. Exiting.")
+				exit(0)
 				self.prenom_du_soldat = None
 			return
 		try:
-			prenoms_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['prenom']['extracted']
+			prenoms_page_1 = page_1['extractions']['soldat']['identite']['prenom']['extracted']
 		except (KeyError, TypeError):
 			prenoms_page_1 = None
 		try:
-			prenoms_page_2 = self.minute_list[1]['extractions']['soldat']['identite']['prenom']['extracted']
+			prenoms_page_2 = page_2['extractions']['soldat']['identite']['prenom']['extracted']
 		except (TypeError, KeyError, IndexError):
 			prenoms_page_2 = None
 		delimiter = re.compile(r"[.;\s\-]+")
@@ -455,12 +459,13 @@ class Reconciliator:
 			liste_prenoms_page_2 = None
 		if liste_prenoms_page_1 is None and liste_prenoms_page_2:
 			self.prenom_du_soldat = liste_prenoms_page_2
+			print("Error B. Exiting.")
+			exit(0)
 			return
 		elif liste_prenoms_page_2 is None and liste_prenoms_page_1:
 			self.prenom_du_soldat = liste_prenoms_page_1
-			return
-		else:
-			self.prenom_du_soldat = None
+			print("Error C. Exiting.")
+			exit(0)
 			return
 
 		if len(liste_prenoms_page_1) != len(liste_prenoms_page_2):
@@ -497,14 +502,16 @@ class Reconciliator:
 					self.certitude_prenom_du_soldat.append(0.7)
 					print("cas 3")
 				elif prenom_2 in self.list_of_names and prenom_1 in self.list_of_names:
-					self.prenom_du_soldat.append([prenom_1, prenom_2])
+					self.prenom_du_soldat.extend([prenom_1, prenom_2])
 					self.certitude_prenom_du_soldat.append(0.1)
 					print("cas 4")
 				else:
-					self.prenom_du_soldat.append([prenom_1, prenom_2])
+					self.prenom_du_soldat.extend([prenom_1, prenom_2])
 					self.certitude_prenom_du_soldat.append(0.1)
 					print("cas 5")
-		print(self.prenom_du_soldat)
+		if isinstance(self.prenom_du_soldat, list):
+			self.prenom_du_soldat = " ".join(self.prenom_du_soldat)
+		print(f"Prénom du soldat: {self.prenom_du_soldat}.")
 
 
 	def _reconciliate_nom_soldat(self):
