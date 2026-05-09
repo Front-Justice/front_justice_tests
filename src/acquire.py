@@ -871,8 +871,8 @@ def main(images_dir:str,
 		minutes = utils.load_json_to_dict(minutes_dir)
 	else:
 		pages_classees = classification_images(images=images,
-							  page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
-							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
+							  page_classifier_model="src/Page_Classifier/models/PageClassifier_RF_2.joblib",
+							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF_2.joblib",
 											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
