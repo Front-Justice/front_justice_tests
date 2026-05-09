@@ -470,7 +470,10 @@ class Reconciliator:
 
 
 		# On va zipper pour comparer un à un les multiples prénoms
-		liste_comparaison_prenoms = list(zip(liste_prenoms_page_1, liste_prenoms_page_2))
+		try:
+			liste_comparaison_prenoms = list(zip(liste_prenoms_page_1, liste_prenoms_page_2))
+		except TypeError:
+			self.prenom_du_soldat = None
 		prenoms_correct = []
 		print("---")
 		for prenom_1, prenom_2 in liste_comparaison_prenoms:
