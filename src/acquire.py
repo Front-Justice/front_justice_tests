@@ -905,7 +905,7 @@ def main(images_dir:str,
 			try:
 				for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 					minute_annotee = {**minute_annotee, **annotations}
-					minute_reconciliee[minute_n] =
+					minute_reconciliee[minute_n] = reconciliation
 			except Exception as e:
 				print(f"Error: {e}")
 				exit(0)
