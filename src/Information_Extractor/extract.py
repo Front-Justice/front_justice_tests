@@ -1113,7 +1113,8 @@ class Extractor:
 				72: "six ans",
 				84: "sept ans"
 			}
-			if peine and peine["extracted"] != "":
+			if peine and peine["extracted"] != "" and peine["extracted"] is not None:
+				# Essayer de voir si une fonction de proximité formelle ne suffirait pas
 				type_peine = semantic_search.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
 																			 embedder=self.sentence_camembert)
 			else:
