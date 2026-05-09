@@ -911,7 +911,7 @@ def main(images_dir:str,
 				except StopIteration:
 					break
 				except Exception as e:
-					print(e)
+					print(e.__traceback__)
 					exit(0)
 				except GeneratorExit as e_2:
 					print(e_2)
