@@ -913,6 +913,9 @@ def main(images_dir:str,
 				except Exception as e:
 					print(e)
 					exit(0)
+				except GeneratorExit as e_2:
+					print(e_2)
+					exit(0)
 				# for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				# 	minute_annotee = {**minute_annotee, **annotations}
 				# 	minute_reconciliee[minute_n] = reconciliation
