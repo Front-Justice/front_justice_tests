@@ -38,15 +38,12 @@ class PageClassifier():
 			self.model = joblib.load(model)
 			if build_vocab is False:
 				self.vocab = joblib.load(vocab)
-				print(self.vocab)
-				exit(0)
 		except FileNotFoundError:
 			print("Some file not found.")
 			print("Check paths: ")
 			print(model)
 			print(vocab)
-			self.model = model
-			self.vocab = vocab
+			exit(0)
 
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
@@ -142,36 +139,6 @@ class PageClassifier():
 		y_pred = self.model.predict(X_test)
 		print(classification_report(y_pred, y_test))
 
-	def train(self,
-			  show_features=False):
-		if not os.path.isfile(self.corpus_path):
-			print("Creating corpus file...")
-			inputs, labels = self.build_dataset()
-		else:
-			inputs, labels = self.load_corpus()
-		assert inputs != [], "Inputs empty"
-		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
-		self.model = RandomForestClassifier(n_estimators=100, random_state=0)
-		# self.model = svm.SVC()
-		# fit the model to the training set
-		self.model.fit(X_train, y_train)
-		accuracy = self.model.score(X_test, y_test)
-		print(accuracy)
-		y_pred = self.model.predict(X_test)
-		print(classification_report(y_pred, y_test))
-		# https://stackoverflow.com/a/20662980
-		joblib.dump(self.model, self.model_path)
-		joblib.dump(self.vocab, self.vocab_path)
-
-	def test(self):
-		inputs, labels = self.load_corpus()
-		X_train, X_test, y_train, y_test = train_test_split(inputs, labels, test_size=0.2, random_state=42)
-		self.model.fit(X_train, y_train)
-		accuracy = self.model.score(X_test, y_test)
-		print(accuracy)
-		y_pred = self.model.predict(X_test)
-		print(classification_report(y_pred, y_test))
-
 	def predict(self,
 				debug_model=False,
 				image=False):
@@ -191,9 +158,6 @@ class PageClassifier():
 
 		test_image = self.load_image(image_path=image, show_image=False)
 		prediction = self.model.predict([test_image])
-		print(prediction)
-		print(self.vocab)
-		exit(0)
 		return self.vocab[prediction[0]]
 
 
