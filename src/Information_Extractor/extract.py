@@ -56,7 +56,7 @@ class Extractor:
 		self.date_proces = ""
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
-		print(device)
+		utils.log_print(device)
 		self.ner_model.to(device)
 		self.logger = logger
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=False)
@@ -118,7 +118,7 @@ class Extractor:
 		# corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
 		#
 		ligne_signature = ocr_prediction[index + 1]
-		print(ligne_signature.prediction)
+		utils.log_print(ligne_signature.prediction)
 		image = Image.open(image).convert("RGBA")
 		height_rectangle = 150
 		if "+" in ligne_signature.prediction:
@@ -169,7 +169,7 @@ class Extractor:
 			if len(zones) == 0:
 				return None, None
 			elif len(zones) > 1 and len(all_zones) == 1:
-				print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
+				utils.log_print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
 				# Si on active l'option du choix de la zone la plus probable, il n'y a qu'à ordonner la liste
 				if select_highest_prob_zone:
 					zones.sort(key=lambda x: x.probs, reverse=True)
@@ -488,10 +488,10 @@ class Extractor:
 		elif len(soldat) > 1:
 			plusieurs_soldats = True
 			bbox_nom_soldat = None
-			print("Plusieurs soldats.")
+			utils.log_print("Plusieurs soldats.")
 		else:
 			bbox_nom_soldat = None
-			print("Aucun soldat identifié par YOLO.")
+			utils.log_print("Aucun soldat identifié par YOLO.")
 
 		description_du_soldat["prediction"] = lignes_description_soldat_raw
 
@@ -1626,7 +1626,7 @@ class Extractor:
 																			  intersect_ratio=0.7)
 		if (corresponding_lines, numero_ordre_zone) == (None, None):
 			# TODO: reprendre cela, ça semble bizarre.
-			print("Error")
+			utils.log_print("Error with order number", print_message=True)
 			exit(0)
 			return {"extracted": None,
 					"baseline": None,
@@ -1651,10 +1651,10 @@ class Extractor:
 		if numero_nomenclature == "967":
 			pass
 		elif numero_nomenclature == "974":
-			print("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
+			utils.log_print("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
 			exit(0)
 		else:
-			print("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
+			utils.log_print("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
 				  "ou de classification de la page.")
 
 		target_line = []
@@ -1667,7 +1667,7 @@ class Extractor:
 				target_line.append(line)
 
 		if len(target_line) != 1:
-			print(f"Erreur. Zéro ou  Plusieurs lignes trouvées pour le numéro d'ordre:\n"
+			utils.log_print(f"Erreur. Zéro ou  Plusieurs lignes trouvées pour le numéro d'ordre:\n"
 				  f"{target_line}")
 			return None
 
@@ -1753,7 +1753,7 @@ class Extractor:
 																				 ocr_prediction=ocr_prediction,
 																				 intersect_ratio=0.1,
 																				 select_highest_prob_zone=True)
-		print(lignes_description_du_soldat)
+		utils.log_print(lignes_description_du_soldat)
 		try:
 			lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		except AttributeError:
@@ -1799,7 +1799,7 @@ class Extractor:
 		elif len(soldat) > 1:
 			# plusieurs_soldats = True
 			# bbox_nom_soldat = None
-			print("Plusieurs soldats.")
+			utils.log_print("Plusieurs soldats.")
 			description_du_soldat["identite"] = {
 				"nom": {"extracted": None,
 						"bbox": None,
@@ -1807,7 +1807,7 @@ class Extractor:
 			}
 		else:
 			# bbox_nom_soldat = None
-			print("Aucun soldat identifié par YOLO.")
+			utils.log_print("Aucun soldat identifié par YOLO.")
 
 
 		description_du_soldat["identite"] = \
@@ -2136,7 +2136,7 @@ class Extractor:
 							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
 						]
 		table_des_magistrats = [item for item in table_dict.values()]
-		print(table_des_magistrats)
+		utils.log_print(table_des_magistrats)
 		# On récupère les informations, en sachant que le premier est toujours le président
 		# TODO: on peut vérifier la présence du mot `président` dans la ligne transcrite
 		president = table_des_magistrats[0]
@@ -2150,18 +2150,18 @@ class Extractor:
 				pipeline=self.date_recognition_pipeline)
 			jury_extrait['baseline'] = [line.baseline for line in jure]
 			jury_extrait['prediction'] = " ".join([line.prediction for line in jure])
-			print(jury_extrait['persName'])
+			utils.log_print(jury_extrait['persName'])
 			if (jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
 																				" ".join(line.prediction for line in
 																						 jure)) > .7) \
 													  or utils.similarite_ratcliff("Juges", jury_extrait['persName']) > .7):
-				print(" ".join(line.prediction for line in jure))
-				print("ÉCARTÉ")
+				utils.log_print(" ".join(line.prediction for line in jure))
+				utils.log_print("ÉCARTÉ")
 				continue
 			jury_dict = {"extracted": jury_extrait}
 			processed_jures.append(jury_dict)
 		if len(processed_jures) < 4:
-			print("Warning: il manque un membre du jury")
+			utils.log_print("Warning: il manque un membre du jury")
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
 																   self.date_recognition_pipeline)
@@ -2193,7 +2193,7 @@ class Extractor:
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
 			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, image_path=image_path)
-		print("Magistrats: OK")
+		utils.log_print("Magistrats: OK")
 		return {"president": {"extracted": processed_president,
 							  "baseline": [line.baseline for line in president],
 							  "predictions": [line.prediction for line in president]},

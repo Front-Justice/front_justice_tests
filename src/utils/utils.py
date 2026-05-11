@@ -2416,3 +2416,7 @@ def filter_pages(pages: list, page_class: str):
 		print(f"Stop iteration. Pages: {pages}")
 		exit()
 	return filtered
+
+def log_print(message, print_message=False):
+	if print_message:
+		print(message)
