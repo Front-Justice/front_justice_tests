@@ -197,8 +197,8 @@ class PageClassifier():
 if __name__ == '__main__':
 	RF_classifier = PageClassifier(build_vocab=False,
 								corpus_path="src/Page_Classifier/data/corpus.data",
-								model="src/Page_Classifier/models/PageClassifier_RF.joblib",
-								vocab="src/Page_Classifier/models/vocab_RF.joblib")
+								model="src/Page_Classifier/models/PageClassifier_RF_2.joblib",
+								vocab="src/Page_Classifier/models/vocab_RF_2.joblib")
 	if len(sys.argv) > 1:
 		images = glob.glob(f"{sys.argv[1]}*.jpg")
 		assert images != [], "No images found."
