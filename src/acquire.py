@@ -823,6 +823,7 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 		for (dossier, ident, image), current_page_type in pool.starmap(predict, data):
 			pages_classees.append(((dossier, ident, image), current_page_type))
 	pages_classees.sort(key=lambda x:int(x[0][1]))
+	print("Pages classées.")
 	return pages_classees
 
 def predict(dossier, ident, image, page_classifier):
