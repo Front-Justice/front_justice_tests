@@ -188,6 +188,9 @@ class PageClassifier():
 
 		test_image = self.load_image(image_path=image, show_image=False)
 		prediction = self.model.predict([test_image])
+		print(prediction)
+		print(self.vocab)
+		exit(0)
 		return self.vocab[prediction[0]]
 
 
