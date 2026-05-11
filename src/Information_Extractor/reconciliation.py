@@ -47,7 +47,12 @@ class Reconciliator:
 		self.condamnation_pecuniaire = None
 		self.age = None
 		self.appendices_number = None
+		self.annotations_page_1 = None
+		self.annotations_page_2 = None
+		self.annotations_page_3 = None
+		self.annotations_page_4 = None
 
+	def _filter_pages(self):
 		self.annotations_page_1 = utils.filter_pages(self.minute_list, "page_1")
 		self.annotations_page_2 = utils.filter_pages(self.minute_list, "page_2")
 		self.annotations_page_3 = utils.filter_pages(self.minute_list, "page_3")
@@ -57,6 +62,7 @@ class Reconciliator:
 		if self._check_minute_consistency() is False:
 			self.reconciliated_minute = {}
 			return
+		self._filter_pages()
 		self._count_number_appendices()
 		self._add_images_path()
 		self._reconciliate_nom_soldat()
