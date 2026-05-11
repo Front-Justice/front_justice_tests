@@ -120,62 +120,6 @@ class Pipeline:
 	def load_image(self, image):
 		self.current_image_path = image
 
-	def classify_image(self):
-		self.current_page_type = self.page_classifier.predict(image=self.current_image_path)
-
-	def classification_images(self, images):
-		"""
-		Cette fonction classe toutes les images à l'aide d'un Random Forest
-		:param images: la liste d'images
-		:return:
-		"""
-		# On commence par classer toutes les images du dossier
-		utils.log_print("Classification des images")
-		for image in tqdm.tqdm(images):
-			dossier, ident = utils.get_name_from_path(image)
-			# On vérifie s'il n'y a pas de problème de disparition d'image
-			self.check_image_consistency(ident)
-			self.images_name_list.append(ident)
-			self.load_image(image)
-			self.classify_image()
-			self.pages_classees.append(((dossier, ident, image), self.current_page_type))
-			if image == images[-1]:
-				utils.log_print("Dossier terminé")
-
-	def regroupement_minutes(self, out_dir):
-		"""
-		Cette fonction regroupe les images pour reconstituer les minutes.
-		:return: None, mais produit le dictionnaire self.minutes de la forme:
-		 ```JSON
-		 {0: [
-		 {'répertoire': '11_J_187(1)',
-		 'id': 33,
-		 'image_path': 'data/minute_test/11_J_187(1)_0033.jpg',
-		 'classe': 'page_1'},
-		 ...
-		 {'répertoire': '11_J_187(1)',
-		 'id': 36,
-		 'image_path': 'data/minute_test/11_J_187(1)_0036.jpg',
-		 'classe': 'page_4'}]
-		 }```
-		"""
-		utils.log_print("Reconstitution des minutes")
-		current_minute = []
-		current_minute_number = 0
-		# Puis on rassemble les minutes
-		for idx, ((dossier, ident, image), classe) in enumerate(self.pages_classees):
-			current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
-			current_minute.append(current_image)
-			if ident == self.pages_classees[-1][0][1]:
-				utils.log_print("Dossier terminé")
-				self.minutes[current_minute_number] = current_minute
-				break
-			if classe in ["page_4", "page_autre"] and self.pages_classees[idx + 1][1] == "page_1":
-				utils.log_print("Minute terminée")
-				self.minutes[current_minute_number] = current_minute
-				current_minute = []
-				current_minute_number += 1
-		utils.save_as_dict(self.minutes, out_dir)
 
 	def check_image_consistency(self, current_image):
 		"""
@@ -720,8 +664,8 @@ class Pipeline:
 						continue
 				# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
-					utils.log_print("---")
-					utils.log_print(f"Treating {page}")
+					utils.log_print("---", print_message=True)
+					utils.log_print(f"Treating {page}", print_message=True)
 					if page["classe"] == "page_4":
 						force_resegment = True
 						extract_polygons = True
@@ -823,7 +767,7 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 		for (dossier, ident, image), current_page_type in pool.starmap(predict, data):
 			pages_classees.append(((dossier, ident, image), current_page_type))
 	pages_classees.sort(key=lambda x:int(x[0][1]))
-	utils.log_print("Pages classées.")
+	utils.log_print("Pages classées.", print_message=True)
 	return pages_classees
 
 def predict(dossier, ident, image, page_classifier):
