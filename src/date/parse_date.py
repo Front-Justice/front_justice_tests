@@ -194,7 +194,6 @@ def process_date(date, debug=False):
 	"""
 	ast = build_grammar(debug=debug, text=date)
 	parsed = parse_ast(ast)
-	print(parsed)
 	result = second_pass(parsed)
 	return result
 

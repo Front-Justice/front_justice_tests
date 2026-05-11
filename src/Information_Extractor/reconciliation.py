@@ -1,6 +1,8 @@
 import copy
 import json
 import re
+import shutil
+
 import src.utils.utils as utils
 import pandas as pd
 
@@ -44,11 +46,13 @@ class Reconciliator:
 		self.questions = None
 		self.condamnation_pecuniaire = None
 		self.age = None
+		self.appendices_number = None
 
 	def reconciliate_minute(self):
 		if self._check_minute_consistency() is False:
 			self.reconciliated_minute = {}
 			return
+		self._count_number_appendices()
 		self._add_images_path()
 		self._reconciliate_nom_soldat()
 		self._reconciliate_prenom_soldat()
@@ -64,6 +68,10 @@ class Reconciliator:
 		# self._remove_baseline_and_bbox()
 		print("---")
 
+	def _count_number_appendices(self):
+		self.appendices_number = len([item for item in self.minute_list if item["classe"] == "page_autre"])
+
+
 	def _check_minute_consistency(self):
 		classes = [int(item["classe"].split("_")[-1]) for item in self.minute_list if item["classe"] != "page_autre"]
 		if classes == [1, 2, 3, 4]:
@@ -71,6 +79,7 @@ class Reconciliator:
 			return True
 		else:
 			print("Quelque chose ne va pas avec la minute")
+			[shutil.copy(image["image_path"], f"debug/") for image in self.minute_list]
 			return False
 
 	def _reconciliate_questions(self):
@@ -615,7 +624,8 @@ class Reconciliator:
 			"metadata":
 				{
 				"images": self.images_path,
-				"greffier": greffier
+				"greffier": greffier,
+				"nombre_pages_annexes": self.appendices_number
 			},
 			"informations_proces": {"numero_ordre": self.numero_ordre,
 									"numero_jugement": self.numero_jugement,

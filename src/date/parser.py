@@ -325,10 +325,11 @@ class Parser(lexer.Lexer):
         p[0] = {**p[1], "annee": p[2]}
 
     def p_error(self, p):
-        if p:
-            print(f"Erreur de syntaxe à '{p.value}'")
-        else:
-            print("Erreur de syntaxe : fin de fichier inattendue")
+        pass
+        # if p:
+        #     print(f"Erreur de syntaxe à '{p.value}'")
+        # else:
+        #     print("Erreur de syntaxe : fin de fichier inattendue")
 
     def __init__(self, lexer, debug):
         self.lexer = lexer
