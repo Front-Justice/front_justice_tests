@@ -38,12 +38,13 @@ class PageClassifier():
 			self.model = joblib.load(model)
 			if build_vocab is False:
 				self.vocab = joblib.load(vocab)
+				print(self.vocab)
+				exit(0)
 		except FileNotFoundError:
 			print("Some file not found.")
 			print("Check paths: ")
 			print(model)
 			print(vocab)
-			exit(0)
 			self.model = model
 			self.vocab = vocab
 
