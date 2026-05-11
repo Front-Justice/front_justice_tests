@@ -53,6 +53,11 @@ class Reconciliator:
 		self.annotations_page_4 = None
 
 	def _filter_pages(self):
+		"""
+		Cette fonction va créer les attributs permettant d'accéder aux pages spécifiques, indépendamment de
+		leur position dans laminute (il peut y avoir des pages annexes intercalées).
+		:return:
+		"""
 		self.annotations_page_1 = utils.filter_pages(self.minute_list, "page_1")
 		self.annotations_page_2 = utils.filter_pages(self.minute_list, "page_2")
 		self.annotations_page_3 = utils.filter_pages(self.minute_list, "page_3")
@@ -456,16 +461,16 @@ class Reconciliator:
 		"""
 		if len(self.minute_list) == 1:
 			try:
-				self.prenom_du_soldat = page_1['extractions']['soldat']['identite']['prenom']['extracted']
+				self.prenom_du_soldat = self.annotations_page_1['extractions']['soldat']['identite']['prenom']['extracted']
 			except (TypeError, KeyError, IndexError):
 				self.prenom_du_soldat = None
 			return
 		try:
-			prenoms_page_1 = page_1['extractions']['soldat']['identite']['prenom']['extracted']
+			prenoms_page_1 = self.annotations_page_1['extractions']['soldat']['identite']['prenom']['extracted']
 		except (KeyError, TypeError):
 			prenoms_page_1 = None
 		try:
-			prenoms_page_2 = page_2['extractions']['soldat']['identite']['prenom']['extracted']
+			prenoms_page_2 = self.annotations_page_2['extractions']['soldat']['identite']['prenom']['extracted']
 		except (TypeError, KeyError, IndexError):
 			prenoms_page_2 = None
 		delimiter = re.compile(r"[.;\s\-]+")
