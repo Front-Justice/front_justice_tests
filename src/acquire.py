@@ -94,9 +94,9 @@ class Pipeline:
 		self.minutes_annotation_file = ""
 		# L'outil d'extraction de l'information
 		self.resize_factor = 1
-		print(f"Use party: {use_party} and debug: {debug}")
+		utils.log_print(f"Use party: {use_party} and debug: {debug}")
 		if debug == True or use_party == False:
-			print("Setting party engine to None")
+			utils.log_print("Setting party engine to None")
 			party_engine = None
 		else:
 			party_engine = PARTY.PartyPredict()
@@ -130,7 +130,7 @@ class Pipeline:
 		:return:
 		"""
 		# On commence par classer toutes les images du dossier
-		print("Classification des images")
+		utils.log_print("Classification des images")
 		for image in tqdm.tqdm(images):
 			dossier, ident = utils.get_name_from_path(image)
 			# On vérifie s'il n'y a pas de problème de disparition d'image
@@ -140,7 +140,7 @@ class Pipeline:
 			self.classify_image()
 			self.pages_classees.append(((dossier, ident, image), self.current_page_type))
 			if image == images[-1]:
-				print("Dossier terminé")
+				utils.log_print("Dossier terminé")
 
 	def regroupement_minutes(self, out_dir):
 		"""
@@ -159,7 +159,7 @@ class Pipeline:
 		 'classe': 'page_4'}]
 		 }```
 		"""
-		print("Reconstitution des minutes")
+		utils.log_print("Reconstitution des minutes")
 		current_minute = []
 		current_minute_number = 0
 		# Puis on rassemble les minutes
@@ -167,11 +167,11 @@ class Pipeline:
 			current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 			current_minute.append(current_image)
 			if ident == self.pages_classees[-1][0][1]:
-				print("Dossier terminé")
+				utils.log_print("Dossier terminé")
 				self.minutes[current_minute_number] = current_minute
 				break
 			if classe in ["page_4", "page_autre"] and self.pages_classees[idx + 1][1] == "page_1":
-				print("Minute terminée")
+				utils.log_print("Minute terminée")
 				self.minutes[current_minute_number] = current_minute
 				current_minute = []
 				current_minute_number += 1
@@ -185,8 +185,8 @@ class Pipeline:
 		:return:
 		"""
 		if len(self.images_name_list) != 0 and current_image - self.images_name_list[-1] != 1:
-			print(f"Il manque probablement une image.")
-			print(f"Image courante: {current_image}. \n"
+			utils.log_print(f"Il manque probablement une image.")
+			utils.log_print(f"Image courante: {current_image}. \n"
 				  f"Image précédente: {self.images_name_list[-1]}.\n"
 				  f"On passe à la minute suivante.")
 
@@ -376,7 +376,7 @@ class Pipeline:
 		loaded_image = loaded_image.resize(new_size)
 
 		if show_image:
-			print("Show image")
+			utils.log_print("Show image")
 			utils.draw_lines_on_image(image_path=page["image_path"],
 									  baselines=[line.baseline for line in self.current_page_transcription])
 
@@ -434,8 +434,8 @@ class Pipeline:
 		"""
 		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
-			print("Cas 1")
-			print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+			utils.log_print("Cas 1")
+			utils.log_print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = self.transcription_kraken(
 				image=page["image_path"],
 				transcription_only=self.resegment is False
@@ -452,11 +452,11 @@ class Pipeline:
 				line.prediction_with_deletion = sentence
 			t2 = time.time()
 			elapsed = t2 - t1
-			print(f"Fait en {elapsed} secondes")
+			utils.log_print(f"Fait en {elapsed} secondes")
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
-			print("Found existing kraken transcription: " + target_transcription)
-			print("Cas 2")
+			utils.log_print("Found existing kraken transcription: " + target_transcription)
+			utils.log_print("Cas 2")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
 			t1 = time.time()
@@ -467,7 +467,7 @@ class Pipeline:
 				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
 			t2 = time.time()
 			elapsed = t2 - t1
-			print(f"Fait en {elapsed} secondes")
+			utils.log_print(f"Fait en {elapsed} secondes")
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
@@ -482,7 +482,7 @@ class Pipeline:
 		"""
 
 		# On segmente la page 1: boxes générales
-		print(f"Checking additions")
+		utils.log_print(f"Checking additions")
 
 
 		zones_ajouts, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],
@@ -505,8 +505,8 @@ class Pipeline:
 				)
 				utils.serialize_dict(lignes_glosees.to_json(), target_transcription)
 			else:
-				print("Found existing kraken transcription: " + target_transcription)
-				print("Cas 2")
+				utils.log_print("Found existing kraken transcription: " + target_transcription)
+				utils.log_print("Cas 2")
 				lignes_glosees = OCRRecord()
 				lignes_glosees.from_json(path=target_transcription)
 
@@ -574,7 +574,7 @@ class Pipeline:
 			current_dict['soldat'] = None
 			return zone_dict, current_dict
 		else:
-			print("On extrait la description du soldat.")
+			utils.log_print("On extrait la description du soldat.")
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
@@ -589,7 +589,7 @@ class Pipeline:
 			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
 																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
 		except (TypeError, KeyError, ValueError):
-			print(current_dict)
+			utils.log_print(current_dict)
 			current_dict["soldat"]["identite"]["age"] = None
 
 
@@ -635,7 +635,7 @@ class Pipeline:
 															  show_image=False)
 			test_lignes = utils.test_number_of_zones(magistrats, label="ligne", number=6)
 			if test_lignes is False:
-				print("Warning: une des lignes du jury n'a pas été identifiée.")
+				utils.log_print("Warning: une des lignes du jury n'a pas été identifiée.")
 			current_dict["magistrats"] = self.extractor.extraire_magistrats(
 				ocr_prediction=self.current_page_transcription,
 				zones_magistrats=magistrats,
@@ -700,7 +700,7 @@ class Pipeline:
 		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
 		"""
-		print("Début du workflow")
+		utils.log_print("Début du workflow")
 		# Il faudra supprimer ça pour la mise en production
 		minute_number = list(minute.keys())[0]
 		self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}.json"
@@ -720,8 +720,8 @@ class Pipeline:
 						continue
 				# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
-					print("---")
-					print(f"Treating {page}")
+					utils.log_print("---")
+					utils.log_print(f"Treating {page}")
 					if page["classe"] == "page_4":
 						force_resegment = True
 						extract_polygons = True
@@ -773,7 +773,7 @@ def regroupement_minutes(pages_classees):
 	 'classe': 'page_4'}]
 	 }```
 	"""
-	print("Reconstitution des minutes")
+	utils.log_print("Reconstitution des minutes")
 	current_minute = []
 	current_minute_number = 0
 	minutes = {}
@@ -782,7 +782,7 @@ def regroupement_minutes(pages_classees):
 		current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 		current_minute.append(current_image)
 		if ident == pages_classees[-1][0][1]:
-			print("Dossier terminé")
+			utils.log_print("Dossier terminé")
 			minutes[current_minute_number] = current_minute
 			break
 		if classe in ["page_4", "page_autre"] and pages_classees[idx + 1][1] == "page_1":
@@ -801,7 +801,7 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 	:return:
 	"""
 	# On commence par classer toutes les images du dossier
-	print("Classification des images")
+	utils.log_print("Classification des images")
 	images_name_list = []
 	pages_classees =  []
 	page_classifier = PC.PageClassifier(build_vocab=False,
@@ -817,13 +817,13 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 		# current_page_type = page_classifier.predict(image=image)
 		# pages_classees.append(((dossier, ident, image), current_page_type))
 		# if image == images[-1]:
-		# 	print("Dossier terminé")
+		# 	utils.log_print("Dossier terminé")
 	pages_classees = []
 	with mp.Pool(processes=workers) as pool:
 		for (dossier, ident, image), current_page_type in pool.starmap(predict, data):
 			pages_classees.append(((dossier, ident, image), current_page_type))
 	pages_classees.sort(key=lambda x:int(x[0][1]))
-	print("Pages classées.")
+	utils.log_print("Pages classées.")
 	return pages_classees
 
 def predict(dossier, ident, image, page_classifier):
@@ -838,8 +838,8 @@ def check_image_consistency(current_image, images_name_list):
 	:return:
 	"""
 	if len(images_name_list) != 0 and current_image - images_name_list[-1] != 1:
-		print(f"Il manque probablement une image.")
-		print(f"Image courante: {current_image}. \n"
+		utils.log_print(f"Il manque probablement une image.")
+		utils.log_print(f"Image courante: {current_image}. \n"
 			  f"Image précédente: {images_name_list[-1]}.\n"
 			  f"On passe à la minute suivante.")
 
@@ -865,7 +865,7 @@ def main(images_dir:str,
 	except:
 		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	images_number = len(images)
-	print(images_dir)
+	utils.log_print(images_dir)
 	images_basedir = images_dir.replace("/", "_")
 	minutes_dir = f"results/{images_basedir}_minutes.json"
 	if os.path.isfile(minutes_dir) and not target:
@@ -878,7 +878,7 @@ def main(images_dir:str,
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
 	minutes_number = len(minutes)
-	print("Starting.")
+	utils.log_print("Starting.")
 	minute_annotee = {}
 	minute_reconciliee = {}
 	# minute_annotee = utils.load_json_to_dict("results/results.json")
@@ -911,7 +911,7 @@ def main(images_dir:str,
 			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
-	print("serializing dict.")
+	utils.log_print("serializing dict.")
 	utils.serialize_dict(minute_annotee, f"results/results.json")
 	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated.json")
 	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
@@ -931,7 +931,7 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe
 		pass
 	resegment = False
 	debug = False
-	print("Initiating.")
+	utils.log_print("Initiating.")
 	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
 						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
 						yolo_models=yolo_models,
@@ -982,6 +982,6 @@ if __name__ == '__main__':
 	elapsed_time = end_time - start_time
 	ratio_images = nombre_images / elapsed_time
 	ratio_minutes = elapsed_time / nombre_minutes
-	print(f"Fait en: {elapsed_time} secondes: {ratio_images} image par seconde et {ratio_minutes} secondes pour une minute.")
+	utils.log_print(f"Fait en: {elapsed_time} secondes: {ratio_images} image par seconde et {ratio_minutes} secondes pour une minute.")
 
 

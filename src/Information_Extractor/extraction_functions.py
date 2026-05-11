@@ -174,7 +174,7 @@ def extraire_matricule(lignes_description_physique,
 																				numero_matricule_2, return_index=True)
 		if index_matricule == 0:
 			return None
-	print("Ligne trouvée.")
+	utils.log_print("Ligne trouvée.")
 	# https://maxhalford.github.io/blog/fuzzy-regex-matching-in-python/
 	regexp_matricule = r"[Nn]um[eé]ro matricule (\d+\.?\s{,3}\d+)|[Nn]?\^?o?\s?m\^?l?e? (\d+\.?\s{,3}\d+)|[nN]?\^?o?\s?m\^?l?e? [ao]u corps (\d+\.?\s{,3}\d+)"
 	fuzzy_pattern = f'({regexp_matricule}){{e<=4}}'
@@ -347,7 +347,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 	if greffier is True:
 		debut_de_chaine = prediction.split(form_greffier)[0]
 	else:
-		print("Ligne mal reconnue")
+		utils.log_print("Ligne mal reconnue")
 		return {"greffier": None}
 
 	# TODO: gérer le problème avec maréchal des logis
@@ -396,7 +396,7 @@ def extraire_date_naissance(entity_dict, lignes, image_path):
 		try:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
-			print(f"Error with date {date_naissance}")
+			utils.log_print(f"Error with date {date_naissance}")
 			date_naissance["extracted"] = None
 			date_normalisee = date_naissance["extracted"]
 		date_naissance["extracted"] = date_normalisee
@@ -622,14 +622,14 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 	# result = pipeline(prediction.lower())
 	result = pipeline(prediction)
 	if debug:
-		print("---")
-		print(prediction)
-		print(result)
+		utils.log_print("---")
+		utils.log_print(prediction)
+		utils.log_print(result)
 	try:
 		persName_NER = prediction[result[0]['start']: result[0]['end']].strip() if result[0][
 																					   "entity_group"] == "PER" else None
 	except IndexError:
-		print(f"La phrase suivante: {prediction} n'a pas mené à reconnaissance d'entité. "
+		utils.log_print(f"La phrase suivante: {prediction} n'a pas mené à reconnaissance d'entité. "
 			  f"Une erreur en amont (zonage, OCR) est possible.")
 		return {"persName": "UNK",
 				"role": "UNK",
@@ -741,7 +741,7 @@ def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeli
 	if commissaire is True:
 		debut_de_chaine = prediction.split(form_commissaire)[0]
 	else:
-		print("Ligne mal reconnue")
+		utils.log_print("Ligne mal reconnue")
 		return {"commissaire": None}
 
 	substitut, form_substitut = utils.check_word_in_sentence(debut_de_chaine,
@@ -786,7 +786,7 @@ def extraire_general(lignes_zone_magistrat: OCRRecord,
 	if grade is True:
 		grade_extrait = f"{form_grade} {prediction.split(form_grade)[1].strip()}"
 	else:
-		print("Ligne mal reconnue")
+		utils.log_print("Ligne mal reconnue")
 		return {"grade": None}
 	baseline = utils.get_baseline_from_string(line=ligne_grade,
 											  target_string=grade_extrait,
