@@ -902,23 +902,9 @@ def main(images_dir:str,
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
-			iterator = pool.starmap(single_minute_workflow, data)
-			while True:
-				try:
-					minute_n, annotations, reconciliation = next(iterator)
-					minute_annotee = {**minute_annotee, **annotations}
-					minute_reconciliee[minute_n] = reconciliation
-				except StopIteration:
-					break
-				except Exception as e:
-					print(e.__traceback__)
-					exit(0)
-				except GeneratorExit as e_2:
-					print(e_2)
-					exit(0)
-				# for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
-				# 	minute_annotee = {**minute_annotee, **annotations}
-				# 	minute_reconciliee[minute_n] = reconciliation
+			for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
+				minute_annotee = {**minute_annotee, **annotations}
+				minute_reconciliee[minute_n] = reconciliation
 	else:
 		for idx, minute in minutes.items():
 			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
