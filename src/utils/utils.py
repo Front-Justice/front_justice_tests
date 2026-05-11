@@ -2410,4 +2410,9 @@ def filter_pages(pages: list, page_class: str):
 	:param page_class: la classe visée
 	:return:
 	"""
-	return next(item for item in pages if item["classe"] == page_class)
+	try:
+		filtered = next(item for item in pages if item["classe"] == page_class)
+	except StopIteration:
+		print(f"Stop iteration. Pages: {pages}")
+		exit()
+	return filtered
