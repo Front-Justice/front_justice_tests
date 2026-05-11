@@ -721,8 +721,8 @@ def find_best_transcription(lines: OCRRecord,
 	'''
 	all_records = []
 	lexicality_indices = []
-	print(f"Before shift: {lines.join_transcription()}")
-	print(f"La glose fait {len(lines)} lignes.")
+	log_print(f"Before shift: {lines.join_transcription()}")
+	log_print(f"La glose fait {len(lines)} lignes.")
 	orig_transcription = lines.join_transcription()
 	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if
 				 not word.isupper()])
@@ -758,18 +758,18 @@ def find_best_transcription(lines: OCRRecord,
 		kraken_ocr = KRAKEN.KRAKEN(segmentation_model=None,
 								   ocr_model=ocr_model)
 		transcription = kraken_ocr.predict_with_kraken(im=image, segments=mysegmentation)
-		print("---")
-		print(f"Current shift: {shift}")
-		print(f"Current transcription: {transcription.join_transcription()}")
+		log_print("---")
+		log_print(f"Current shift: {shift}")
+		log_print(f"Current transcription: {transcription.join_transcription()}")
 		all_records.append(transcription)
 		transcription = transcription.join_transcription()
 		lexicality = compute_lexicality(transcription, words)
-		print(f"Transcription: {transcription}")
-		print(f"Lexicalité: {lexicality}")
+		log_print(f"Transcription: {transcription}")
+		log_print(f"Lexicalité: {lexicality}")
 		lexicality_indices.append(lexicality)
 
 	best_transcription = all_records[lexicality_indices.index(min(lexicality_indices))]
-	print(f"Best transcription: {best_transcription.join_transcription()}")
+	log_print(f"Best transcription: {best_transcription.join_transcription()}")
 
 	return best_transcription
 
@@ -865,9 +865,9 @@ def shift_lines(lines_as_record: OCRRecord, pixels_shift: int):
 			if y2 < 0:
 				y2 = 0
 			new_baseline.append([round(x2), round(y2)])
-		# print("---")
-		# print(f"Current point: {x1, y1}")
-		# print(f"Shifted point: {x2, y2}")
+		# log_print("---")
+		# log_print(f"Current point: {x1, y1}")
+		# log_print(f"Shifted point: {x2, y2}")
 		new_lines.append(new_baseline)
 
 	return new_lines
@@ -1095,7 +1095,7 @@ def match_lines_in_zones(ocr_prediction: OCRRecord,
 
 
 def draw_rectangle(image, rectangle, return_image=False):
-	print("Attempting to show image")
+	log_print("Attempting to show image")
 	draw = PIL.ImageDraw.Draw(image)
 	draw.rectangle(rectangle, outline="red", width=10)
 	if return_image is False:
@@ -1141,7 +1141,7 @@ def remove_all_punctuation(string: str, debug=False) -> str:
 	string = re.sub(punct_regexp, " ", string)
 	string = string.strip()
 	if debug:
-		print(f"|{orig_string}| -> |{string}|")
+		log_print(f"|{orig_string}| -> |{string}|")
 	return string
 
 
@@ -1161,7 +1161,7 @@ def strip_punctuation(string: str | None, debug=False) -> str | None:
 	string = re.sub(punct_regexp, "", string)
 	string = string.strip()
 	if debug:
-		print(f"|{orig_string}| -> |{string}|")
+		log_print(f"|{orig_string}| -> |{string}|")
 	return string
 
 
@@ -1830,9 +1830,9 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		min_dist_index = distances.index(min(distances))
 	except ValueError:
 		return None, None
-	print(word_list[min_dist_index])
-	print(min(distances))
-	print(target_word)
+	log_print(word_list[min_dist_index])
+	log_print(min(distances))
+	log_print(target_word)
 	return word_list[min_dist_index], min(distances)
 
 
@@ -1899,15 +1899,15 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 			item = nfc_normalize(item)
 			dist = similarite_ratcliff(word_lower, item)
 			if debug is True:
-				print(word_lower)
-				print(dist)
+				log_print(word_lower)
+				log_print(dist)
 			if dist > sensibility:
 				distances.append(dist)
 				matching_word.append(word)
 	if len(distances) == 0:
 		return False, False
 	elif len(distances) > 1:
-		print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
+		log_print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
 			  f"On prend le dernier mot identifié.")
 		# Dans ce cas on considère le dernier mot identifié, étant imprimé en fin de ligne.
 		return True, matching_word[1]
@@ -1920,11 +1920,11 @@ def recursive_search(corresponding_lines: OCRRecord, string_to_match: str, n_gra
 	lines = [line.prediction for line in corresponding_lines]
 	n_gram_lines = [((n, n + n_gram), nfc_normalize(" ".join(lines[n:n + n_gram]))) for n in range(len(lines))]
 	inclusion_test = [string_to_match in line_group[1] for line_group in n_gram_lines]
-	print(inclusion_test)
+	log_print(inclusion_test)
 	if any(inclusion_test):
 		current_lines = next(idx for idx, item in enumerate(inclusion_test) if item is True)
-		print(current_lines)
-		print(n_gram_lines[current_lines][1])
+		log_print(current_lines)
+		log_print(n_gram_lines[current_lines][1])
 		lines_range = n_gram_lines[current_lines][0]
 		return corresponding_lines[slice(*lines_range)]
 	else:
@@ -2099,7 +2099,7 @@ def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_r
 		try:
 			n_points = [(item, (a * item) + b) for item in range(baseline[0], baseline[-2], steps)]
 		except ValueError as e:
-			print(f"La ligne est verticale.")
+			log_print(f"La ligne est verticale.")
 			steps = x_distance // number_points
 			n_points = [(baseline[0], baseline[1] + (steps*item)) for item in range(20)]
 	number_in = 0
@@ -2155,7 +2155,7 @@ def list_depth(lst: list) -> int:
 
 
 def extraire_frais(chaine_caractere):
-	print(chaine_caractere)
+	log_print(chaine_caractere)
 	regexp = re.compile("\^f\s?|[.,]\s?")
 	split = re.split(regexp, chaine_caractere)
 	if isinstance(split, str):
@@ -2186,7 +2186,7 @@ def correct_numbers_in_string(input_string):
 			closest_match = all_french_numbers[all_distances.index(min(all_distances))]
 			corrected_string.append(closest_match)
 
-	print(corrected_string)
+	log_print(corrected_string)
 	return " ".join(corrected_string)
 
 
@@ -2209,8 +2209,8 @@ def sum_to_float(input: string) -> float:
 				"certainty": "low",
 				"somme": input}
 	centimes = correct_numbers_in_string(centimes)
-	print(entiers)
-	print(centimes)
+	log_print(entiers)
+	log_print(centimes)
 	try:
 		entiers = text_to_num.text2num(entiers, "fr")
 	except ValueError:
@@ -2319,7 +2319,7 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 			y_2 = round(a * x_2 + b)
 			target_baseline = [[x_1, y_1], [x_2, y_2]]
 			baselines.append(target_baseline)
-			print(target_baseline)
+			log_print(target_baseline)
 			if show_image:
 				assert loaded_image is not None, "Merci d'ajouter l'image si vous voulez la montrer."
 				cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
@@ -2328,8 +2328,8 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 					 "image_path": image_path}
 		return baselines
 	else:
-		print(type(line))
-		print(target_string)
+		log_print(type(line))
+		log_print(target_string)
 		cuts = line.cuts
 		baseline = line.baseline
 		prediction = line.prediction
@@ -2340,7 +2340,7 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 		target_string = nfc_normalize(target_string)
 		prediction = nfc_normalize(prediction)
 		if target_string not in prediction:
-			print(f"Attention, la ligne '{prediction}' ne contient pas la chaîne recherchée: '{target_string}'.")
+			log_print(f"Attention, la ligne '{prediction}' ne contient pas la chaîne recherchée: '{target_string}'.")
 			return None
 		first_char_idx, last_char_idx = (prediction.find(target_string),
 										 prediction.find(target_string) + len(target_string) - 1)
@@ -2367,7 +2367,7 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 
 
 def draw_lines_on_image(image_path, baselines: list, return_image=False):
-	print("Attempting to show image")
+	log_print("Attempting to show image")
 	image = Image.open(image_path)
 	draw = PIL.ImageDraw.Draw(image)
 	for line in baselines:
@@ -2386,7 +2386,7 @@ def get_string_between_two_words(target_string: str, word_a: str, word_b: str) -
 	:param word_b: mot b
 	:return: la sous-chaîne visée
 	"""
-	print(f"Trying to identify the string between {word_a} and {word_b} in {target_string}")
+	log_print(f"Trying to identify the string between {word_a} and {word_b} in {target_string}")
 	try:
 		after_first_delimiter = approximate_sentence_split(sentence=target_string,
 														   substring=word_a,
@@ -2413,7 +2413,7 @@ def filter_pages(pages: list, page_class: str):
 	try:
 		filtered = next(item for item in pages if item["classe"] == page_class)
 	except StopIteration:
-		print(f"Stop iteration. Pages: {pages}")
+		log_print(f"Stop iteration. Pages: {pages}")
 		exit()
 	return filtered
 
