@@ -11,7 +11,7 @@ import json
 import time
 
 import utils.utils as utils
-import Page_Classifier.page_classifier as PC
+import Page_Classifier.classify as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
 import Information_Extractor.reconciliation as reconciliation

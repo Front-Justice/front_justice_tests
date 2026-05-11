@@ -10,7 +10,7 @@ import tqdm
 import torch.cuda
 import zipfile
 import utils.utils as utils
-import Page_Classifier.page_classifier as PC
+import Page_Classifier.train as PC
 import Vision.KRAKEN as KRAKEN
 import Information_Extractor.extract as extract
 import glob
