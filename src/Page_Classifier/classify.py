@@ -35,6 +35,8 @@ class PageClassifier():
 		self.corpus_path = corpus_path
 		self.vocab_path = vocab
 		try:
+			print(model)
+			print(vocab)
 			self.model = joblib.load(model)
 			if build_vocab is False:
 				self.vocab = joblib.load(vocab)
