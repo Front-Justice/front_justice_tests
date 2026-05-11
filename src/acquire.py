@@ -37,8 +37,6 @@ class Pipeline:
 	la reconstitution des minutes, l'acquisition du texte, l'extraction des informations.
 	"""
 	def __init__(self,
-				 page_classifier_model,
-				 page_classifier_vocab,
 				 yolo_models,
 				 debug:bool = False,
 				 use_party=True,
@@ -51,9 +49,6 @@ class Pipeline:
 		self.minutes_reconciliees_file = None
 		self.current_page_type = None
 		self.debug = debug
-		self.page_classifier = PC.PageClassifier(build_vocab=False,
-												 model=page_classifier_model,
-												 vocab=page_classifier_vocab)
 		self.logger = Logger(log_file_path="logs/logs.txt")
 		self.current_image = None
 		self.current_image_path = None
@@ -876,9 +871,7 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe
 	resegment = False
 	debug = False
 	utils.log_print("Initiating.")
-	pipeline = Pipeline(page_classifier_model="src/Page_Classifier/models/PageClassifier_RF.joblib",
-						page_classifier_vocab="src/Page_Classifier/models/vocab_RF.joblib",
-						yolo_models=yolo_models,
+	pipeline = Pipeline(yolo_models=yolo_models,
 						debug=debug,
 						use_party=False,
 						resegment=resegment,
