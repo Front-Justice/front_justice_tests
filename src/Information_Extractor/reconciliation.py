@@ -48,6 +48,11 @@ class Reconciliator:
 		self.age = None
 		self.appendices_number = None
 
+		self.annotations_page_1 = utils.filter_pages(self.minute_list, "page_1")
+		self.annotations_page_2 = utils.filter_pages(self.minute_list, "page_2")
+		self.annotations_page_3 = utils.filter_pages(self.minute_list, "page_3")
+		self.annotations_page_4 = utils.filter_pages(self.minute_list, "page_4")
+
 	def reconciliate_minute(self):
 		if self._check_minute_consistency() is False:
 			self.reconciliated_minute = {}
@@ -88,26 +93,26 @@ class Reconciliator:
 
 	def _reconciliate_questions(self):
 		try:
-			questions_page_2 = self.minute_list[1]["extractions"]["questions"]["extracted"]
+			questions_page_2 = self.annotations_page_2["extractions"]["questions"]["extracted"]
 		except  (KeyError, TypeError, IndexError):
 			questions_page_2 = ""
 		try:
-			questions_page_3 = self.minute_list[2]["extractions"]["questions"]["extracted"]
+			questions_page_3 = self.annotations_page_3["extractions"]["questions"]["extracted"]
 		except (KeyError, TypeError, IndexError):
 			questions_page_3 = ""
 
 		self.questions = f"{questions_page_2} {questions_page_3}".strip()
 	def _reconciliate_date_naissance(self):
 		try:
-			date_page_1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+			date_page_1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except  (KeyError, TypeError):
 			date_page_1 = None
 		try:
-			self.date_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
+			self.date_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except  (KeyError, TypeError):
 			self.date_naissance = None
 		try:
-			age_soldat = self.minute_list[1]["extractions"]["soldat"]["identite"]["age"]["extracted"]
+			age_soldat = self.annotations_page_2["extractions"]["soldat"]["identite"]["age"]["extracted"]
 		except (IndexError, TypeError, KeyError):
 			age_soldat = None
 		if self.date_proces:
@@ -124,15 +129,15 @@ class Reconciliator:
 
 	def _reconciliate_trial_date(self):
 		try:
-			date_page_1 = self.minute_list[0]["extractions"]["date_proces"]["normalized"]["when"]
+			date_page_1 = self.annotations_page_1["extractions"]["date_proces"]["normalized"]["when"]
 		except (TypeError, KeyError, IndexError):
 			date_page_1 = None
 		try:
-			date_a_page_4 = self.minute_list[3]["extractions"]["date_proces_1"]["normalized"]["when"]
+			date_a_page_4 = self.annotations_page_4["extractions"]["date_proces_1"]["normalized"]["when"]
 		except (TypeError, KeyError, IndexError):
 			date_a_page_4 = None
 		try:
-			date_b_page_4 = self.minute_list[3]["extractions"]["date_proces_2"]["normalized"]["when"]
+			date_b_page_4 = self.annotations_page_4["extractions"]["date_proces_2"]["normalized"]["when"]
 		except (TypeError, KeyError, IndexError):
 			date_b_page_4 = None
 		if date_page_1 == date_a_page_4 == date_b_page_4:
@@ -173,18 +178,18 @@ class Reconciliator:
 
 	def _retrieve_profession(self):
 		try:
-			profession_page_1 = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			profession_page_1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, TypeError):
 			try:
-				self.profession = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+				self.profession = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
 				return
 			except (AttributeError, IndexError, KeyError):
 				self.profession = None
 				return
 		try:
-			profession_page_2 = self.minute_list[1]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			profession_page_2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, IndexError, TypeError, KeyError):
-			self.profession = self.minute_list[0]["extractions"]["soldat"]["profession"]["extracted"].lower()
+			self.profession = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
 			return
 
 		if profession_page_1 == profession_page_2:
@@ -221,66 +226,66 @@ class Reconciliator:
 		:return:
 		"""
 		try:
-			self.decision_tribunal = self.minute_list[2]["extractions"]["decision_tribunal"]
+			self.decision_tribunal = self.annotations_page_3["extractions"]["decision_tribunal"]
 		except (TypeError, KeyError, IndexError):
 			self.decision_tribunal = None
 		try:
-			self.description_physique = self.minute_list[0]["extractions"]["soldat"]["description_physique"]
+			self.description_physique = self.annotations_page_1["extractions"]["soldat"]["description_physique"]
 		except (TypeError, KeyError, IndexError):
 			self.description_physique = None
 		try:
-			self.magistrats = self.minute_list[0]["extractions"]["magistrats"]
+			self.magistrats = self.annotations_page_1["extractions"]["magistrats"]
 		except (TypeError, KeyError, IndexError):
 			self.magistrats = None
 		try:
-			self.numero_ordre = self.minute_list[0]["extractions"]["numero_ordre"]
+			self.numero_ordre = self.annotations_page_1["extractions"]["numero_ordre"]
 		except (TypeError, KeyError, IndexError):
 			self.numero_ordre = None
 		try:
-			self.numero_jugement = self.minute_list[0]["extractions"]["numero_jugement"]
+			self.numero_jugement = self.annotations_page_1["extractions"]["numero_jugement"]
 		except (TypeError, KeyError, IndexError):
 			self.numero_ordre = None
 		try:
-			self.lieu_jugement = self.minute_list[0]["extractions"]["lieu_jugement"]
+			self.lieu_jugement = self.annotations_page_1["extractions"]["lieu_jugement"]
 		except (TypeError, KeyError, IndexError):
 			self.lieu_jugement = None
 		try:
-			self.date_crime_ou_delit = self.minute_list[0]["extractions"]["date_du_crime_ou_delit"]["normalized"]
+			self.date_crime_ou_delit = self.annotations_page_1["extractions"]["date_du_crime_ou_delit"]["normalized"]
 		except (TypeError, KeyError, IndexError):
 			self.date_crime_ou_delit = None
 		try:
-			self.chef_accusation = self.minute_list[0]["extractions"]["chef_accusation"]["extracted"]
+			self.chef_accusation = self.annotations_page_1["extractions"]["chef_accusation"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.chef_accusation = None
 		try:
-			self.antecedents = len(self.minute_list[0]["extractions"]["antécédents"]["extracted"])
+			self.antecedents = len(self.annotations_page_1["extractions"]["antécédents"]["extracted"])
 		except (TypeError, KeyError, IndexError):
 			self.antecedents = None
 		try:
-			self.situation_maritale = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"])
+			self.situation_maritale = len(self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"])
 		except (TypeError, KeyError, IndexError):
 			self.situation_maritale = None
 		try:
-			self.enfants = len(self.minute_list[0]["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"])
+			self.enfants = len(self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"])
 		except (TypeError, KeyError, IndexError):
 			self.enfants = None
 
 
 		try:
-			self.rang = self.minute_list[0]["extractions"]["soldat"]["identite"]["rang"]["extracted"]
+			self.rang = self.annotations_page_1["extractions"]["soldat"]["identite"]["rang"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.rang = None
 		try:
-			self.affectation = self.minute_list[0]["extractions"]["soldat"]["identite"]["affectation"]["extracted"]
+			self.affectation = self.annotations_page_1["extractions"]["soldat"]["identite"]["affectation"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.affectation = None
 		try:
-			self.numero_matricule = self.minute_list[0]["extractions"]["soldat"]["identite"]["matricule"]["extracted"]
+			self.numero_matricule = self.annotations_page_1["extractions"]["soldat"]["identite"]["matricule"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.numero_matricule = None
 
 		try:
-			self.condamnation_pecuniaire = self.minute_list[3]["extractions"]["dernier_paragraphe"]["extracted"]["value"]
+			self.condamnation_pecuniaire = self.annotations_page_4["extractions"]["dernier_paragraphe"]["extracted"]["value"]
 		except (TypeError, KeyError, IndexError):
 			self.condamnation_pecuniaire = None
 		if self.condamnation_pecuniaire:
@@ -288,7 +293,7 @@ class Reconciliator:
 			try:
 				float(self.condamnation_pecuniaire)
 			except ValueError:
-				self.condamnation_pecuniaire = self.minute_list[3]["extractions"]["tableau_frais"]["extracted"]["frais_totaux"]["totaux_transcrits"]
+				self.condamnation_pecuniaire = self.annotations_page_4["extractions"]["tableau_frais"]["extracted"]["frais_totaux"]["totaux_transcrits"]
 
 	def reconciliate_date(self, date_a: str, date_b: str):
 		"""
@@ -322,14 +327,14 @@ class Reconciliator:
 
 	def _reconciliate_lieu_residence(self):
 		try:
-			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
+			nom_ville_transcrit_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
 		except (KeyError, TypeError):
 			nom_ville_transcrit_p1 = None
 		try:
-			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
+			nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
 		except (KeyError, TypeError):
 			try:
-				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
+				nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
 			except (KeyError, TypeError):
 				nom_ville_identifie_p1 = None
 		try:
@@ -339,51 +344,51 @@ class Reconciliator:
 			self.lieu_residence = None
 			return
 		try:
-			self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
 		except (KeyError, TypeError):
 			self.lieu_residence = None
 
 
 		try:
-			nom_ville_transcrit_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
+			nom_ville_transcrit_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
 		except (KeyError, IndexError, TypeError):
 			nom_ville_transcrit_p2 = None
 		try:
-			nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
+			nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
 		except (KeyError, IndexError, TypeError):
 			try:
-				nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
+				nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
 			except (KeyError, IndexError, TypeError):
 				nom_ville_identifie_p2 = None
 		try:
 			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
 		except (KeyError, TypeError):
-			self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
 			print("Page 2 sans annotations")
 			return
 		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
 		if distance_p1 < distance_p2:
 			print("Page 1 choisie.")
-			self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
 		else:
 			print("Page 2 choisie.")
 			try:
-				self.lieu_residence = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_residence"]
+				self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
 			except KeyError:
-				self.lieu_residence = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_residence"]
+				self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
 
 
 	def _reconciliate_lieu_naissance(self):
 		try:
-			nom_ville_transcrit_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
+			nom_ville_transcrit_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
 		except (KeyError, TypeError):
 			nom_ville_transcrit_p1 = None
 		try:
-			nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
+			nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
 		except (KeyError, TypeError):
 			try:
-				nom_ville_identifie_p1 = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
+				nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
 			except (KeyError, TypeError):
 				nom_ville_identifie_p1 = None
 		try:
@@ -394,14 +399,14 @@ class Reconciliator:
 
 
 		try:
-			nom_ville_transcrit_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
+			nom_ville_transcrit_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
 		except (KeyError, IndexError, TypeError):
 			nom_ville_transcrit_p2 = None
 		try:
-			nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
+			nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
 		except (KeyError, IndexError, TypeError):
 			try:
-				nom_ville_identifie_p2 = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
+				nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
 			except (KeyError, IndexError, TypeError):
 				nom_ville_identifie_p2 = None
 		try:
@@ -413,24 +418,24 @@ class Reconciliator:
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
 		if distance_p1 is None:
 			try:
-				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+				self.lieu_naissance = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			except (KeyError, TypeError):
 				self.lieu_naissance = "UNK"
 			return
 		elif distance_p2 is None:
-			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			return
 		if distance_p1 < distance_p2:
 			print("Page 1 choisie.")
-			self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+			self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
 		else:
 			print("Page 2 choisie.")
 			try:
-				self.lieu_naissance = self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]
+				self.lieu_naissance = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			except (KeyError, TypeError):
-				self.lieu_naissance = self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]
-		print(f'Page 1: {self.minute_list[0]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
-		print(f'Page 2: {self.minute_list[1]["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
+				self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
+		print(f'Page 1: {self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
+		print(f'Page 2: {self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
 
 
 	def _reconciliate_prenom_soldat(self):
@@ -443,8 +448,6 @@ class Reconciliator:
 		dans la liste de noms), 0.1 dans les autres cas
 		:return: None
 		"""
-		page_1 = utils.filter_pages(self.minute_list, "page_1")
-		page_2 = utils.filter_pages(self.minute_list, "page_2")
 		if len(self.minute_list) == 1:
 			try:
 				self.prenom_du_soldat = page_1['extractions']['soldat']['identite']['prenom']['extracted']
@@ -538,31 +541,31 @@ class Reconciliator:
 		# Attention, ne fonctionnera pas s'il y a plus ou moins de 4 pages dans la minute. Passer
 		# Par la classification de la page.
 		try:
-			nom_page_1 = self.minute_list[0]['extractions']['soldat']['identite']['nom']['extracted'].upper()
+			nom_page_1 = self.annotations_page_1['extractions']['soldat']['identite']['nom']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_1 = None
 		try:
-			nom_page_2_a = self.minute_list[1]['extractions']['soldat']['identite']['nom_1']['extracted'].upper()
+			nom_page_2_a = self.annotations_page_2['extractions']['soldat']['identite']['nom_1']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_2_a = None
 		try:
-			nom_page_2_b = self.minute_list[1]['extractions']['soldat']['identite']['nom_2']['extracted'].upper()
+			nom_page_2_b = self.annotations_page_2['extractions']['soldat']['identite']['nom_2']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_2_b = None
 		try:
-			nom_page_3 = self.minute_list[2]['extractions']['identite']['nom']['extracted'].upper()
+			nom_page_3 = self.annotations_page_3['extractions']['identite']['nom']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_3 = None
 		try:
-			nom_page_4a = self.minute_list[3]['extractions']['identite']['nom_1']['extracted'].upper()
+			nom_page_4a = self.annotations_page_4['extractions']['identite']['nom_1']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_4a = None
 		try:
-			nom_page_4b = self.minute_list[3]['extractions']['identite']['nom_2']['extracted'].upper()
+			nom_page_4b = self.annotations_page_4['extractions']['identite']['nom_2']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_4b = None
 		try:
-			nom_page_4c = self.minute_list[3]['extractions']['identite']['nom_1']['extracted'].upper()
+			nom_page_4c = self.annotations_page_4['extractions']['identite']['nom_1']['extracted'].upper()
 		except (TypeError, AttributeError, KeyError, IndexError):
 			nom_page_4c = None
 		liste_noms = [nom_page_1, nom_page_2_a, nom_page_2_b, nom_page_3, nom_page_4a, nom_page_4b, nom_page_4c]
