@@ -636,7 +636,7 @@ class Reconciliator:
 	def _produce_dict(self):
 		try:
 			greffier = self.magistrats["greffier"]["extracted"]["persName"]
-		except TypeError:
+		except (TypeError, KeyError):
 			greffier = None
 		self.reconciliated_minute = {
 			"metadata":
