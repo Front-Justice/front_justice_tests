@@ -6,7 +6,7 @@ from kraken.lib import models
 from kraken import rpred
 import kraken.containers
 
-from src.utils.utils import OCRRecord
+import src.utils.utils as utils
 import dataclasses
 
 class KRAKEN():
@@ -42,7 +42,7 @@ class KRAKEN():
 							segments:kraken.blla.Segmentation,
 							extract_polygons:bool = False,
 							return_kraken_preds = False,
-							image_name = None) -> OCRRecord:
+							image_name = None) -> utils.OCRRecord:
 		"""
 		Production de l'inférence à l'aide d'un modèle kraken et de segments.
 		:param im: L'image chargée
@@ -62,9 +62,9 @@ class KRAKEN():
 				interm_dict['polygon'] = line.boundary
 			else:
 				interm_dict['polygon'] = None
-			interm_dict['prediction'] = record.prediction
+			interm_dict['prediction'] = utils.nfc_normalize(record.prediction)
 			interm_dict['cuts'] = record.cuts
 			interm_dict['image_path'] = image_name
 			prediction.append(interm_dict)
-		my_OCR_record = OCRRecord(record=prediction)
+		my_OCR_record = utils.OCRRecord(record=prediction)
 		return my_OCR_record
