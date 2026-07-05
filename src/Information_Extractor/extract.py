@@ -460,7 +460,8 @@ class Extractor:
 			return None
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
-		lignes_description_soldat_raw = f"1 {lignes_description_soldat_raw}"
+		# 1 correspond à la page 1, métadonnée qu'on envoie au modèle.
+		lignes_description_soldat_raw = f"1 {utils.nfc_normalize(lignes_description_soldat_raw)}"
 		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
