@@ -279,8 +279,8 @@ class Reconciliator:
 		try:
 			self.enfants = len(self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"])
 			print(f"Nombre d'enfants {self.enfants}.")
-		except (TypeError, KeyError, IndexError):
-			print("Enfants non trouvés.")
+		except (TypeError, KeyError, IndexError) as e:
+			print(f"Enfants non trouvés: {e}")
 			self.enfants = None
 
 
