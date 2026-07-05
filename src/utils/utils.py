@@ -1523,7 +1523,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			situation_maritale = "célibataire"
 		interm.append(situation_maritale)
 		try:
-			enfants = minute['soldat']["identite"]["famille"]['enfants']['extracted']
+			enfants = minute['soldat']["identite"]["famille"]['enfants']
 			interm.append(enfants)
 		except (KeyError, TypeError):
 			interm.append(0)
