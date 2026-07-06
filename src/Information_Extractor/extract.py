@@ -1905,7 +1905,7 @@ class Extractor:
 						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
 						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
 						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu"]
-		rang_normalise = utils.find_closest_word_in_list(rang_extrait, rangs_possibles)
+		rang_normalise = utils.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait)
 
 		description_du_soldat["identite"]["rang"]["normalized"] = rang_normalise
 
