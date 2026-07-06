@@ -1892,12 +1892,21 @@ class Extractor:
 				image_path=image_path)
 		)
 
-		description_du_soldat["identite"]["rang"] = (
+		rang_extrait = (
 			extractions.extraire_feature(entities_list=entities,
 										 lignes=lignes_description_du_soldat,
 										 feature="rang_actuel",
 				image_path=image_path)
 		)
+
+		description_du_soldat["identite"]["rang"] = rang_extrait
+		rangs_possibles = ["canonnier", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
+						   "soldat détenu", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
+						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
+						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
+						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu"]
+		semantic_search.retrieve_most_similar_sentence(rang_extrait, rangs_possibles, self.sentence_camembert, mode="formal")
+
 
 		# Profession
 		description_du_soldat["profession"] = extractions.extraire_feature(
