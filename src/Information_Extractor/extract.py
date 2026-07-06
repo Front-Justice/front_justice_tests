@@ -1904,9 +1904,13 @@ class Extractor:
 						   "soldat détenu", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
 						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
 						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
-						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu"]
+						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu",
+						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "zouave"]
 		if rang_extrait["extracted"] is not None:
-			rang_normalise = utils.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
+			# Il manque le cas "Autre", à gérer avec une distance importante
+			rang_normalise, distance = utils.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
+			if distance > (len(rang_normalise) / 2):
+				rang_normalise = "UNK"
 		else:
 			rang_normalise = None
 
