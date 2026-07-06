@@ -661,7 +661,7 @@ class Reconciliator:
 				{
 					"situation_militaire":
 						{"rang_extrait": self.rang,
-						{"rang_normalise": self.rang_normalise,
+						"rang_normalise": self.rang_normalise,
 					"affectation": self.affectation,
 						 "matricule": self.numero_matricule},
 					"identite": {
