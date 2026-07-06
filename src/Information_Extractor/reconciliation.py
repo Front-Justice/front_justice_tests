@@ -289,6 +289,10 @@ class Reconciliator:
 		except (TypeError, KeyError, IndexError):
 			self.rang = None
 		try:
+			self.rang_normalise = self.annotations_page_1["extractions"]["soldat"]["identite"]["rang"]["normalized"]
+		except (TypeError, KeyError, IndexError):
+			self.rang_normalise = None
+		try:
 			self.affectation = self.annotations_page_1["extractions"]["soldat"]["identite"]["affectation"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.affectation = None
@@ -656,7 +660,8 @@ class Reconciliator:
 			"soldat":
 				{
 					"situation_militaire":
-						{"rang": self.rang,
+						{"rang_extrait": self.rang,
+						{"rang_normalise": self.rang_normalise,
 					"affectation": self.affectation,
 						 "matricule": self.numero_matricule},
 					"identite": {

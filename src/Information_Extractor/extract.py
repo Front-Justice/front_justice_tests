@@ -1905,8 +1905,9 @@ class Extractor:
 						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
 						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
 						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu"]
-		semantic_search.retrieve_most_similar_sentence(rang_extrait, rangs_possibles, self.sentence_camembert, mode="formal")
+		rang_normalise = semantic_search.retrieve_most_similar_sentence(rang_extrait, rangs_possibles, self.sentence_camembert, mode="formal")
 
+		description_du_soldat["identite"]["rang"]["normalized"] = rang_normalise
 
 		# Profession
 		description_du_soldat["profession"] = extractions.extraire_feature(

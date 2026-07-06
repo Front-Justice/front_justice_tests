@@ -1216,7 +1216,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Situation maritale",
 			  "Enfants",
 			  "Profession",
-			  "Rang du soldat",
+			  "Rang du soldat (extrait)",
+			  "Rang du soldat (normalisé)",
 			  "Affectation du soldat",
 			  "Numéro de matricule",
 			  "Chef d'accusation",
@@ -1538,10 +1539,16 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(None)
 		# Rang du soldat
 		try:
-			rang = minute['soldat']["situation_militaire"]['rang']
+			rang_extrait = minute['soldat']["situation_militaire"]['rang_extrait']
 		except (TypeError, KeyError):
-			rang = None
-		interm.append(rang)
+			rang_extrait = None
+		interm.append(rang_extrait)
+		# Rang du soldat
+		try:
+			rang_normalise = minute['soldat']["situation_militaire"]['rang_normalise']
+		except (TypeError, KeyError):
+			rang_normalise = None
+		interm.append(rang_normalise)
 
 		# Affectation du soldat
 
