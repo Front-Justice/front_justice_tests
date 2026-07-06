@@ -41,6 +41,7 @@ class Reconciliator:
 		self.images_path = None
 		self.annotations = None
 		self.profession = None
+		self.profession_normalisee = None
 		self.date_proces_orig = None
 		self.date_naissance = None
 		self.questions = None
@@ -189,18 +190,18 @@ class Reconciliator:
 
 	def _retrieve_profession(self):
 		try:
-			profession_page_1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
+			profession_page_1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
 		except (AttributeError, TypeError):
 			try:
-				self.profession = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
+				self.profession = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
 				return
 			except (AttributeError, IndexError, KeyError):
 				self.profession = None
 				return
 		try:
-			profession_page_2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
+			profession_page_2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
 		except (AttributeError, IndexError, TypeError, KeyError):
-			self.profession = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
+			self.profession = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
 			return
 
 		if profession_page_1 == profession_page_2:
