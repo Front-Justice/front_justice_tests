@@ -212,6 +212,7 @@ class OCRRecord():
 		"""
 		lines_as_dict = load_json_to_dict(path)
 		if lines_as_dict is None:
+			print(f"Error with {path}")
 			self.record = None
 			return
 		self.record = []
