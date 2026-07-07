@@ -54,12 +54,12 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
-		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=False)
+		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
+		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		utils.log_print(device)
 		self.ner_model.to(device)
 		self.logger = logger
-		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=False)
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
 		self.date_recognition_pipeline = pipeline('ner',
 												  model=self.ner_model,
 												  tokenizer=self.tokenizer,
