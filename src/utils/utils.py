@@ -213,6 +213,7 @@ class OCRRecord():
 		lines_as_dict = load_json_to_dict(path)
 		if lines_as_dict is None:
 			self.record = None
+			return
 		self.record = []
 		for item in lines_as_dict:
 			if "polygon" not in item:
@@ -1234,11 +1235,13 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Nombre de mois",
 			  "Frais du procès"]
 	for idx_minute, minute in extractions.items():
+		interm = []
 		if minute == {}:
 			print(f"Minute {idx_minute} wrong.")
-		interm = []
+			interm.append(f"err_{idx_minute}")
+		else:
+			interm.append(f"{idx_minute}")
 		# Image
-		interm.append(idx_minute)
 
 		# ID
 		interm.append(random_string())
