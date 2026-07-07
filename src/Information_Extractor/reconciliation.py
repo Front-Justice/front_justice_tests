@@ -195,7 +195,7 @@ class Reconciliator:
 			try:
 				self.profession = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
 				return
-			except (AttributeError, IndexError, KeyError):
+			except (AttributeError, IndexError, KeyError, TypeError):
 				self.profession = None
 				return
 		try:
