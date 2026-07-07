@@ -211,6 +211,8 @@ class OCRRecord():
 		:param path: le chemin vers le fichier
 		"""
 		lines_as_dict = load_json_to_dict(path)
+		if lines_as_dict is None:
+			self.record = None
 		self.record = []
 		for item in lines_as_dict:
 			if "polygon" not in item:
@@ -1232,6 +1234,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Nombre de mois",
 			  "Frais du procès"]
 	for idx_minute, minute in extractions.items():
+		if minute == {}:
+			print(f"Minute {idx_minute} wrong.")
 		interm = []
 		# Image
 		interm.append(idx_minute)
@@ -1816,7 +1820,7 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 	:param sentence: la phrase cible
 	:param target_word: le mot à chercher
 	:param replacement_mapping: un mapping des caractères à modifier {"orig": "reg"}
-	:return: la liste du mot ou des mots les plus proches
+	:return: le mot le plus proche et les distances
 	"""
 	if load_file:
 		with open(word_list, "r") as input_file:
@@ -2241,8 +2245,12 @@ def sum_to_float(input: string) -> float:
 
 
 def load_json_to_dict(path):
-	with open(path, 'r') as f:
-		return json.load(f)
+	try:
+		with open(path, 'r') as f:
+			return json.load(f)
+	except json.decoder.JSONDecodeError:
+		print(f"Error with file {path}")
+		return None
 
 
 def serialize_dict(dictionnaire, path) -> None:
