@@ -565,10 +565,15 @@ class Extractor:
 		)
 
 		description_du_soldat["profession"] = profession
-		if profession["extracted"]:
-			description_du_soldat["profession"]["normalized"], _ = utils.find_closest_word_in_list(target_word=profession["extracted"],
+		if description_du_soldat["profession"]:
+			normalized, distance = utils.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
+			if distance > (len(normalized) / 2):
+				description_du_soldat["profession"]["normalized"] = None
+			else:
+				description_du_soldat["profession"]["normalized"] = normalized
+
 		else:
 			description_du_soldat["profession"]["normalized"] = None
 
@@ -1933,10 +1938,15 @@ class Extractor:
 		)
 
 		description_du_soldat["profession"] = profession
-		if profession["extracted"]:
-			description_du_soldat["profession"]["normalized"], _ = utils.find_closest_word_in_list(target_word=profession["extracted"],
-										word_list="src/resources/french_professions.txt",
-										load_file=True)
+		if description_du_soldat["profession"]:
+			normalized, distance = utils.find_closest_word_in_list(target_word=profession["extracted"],
+																   word_list="src/resources/french_professions.txt",
+																   load_file=True)
+			if distance > (len(normalized) / 2):
+				description_du_soldat["profession"]["normalized"] = None
+			else:
+				description_du_soldat["profession"]["normalized"] = normalized
+
 		else:
 			description_du_soldat["profession"]["normalized"] = None
 
