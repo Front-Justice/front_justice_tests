@@ -565,9 +565,12 @@ class Extractor:
 		)
 
 		description_du_soldat["profession"] = profession
-		description_du_soldat["profession"]["normalized"] = utils.find_closest_word_in_list(target_word=profession["extracted"],
+		if profession["extracted"]:
+			description_du_soldat["profession"]["normalized"] = utils.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
+		else:
+			description_du_soldat["profession"]["normalized"] = None
 
 		return description_du_soldat
 
@@ -1930,9 +1933,12 @@ class Extractor:
 		)
 
 		description_du_soldat["profession"] = profession
-		description_du_soldat["profession"]["normalized"] = utils.find_closest_word_in_list(target_word=profession["extracted"],
+		if profession["extracted"]:
+			description_du_soldat["profession"]["normalized"] = utils.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
+		else:
+			description_du_soldat["profession"]["normalized"] = None
 
 
 		# Description physique
