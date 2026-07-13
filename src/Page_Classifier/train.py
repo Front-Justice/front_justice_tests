@@ -46,7 +46,7 @@ class PageClassifier():
 	def crop_and_resize(self, image, vertical_crop_factor):
 		height_resized = image.height // vertical_crop_factor
 		image = image.crop((0, 0, image.width, height_resized))
-		image = image.resize((1062, 391))
+		image = image.resize((1100, 2000))
 		# image = image.resize(dims)
 		#print(image.size)
 		#Image.Image.show(image)
