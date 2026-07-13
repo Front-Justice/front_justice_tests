@@ -370,6 +370,13 @@ class Extractor:
 																				 intersect_ratio=0.7)
 
 		target_line = []
+		if corresponding_lines is None:
+			return {"extracted": None,
+					"baseline": None,
+					"bbox": None,
+					"certitude": None,
+					"predictions": {"party": None,
+									"kraken": None}}
 		for line in corresponding_lines:
 			prediction = line.prediction
 			# On va chercher une ligne avec un nombre uniquement ici
