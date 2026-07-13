@@ -793,7 +793,8 @@ def main(images_dir:str,
 		 retranscribe:bool=False,
 		 start_after:int=0,
 		 device:str="cpu",
-		 workers:int=1):
+		 workers:int=1,
+		 focus=None):
 	images = glob.glob(f"{images_dir}/*.jpg")
 	if target:
 		images = [item for item in images if item == target]
@@ -841,6 +842,8 @@ def main(images_dir:str,
 	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
 	# exit(0)
 	minute_reconciliee = {}
+	if focus:
+		minutes = {k:v for k, v in minutes.items() if k==focus}
 	if workers != 1:
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
@@ -892,6 +895,7 @@ if __name__ == '__main__':
 	arguments.add_argument("-db", "--debug", help="Debug mode", default=False)
 	arguments.add_argument("-d", "--device", help="Device", default="cpu")
 	arguments.add_argument("-w", "--workers", help="Workers", default=1)
+	arguments.add_argument("-f", "--focus", help="Focus on specific minute", default=None)
 	arguments.add_argument("-t", "--target", help="Target one specific file", default=None)
 	arguments.add_argument("-sa", "--start_after", help="Start after given image index", default=0)
 	arguments.add_argument("-rs", "--resegment", help="Launch new segmentation", default=False)
@@ -900,6 +904,7 @@ if __name__ == '__main__':
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
 	target = arguments.target
+	focus = int(arguments.focus) if arguments.focus is not None else None
 	workers = int(arguments.workers)
 	device = arguments.device
 	resegment = arguments.resegment
@@ -917,7 +922,8 @@ if __name__ == '__main__':
 		 retranscribe=retranscribe,
 		 start_after=start_after,
 		 device=device,
-		 workers=workers)
+		 workers=workers,
+										 focus=focus)
 	end_time = time.time()
 	elapsed_time = end_time - start_time
 	ratio_images = nombre_images / elapsed_time
