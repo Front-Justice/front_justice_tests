@@ -2440,6 +2440,9 @@ def filter_pages(pages: list, page_class: str):
 		exit()
 	return filtered
 
-def log_print(message, print_message=False):
+def log_print(message, print_message=False, filepath="logs/log.txt"):
 	if print_message:
 		print(message)
+	else:
+		with open(filepath, "a") as output_log:
+			output_log.write("\n" + message)

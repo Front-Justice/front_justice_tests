@@ -2043,7 +2043,10 @@ class Extractor:
 			line_as_string = f"{cejourdui_date.prediction} {an_mil_neuf_date.prediction}"
 		date_span = utils.approximate_word_split(line_as_string, "CEJOURD'HUI")
 
-		date_extraite = date_span[-1]
+		try:
+			date_extraite = date_span[-1]
+		except TypeError:
+			return None
 		baseline = utils.get_baseline_from_string(line=correct_lines,
 												  target_string=date_extraite,
 												  show_image=False,
