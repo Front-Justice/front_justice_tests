@@ -402,10 +402,11 @@ class Pipeline:
 			image = PIL.Image.open(page["image_path"])
 			if self.current_page_transcription is None:
 				utils.log_print(f"Error with page {page['image_path']}")
-			for line in self.current_page_transcription:
-				line.prediction_with_deletion = None
-				continue
-				sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
+			# try:
+			# 	for line in self.current_page_transcription:
+			# 		line.prediction_with_deletion = None
+			# 		continue
+			# 		sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
 			t2 = time.time()
 			elapsed = t2 - t1
 			utils.log_print(f"Fait en {elapsed} secondes")
