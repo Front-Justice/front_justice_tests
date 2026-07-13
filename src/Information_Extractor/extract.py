@@ -565,7 +565,7 @@ class Extractor:
 		)
 
 		description_du_soldat["profession"] = profession
-		if description_du_soldat["profession"]:
+		if description_du_soldat["profession"] and profession["extracted"]:
 			normalized, distance = utils.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
