@@ -799,7 +799,6 @@ def main(images_dir:str,
 		images = [item for item in images if item == target]
 	if start_after:
 		images = [item for item in images  if int(item.split("/")[-1].replace(".jpg", "")) > start_after]
-		print(images)
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	else:
 		target = None
@@ -843,7 +842,7 @@ def main(images_dir:str,
 	# exit(0)
 	minute_reconciliee = {}
 	if workers != 1:
-		torch.set_num_threads(1)
+		# torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
 			for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
