@@ -1098,7 +1098,20 @@ class Extractor:
 													  lignes=lignes_decision,
 													  feature="nom_du_soldat",
 															 image_path=image_path)}
-		if "condamnation" in [item['entity_group'] for item in entities]:
+
+
+		if "acquittement" in [item['entity_group'] for item in entities]:
+			decision = "acquittement"
+			peine = None
+			unanimite = None
+			majorite = None
+			sursis = None
+			extracted = {"decision": decision,
+						 "peine": peine,
+						 "vote": None,
+						 "voix": None,
+						 "sursis": None}
+		elif "condamnation" in [item['entity_group'] for item in entities]:
 			decision = "condamnation"
 			peine = extractions.extraire_feature(entities_list=entities,
 													  lignes=lignes_decision,
@@ -1196,17 +1209,6 @@ class Extractor:
 						 "voix": vote if majorite else None,
 						 "sursis": True if sursis and sursis["extracted"] != None else False}
 
-		elif "acquittement" in [item['entity_group'] for item in entities]:
-			decision = "acquittement"
-			peine = None
-			unanimite = None
-			majorite = None
-			sursis = None
-			extracted = {"decision": decision,
-						 "peine": peine,
-						 "vote": None,
-						 "voix": None,
-						 "sursis": None}
 		else:
 			extracted = {"decision": "UNK",
 						 "peine": "UNK",
