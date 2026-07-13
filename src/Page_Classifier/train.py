@@ -104,7 +104,7 @@ class PageClassifier():
 		image = self.load_to_greyscale(image_path)
 		if show_image:
 			Image.Image.show(image)
-		cropped = self.crop_and_resize(image, vertical_crop_factor=2)
+		cropped = self.crop_and_resize(image, vertical_crop_factor=1)
 		features = self.extract_features(cropped)
 		if produce_labels:
 			return features, self.reverse_vocab.get(image_path.split("/")[-2])
