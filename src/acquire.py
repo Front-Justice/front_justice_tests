@@ -400,6 +400,8 @@ class Pipeline:
 			self.current_page_transcription.from_json(path=target_transcription)
 			t1 = time.time()
 			image = PIL.Image.open(page["image_path"])
+			if self.current_page_transcription is None:
+				utils.log_print(f"Error with page {page['image_path']}")
 			for line in self.current_page_transcription:
 				line.prediction_with_deletion = None
 				continue
