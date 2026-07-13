@@ -7,12 +7,10 @@ from collections import namedtuple
 import multiprocessing as mp
 import tqdm
 
-import torch.cuda
 import zipfile
 import utils.utils as utils
 import Page_Classifier.train as PC
 import Vision.KRAKEN as KRAKEN
-import Information_Extractor.extract as extract
 import glob
 import PIL.Image as Image
 import json
