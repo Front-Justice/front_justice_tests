@@ -1818,41 +1818,6 @@ def delete_key(k, dic):
 	return dic
 
 
-def find_closest_word_in_list(word_list: list, target_word: str, replacement_mapping: dict = None, load_file=False) -> list:
-	"""
-	Cette fonction cherche le mot le plus proche dans une liste de mots
-	:param sentence: la phrase cible
-	:param target_word: le mot à chercher
-	:param replacement_mapping: un mapping des caractères à modifier {"orig": "reg"}
-	:return: le mot le plus proche et les distances
-	"""
-	if load_file:
-		with open(word_list, "r") as input_file:
-			list_of_words = [item.replace("\n", "") for item in input_file.readlines()]
-		word_list = list_of_words
-	distances = []
-	target_word = target_word.lower()
-	if replacement_mapping:
-		for key, value in replacement_mapping.items():
-			word_lower = target_word.replace(key, value)
-	for word in word_list:
-		if word is None:
-			distances.append(99)
-			continue
-		word_lower = word.lower()
-		if replacement_mapping:
-			for key, value in replacement_mapping.items():
-				word_lower = word_lower.replace(key, value)
-		dist = levensthein_distance(word_lower, target_word)
-		distances.append(dist)
-	try:
-		min_dist_index = distances.index(min(distances))
-	except ValueError:
-		return None, None
-	log_print(word_list[min_dist_index])
-	log_print(min(distances))
-	log_print(target_word)
-	return word_list[min_dist_index], min(distances)
 
 
 def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):

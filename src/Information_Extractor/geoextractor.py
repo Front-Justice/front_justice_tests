@@ -3,6 +3,7 @@ import json
 import re
 
 import src.utils.utils as utils
+import src.Information_Extractor.similarity as similarity
 
 class GeoExtractor():
 	def __init__(self):
@@ -29,7 +30,7 @@ class GeoExtractor():
 		else:
 			utils.log_print(departement)
 			liste_des_departements = list(self.departments_dict.keys())
-			matching_department, distance = utils.find_closest_word_in_list(liste_des_departements, departement)
+			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements, departement)
 			corresponding_departments = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			if distance > 4:
@@ -90,7 +91,7 @@ class GeoExtractor():
 		else:
 			utils.log_print(departement)
 			liste_des_departements = list(self.departments_dict.keys())
-			matching_department, distance = utils.find_closest_word_in_list(liste_des_departements,
+			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements,
 																			departement,
 																			replacement_mapping={"-": " "})
 			utils.log_print(matching_department)
@@ -228,7 +229,7 @@ class GeoExtractor():
 				liste_des_communes_1999 = [item["nom_1999"] for key, item in self.filtered_geodict.items()]
 				liste_des_communes_actuelles = [item["nom_actuel"] for key, item in self.filtered_geodict.items()]
 				if ville:
-					closest_1999, distance_1999 = utils.find_closest_word_in_list(liste_des_communes_1999, ville)
+					closest_1999, distance_1999 = similarity.find_closest_word_in_list(liste_des_communes_1999, ville)
 				else:
 					return {
 						"lat": None,
@@ -239,11 +240,11 @@ class GeoExtractor():
 				utils.log_print(closest_1999)
 				utils.log_print(distance_1999)
 				utils.log_print("---")
-				closest_1801, distance_1801 = utils.find_closest_word_in_list(liste_des_communes_1801, ville)
+				closest_1801, distance_1801 = similarity.find_closest_word_in_list(liste_des_communes_1801, ville)
 				utils.log_print(closest_1801)
 				utils.log_print(distance_1801)
 				utils.log_print("---")
-				closest_actuel, distance_actuel = utils.find_closest_word_in_list(liste_des_communes_actuelles, ville)
+				closest_actuel, distance_actuel = similarity.find_closest_word_in_list(liste_des_communes_actuelles, ville)
 				utils.log_print(closest_1801)
 				utils.log_print(distance_1801)
 				try:

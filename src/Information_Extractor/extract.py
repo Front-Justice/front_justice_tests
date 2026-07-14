@@ -6,7 +6,7 @@ import math
 import unicodedata
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from sentence_transformers import SentenceTransformer
-import src.Information_Extractor.semantic_search as semantic_search
+import src.Information_Extractor.similarity as similarity
 import glob
 import re
 from src.utils.utils import OCRRecord, YOLOZone
@@ -15,7 +15,6 @@ from src.utils.utils import YOLORecord
 import src.utils.utils as utils
 import copy
 import PIL.Image as Image
-import src.Information_Extractor.semantic_search as search
 import src.Information_Extractor.geoextractor as geoextractor
 import PIL
 from collections import namedtuple
@@ -573,7 +572,7 @@ class Extractor:
 
 		description_du_soldat["profession"] = profession
 		if description_du_soldat["profession"] and profession["extracted"] is not None:
-			normalized, distance = utils.find_closest_word_in_list(target_word=profession["extracted"],
+			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
 			if distance > (len(normalized) / 2):
@@ -1099,20 +1098,10 @@ class Extractor:
 													  feature="nom_du_soldat",
 															 image_path=image_path)}
 
-
-		if "acquittement" in [item['entity_group'] for item in entities]:
-			decision = "acquittement"
-			peine = None
-			unanimite = None
-			majorite = None
-			sursis = None
-			extracted = {"decision": decision,
-						 "peine": peine,
-						 "vote": None,
-						 "voix": None,
-						 "sursis": None}
-		elif "condamnation" in [item['entity_group'] for item in entities]:
-			decision = "condamnation"
+		if "condamnation" in [item['entity_group'] for item in entities]:
+			cas = {"acquitte": "acquitement", "condamne": "condamnation"}
+			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=next((item['word'] for item in entities if item['entity_group'] == "condamnation")))
+			decision = cas[result]
 			peine = extractions.extraire_feature(entities_list=entities,
 													  lignes=lignes_decision,
 													  feature="peine",
@@ -1149,13 +1138,13 @@ class Extractor:
 			}
 			if peine and peine["extracted"] != "" and peine["extracted"] is not None:
 				# Essayer de voir si une fonction de proximité formelle ne suffirait pas
-				type_peine = semantic_search.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
-																			 embedder=self.sentence_camembert)
+				type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
+																	   embedder=self.sentence_camembert)
 			else:
 				type_peine = None
 			if type_peine and type_peine != "peine de mort" and peine["extracted"] != "":
-				duree_peine = semantic_search.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
-																		 embedder=self.sentence_camembert)
+				duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
+																		embedder=self.sentence_camembert)
 				duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
 			else:
 				duree_peine = None
@@ -1186,7 +1175,7 @@ class Extractor:
 					"3/2": "trois voix contre deux",
 					"4/1":"quatre voix contre une"
 				}
-				type_de_majorite = semantic_search.retrieve_most_similar_sentence(sentence=majorite["extracted"],
+				type_de_majorite = similarity.retrieve_most_similar_sentence(sentence=majorite["extracted"],
 																			 queries=[item for item in
 																					  types_majorite.values()],
 																			 embedder=self.sentence_camembert)
@@ -1492,7 +1481,7 @@ class Extractor:
 				"Sursis révoqué"
 			]
 			if lignes_fusionnees != "":
-				information_contenue = search.retrieve_most_similar_sentence(sentence=lignes_fusionnees,
+				information_contenue = similarity.retrieve_most_similar_sentence(sentence=lignes_fusionnees,
 																			 queries=list_of_informations,
 																			 embedder=self.sentence_camembert)
 			else:
@@ -1930,7 +1919,7 @@ class Extractor:
 						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "zouave", "canonnier fauconnier"]
 		if rang_extrait["extracted"] is not None:
 			# Il manque le cas "Autre", à gérer avec une distance importante
-			rang_normalise, distance = utils.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
+			rang_normalise, distance = similarity.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
 			if distance > (len(rang_normalise) / 2):
 				rang_normalise = "UNK"
 		else:
@@ -1948,7 +1937,7 @@ class Extractor:
 
 		description_du_soldat["profession"] = profession
 		if description_du_soldat["profession"] and profession["extracted"] is not None:
-			normalized, distance = utils.find_closest_word_in_list(target_word=profession["extracted"],
+			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
 																   word_list="src/resources/french_professions.txt",
 																   load_file=True)
 			if distance > (len(normalized) / 2):
