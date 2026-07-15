@@ -1226,7 +1226,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Numéro de matricule",
 			  "Chef d'accusation",
 			  "Antécédents",
-			  "Condamnation",
+			  "Condamnation (extraite)",
+			  "Condamnation (normalisée)",
 			  "Sursis",
 			  "Vote transcrit",
 			  "Vote extrait",
@@ -1589,9 +1590,13 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		# Décision du tribunal
 		try:
-			condamnation = minute['decision_tribunal']["jugement"]["decision"]
+			decision_normalisee = minute['decision_tribunal']["jugement"]["decision_normalisee"]
 		except (KeyError, TypeError):
-			condamnation = "UNK"
+			decision_normalisee = "UNK"
+		try:
+			decision_extraite = minute['decision_tribunal']["jugement"]["decision_extraite"]
+		except (KeyError, TypeError):
+			decision_extraite = "UNK"
 
 		try:
 			sursis = minute['decision_tribunal']["jugement"]["sursis"]
@@ -1627,7 +1632,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except (KeyError, TypeError):
 			duree_peine = "UNK"
 
-		interm.append(condamnation)
+		interm.append(decision_extraite)
+		interm.append(decision_normalisee)
 		interm.append(sursis)
 		interm.append(transcription_vote)
 		interm.append(vote)

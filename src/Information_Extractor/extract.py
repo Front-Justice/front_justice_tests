@@ -1099,9 +1099,10 @@ class Extractor:
 															 image_path=image_path)}
 
 		if "condamnation" in [item['entity_group'] for item in entities]:
-			cas = {"acquitte": "acquitement", "condamne": "condamnation"}
-			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=next((item['word'] for item in entities if item['entity_group'] == "condamnation")))
-			decision = cas[result]
+			cas = {"acquitte": "acquittement", "condamne": "condamnation"}
+			resultat_condamnation = next((item['word'] for item in entities if item['entity_group'] == "condamnation"))
+			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
+			decision_normalisee = cas[result]
 			peine = extractions.extraire_feature(entities_list=entities,
 													  lignes=lignes_decision,
 													  feature="peine",
@@ -1192,14 +1193,16 @@ class Extractor:
 													  lignes=lignes_decision,
 													  feature="sursis",
 															 image_path=image_path)
-			extracted = {"decision": decision,
+			extracted = {"decision_normalisee": decision_normalisee,
+						 "decision_extraite": resultat_condamnation,
 						 "peine": peine,
 						 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
 						 "voix": vote if majorite else None,
 						 "sursis": True if sursis and sursis["extracted"] != None else False}
 
 		else:
-			extracted = {"decision": "UNK",
+			extracted = {"decision_normalisee": "UNK",
+						 "decision_extraite": "UNK",
 						 "peine": "UNK",
 						 "vote": "UNK",
 						 "voix": "UNK",
