@@ -95,6 +95,10 @@ class Reconciliator:
 		except ValueError:
 			print([item["classe"] for item in self.minute_list])
 			return False
+		if self.minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
+			self.minute_list[-2]["classe"] == "page_3"
+			print("Minute reconstruite.")
+			return True
 		if classes == [1, 2, 3, 4]:
 			print("Minute correctement ordonnée")
 			return True
