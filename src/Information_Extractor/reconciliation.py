@@ -91,10 +91,10 @@ class Reconciliator:
 
 	def _check_minute_consistency(self):
 		try:
-			classes = [int(item["classe"].split("_")[-1]) for item in self.minute_list if item["classe"] != "page_autre"]
+			classes = [int(item["classe"].split("_")[-1]) for item in self.minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
 		except ValueError:
 			print([item["classe"] for item in self.minute_list])
-			exit(0)
+			return False
 		if classes == [1, 2, 3, 4]:
 			print("Minute correctement ordonnée")
 			return True
@@ -279,9 +279,7 @@ class Reconciliator:
 			self.situation_maritale = None
 		try:
 			self.enfants = self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["enfants"]["extracted"]
-			print(f"Nombre d'enfants {self.enfants}.")
 		except (TypeError, KeyError, IndexError) as e:
-			print(f"Enfants non trouvés: {e}")
 			self.enfants = None
 
 

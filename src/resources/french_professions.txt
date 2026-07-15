@@ -6,6 +6,7 @@ tonnelier
 ébéniste
 pâtissier
 journalier coiffeur
+tourneur sur métaux
 comptable
 marin-pêcheur
 bardeur
