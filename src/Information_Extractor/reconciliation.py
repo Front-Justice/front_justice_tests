@@ -190,16 +190,23 @@ class Reconciliator:
 
 	def _retrieve_profession(self):
 		try:
-			profession_page_1_normalisee = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
 			profession_page_1_extraite = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
-		except (AttributeError, TypeError):
-			profession_page_1_extraite, profession_page_1_normalisee = None, None
-			
+		except (AttributeError, IndexError, TypeError, KeyError):
+			profession_page_1_extraite = None
 		try:
-			profession_page_2_normalisee = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
+			profession_page_1_normalisee = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
+		except (AttributeError, IndexError, TypeError, KeyError):
+			profession_page_1_normalisee = None
+
+		try:
+			profession_page_2_normalisee = self.annotations_page_2["extractions"]["soldat"]["profession"][
+				"normalized"].lower()
+		except (AttributeError, IndexError, TypeError, KeyError):
+			profession_page_2_normalisee = None
+		try:
 			profession_page_2_extraite = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, IndexError, TypeError, KeyError):
-			profession_page_2_normalisee, profession_page_2_extraite = None, None
+			profession_page_2_extraite = None
 
 		if profession_page_1_normalisee == profession_page_2_normalisee:
 			self.profession_normalisee = profession_page_1_normalisee

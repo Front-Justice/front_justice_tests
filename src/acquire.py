@@ -857,9 +857,9 @@ def main(images_dir:str,
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
 	utils.log_print("serializing dict.")
-	utils.serialize_dict(minute_annotee, f"results/results.json")
-	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated.json")
-	utils.convert_to_csv(minute_reconciliee, "results/results.csv")
+	utils.serialize_dict(minute_annotee, f"results/results_{images_basedir}.json")
+	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated_{images_basedir}.json")
+	utils.convert_to_csv(minute_reconciliee, f"results/results_{images_basedir}.csv")
 	return images_number, minutes_number
 
 def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe:bool):

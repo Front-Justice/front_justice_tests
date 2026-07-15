@@ -5,6 +5,8 @@ terrassier
 tonnelier
 ébéniste
 pâtissier
+journalier coiffeur
+comptable
 marin-pêcheur
 bardeur
 caissier
