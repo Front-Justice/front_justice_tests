@@ -274,7 +274,7 @@ class Reconciliator:
 		except (TypeError, KeyError, IndexError):
 			self.antecedents = None
 		try:
-			self.situation_maritale = len(self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"])
+			self.situation_maritale = self.annotations_page_1["extractions"]["soldat"]["identite"]["situation_maritale"]["situation"]["extracted"]
 		except (TypeError, KeyError, IndexError):
 			self.situation_maritale = None
 		try:
