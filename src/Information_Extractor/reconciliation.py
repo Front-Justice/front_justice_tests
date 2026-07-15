@@ -190,33 +190,26 @@ class Reconciliator:
 
 	def _retrieve_profession(self):
 		try:
-			profession_page_1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
+			profession_page_1_normalisee = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
+			profession_page_1_extraite = self.annotations_page_1["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, TypeError):
-			try:
-				self.profession = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
-				return
-			except (AttributeError, IndexError, KeyError, TypeError):
-				self.profession = None
-				return
+			profession_page_1_extraite, profession_page_1_normalisee = None, None
+			
 		try:
-			profession_page_2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
+			profession_page_2_normalisee = self.annotations_page_2["extractions"]["soldat"]["profession"]["normalized"].lower()
+			profession_page_2_extraite = self.annotations_page_2["extractions"]["soldat"]["profession"]["extracted"].lower()
 		except (AttributeError, IndexError, TypeError, KeyError):
-			self.profession = self.annotations_page_1["extractions"]["soldat"]["profession"]["normalized"].lower()
-			return
+			profession_page_2_normalisee, profession_page_2_extraite = None, None
 
-		if profession_page_1 == profession_page_2:
-			self.profession = profession_page_1
-			return
+		if profession_page_1_normalisee == profession_page_2_normalisee:
+			self.profession_normalisee = profession_page_1_normalisee
 		else:
-			lexicality_1 = utils.compute_lexicality(profession_page_1, words=self.french_lexicon)
-			lexicality_2 = utils.compute_lexicality(profession_page_2, words=self.french_lexicon)
-
-		if lexicality_1 > lexicality_2:
-			self.profession = profession_page_1
-		elif lexicality_1 < lexicality_2:
-			self.profession = profession_page_2
+			self.profession_normalisee = [profession_page_1_normalisee, profession_page_2_normalisee]
+			
+		if profession_page_1_extraite == profession_page_2_extraite:
+			self.profession_extraite = profession_page_1_extraite
 		else:
-			self.profession = [profession_page_1, profession_page_2]
+			self.profession_extraite = [profession_page_1_extraite, profession_page_2_extraite]
 
 	def _retrieve_annotations(self):
 		self.annotations = []
@@ -676,7 +669,8 @@ class Reconciliator:
 						"date_naissance": self.date_naissance,
 						"lieu_residence": self.lieu_residence,
 						"lieu_naissance": self.lieu_naissance,
-						"profession": self.profession,
+						"profession_extraite": self.profession_extraite,
+						"profession_normalisee": self.profession_normalisee,
 						"famille":
 						{"situation_maritale": self.situation_maritale,
 						 "enfants": self.enfants},

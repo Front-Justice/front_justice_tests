@@ -1219,7 +1219,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Département de résidence",
 			  "Situation maritale",
 			  "Enfants",
-			  "Profession",
+			  "Profession extraite",
+			  "Profession normalisée",
 			  "Rang du soldat (extrait)",
 			  "Rang du soldat (normalisé)",
 			  "Affectation du soldat",
@@ -1542,10 +1543,18 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		# Profession
 		try:
-			profession = minute['soldat']["identite"]['profession']
-			if isinstance(profession, list):
-				profession = " ou ".join(profession)
-			interm.append(profession)
+			profession_extraite = minute['soldat']["identite"]['profession_extraite']
+			if isinstance(profession_extraite, list):
+				profession_extraite = " ou ".join(profession_extraite)
+			interm.append(profession_extraite)
+		except  (KeyError, TypeError):
+			interm.append(None)
+			
+		try:
+			profession_normalisee = minute['soldat']["identite"]['profession_normalisee']
+			if isinstance(profession_normalisee, list):
+				profession_normalisee = " ou ".join(profession_normalisee)
+			interm.append(profession_normalisee)
 		except  (KeyError, TypeError):
 			interm.append(None)
 		# Rang du soldat
