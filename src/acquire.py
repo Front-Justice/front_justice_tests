@@ -375,7 +375,6 @@ class Pipeline:
 		"""
 		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
-			utils.log_print("Cas 1")
 			utils.log_print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = self.transcription_kraken(
 				image=page["image_path"],
@@ -393,11 +392,10 @@ class Pipeline:
 				line.prediction_with_deletion = sentence
 			t2 = time.time()
 			elapsed = t2 - t1
-			utils.log_print(f"Fait en {elapsed} secondes")
+			# utils.log_print(f"Fait en {elapsed} secondes")
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
 			utils.log_print("Found existing kraken transcription: " + target_transcription)
-			utils.log_print("Cas 2")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
 			t1 = time.time()
@@ -411,7 +409,7 @@ class Pipeline:
 			# 		sentence = self.LinesDeletionsIdentifier.identify_deletions(line, image, level="char")
 			t2 = time.time()
 			elapsed = t2 - t1
-			utils.log_print(f"Fait en {elapsed} secondes")
+			# utils.log_print(f"Fait en {elapsed} secondes")
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
@@ -450,7 +448,6 @@ class Pipeline:
 				utils.serialize_dict(lignes_glosees.to_json(), target_transcription)
 			else:
 				utils.log_print("Found existing kraken transcription: " + target_transcription)
-				utils.log_print("Cas 2")
 				lignes_glosees = OCRRecord()
 				lignes_glosees.from_json(path=target_transcription)
 
@@ -518,7 +515,6 @@ class Pipeline:
 			current_dict['soldat'] = None
 			return zone_dict, current_dict
 		else:
-			utils.log_print("On extrait la description du soldat.")
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
@@ -533,7 +529,6 @@ class Pipeline:
 			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
 																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
 		except (TypeError, KeyError, ValueError):
-			utils.log_print(current_dict)
 			current_dict["soldat"]["identite"]["age"] = None
 
 
@@ -578,8 +573,8 @@ class Pipeline:
 															  model=self.yolo_models["magistrats"],
 															  show_image=False)
 			test_lignes = utils.test_number_of_zones(magistrats, label="ligne", number=6)
-			if test_lignes is False:
-				utils.log_print("Warning: une des lignes du jury n'a pas été identifiée.")
+			# if test_lignes is False:
+				# utils.log_print("Warning: une des lignes du jury n'a pas été identifiée.")
 			current_dict["magistrats"] = self.extractor.extraire_magistrats(
 				ocr_prediction=self.current_page_transcription,
 				zones_magistrats=magistrats,
@@ -726,7 +721,6 @@ def regroupement_minutes(pages_classees):
 		current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 		current_minute.append(current_image)
 		if ident == pages_classees[-1][0][1]:
-			utils.log_print("Dossier terminé")
 			minutes[current_minute_number] = current_minute
 			break
 		if classe in ["page_4", "page_autre"] and pages_classees[idx + 1][1] == "page_1":
@@ -828,7 +822,6 @@ def main(images_dir:str,
 	except:
 		images.sort(key= lambda x: int(x.split("/")[-1].split(".jpg")[0]))
 	images_number = len(images)
-	utils.log_print(images_dir)
 	images_basedir = images_dir.replace("/", "_")
 	minutes_dir = f"results/{images_basedir}_minutes.json"
 	if os.path.isfile(minutes_dir) and not target:
@@ -882,7 +875,6 @@ def main(images_dir:str,
 			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
-	utils.log_print("serializing dict.")
 	utils.serialize_dict(minute_annotee, f"results/results_{images_basedir}.json")
 	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated_{images_basedir}.json")
 	utils.convert_to_csv(minute_reconciliee, f"results/results_{images_basedir}.csv")

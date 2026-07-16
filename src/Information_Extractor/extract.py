@@ -1089,7 +1089,7 @@ class Extractor:
 
 		# On doit ajouter 0 comme une métadonnée pour le modèle.
 		lignes_decision_as_string = f"0 {lignes_decision_as_string}"
-		entities = self.entity_spotting_pipeline(lignes_decision_as_string)
+		entities = self.entity_spotting_pipeline(lignes_decision_as_string.lower())
 
 		nom_du_soldat = {"nom": extractions.extraire_feature(entities_list=entities,
 													  lignes=lignes_decision,
@@ -1098,7 +1098,7 @@ class Extractor:
 
 		if "condamnation" in [item['entity_group'] for item in entities]:
 			cas = {"acquitte": "acquittement", "condamne": "condamnation"}
-			resultat_condamnation = next((item['word'] for item in entities if item['entity_group'] == "condamnation"))
+			resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
 			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
 			decision_normalisee = cas[result]
 			peine = extractions.extraire_feature(entities_list=entities,
@@ -1912,13 +1912,13 @@ class Extractor:
 
 		description_du_soldat["identite"]["rang"] = rang_extrait
 		rangs_possibles = ["canonnier", "canonnier de 2^e classe","2^e canonnier conducteur", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
-						   "soldat détenu","soldat auxiliaire", "soldat territorial", "matelot", "soldat conducteur", "sapeur réserviste"," aspirant",
+						   "soldat détenu","soldat auxiliaire", "soldat territorial", "matelot", "soldat conducteur", "sapeur réserviste", "aspirant",
 						   "travailleur auxiliaire kabyle", "travailleur auxiliaire", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
-						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
-						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
-						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu",
-						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "zouave", "canonnier fauconnier", "conducteur territorial",
-						   "sous-chef ouvrier", "prisonnier de guerre", "contrôleur de 1^ere classe", "brigadier", "sapeur artilleur"]
+						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier", "maréchal des logis réserviste",
+						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe", "garde intérimaire",
+						   "médecin auxiliaire", "médecin major", "sapeur mineur", "quartier-maître","quartier-maître mécanicien", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu",
+						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "sapeur de 1^ere classe", "sapeur de 2^eme classe", "zouave", "canonnier fauconnier", "2^e canonnier", "conducteur territorial",
+						   "sous-chef ouvrier", "prisonnier de guerre", "contrôleur de 1^ere classe", "brigadier", "sapeur artilleur", "sapeur réserviste"]
 		if rang_extrait["extracted"] is not None:
 			# Il manque le cas "Autre", à gérer avec une distance importante
 			rang_normalise, distance = similarity.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
