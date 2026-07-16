@@ -55,7 +55,6 @@ class Extractor:
 		self.date_proces = ""
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
-		utils.log_print(device)
 		self.ner_model.to(device)
 		self.logger = logger
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
@@ -117,7 +116,6 @@ class Extractor:
 		# corresponding_idx = [idx for idx, line in enumerate(ocr_prediction) if line.prediction == "Le Greffier,"]
 		#
 		ligne_signature = ocr_prediction[index + 1]
-		utils.log_print(ligne_signature.prediction)
 		image = Image.open(image).convert("RGBA")
 		height_rectangle = 150
 		if "+" in ligne_signature.prediction:
@@ -1768,7 +1766,6 @@ class Extractor:
 																				 ocr_prediction=ocr_prediction,
 																				 intersect_ratio=0.1,
 																				 select_highest_prob_zone=True)
-		utils.log_print(lignes_description_du_soldat)
 		try:
 			lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		except AttributeError:
@@ -1814,7 +1811,7 @@ class Extractor:
 		elif len(soldat) > 1:
 			# plusieurs_soldats = True
 			# bbox_nom_soldat = None
-			utils.log_print("Plusieurs soldats.")
+			# utils.log_print("Plusieurs soldats.")
 			description_du_soldat["identite"] = {
 				"nom": {"extracted": None,
 						"bbox": None,
@@ -2184,7 +2181,6 @@ class Extractor:
 							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
 						]
 		table_des_magistrats = [item for item in table_dict.values()]
-		utils.log_print(table_des_magistrats)
 		# On récupère les informations, en sachant que le premier est toujours le président
 		# TODO: on peut vérifier la présence du mot `président` dans la ligne transcrite
 		president = table_des_magistrats[0]
@@ -2198,13 +2194,10 @@ class Extractor:
 				pipeline=self.date_recognition_pipeline)
 			jury_extrait['baseline'] = [line.baseline for line in jure]
 			jury_extrait['prediction'] = " ".join([line.prediction for line in jure])
-			utils.log_print(jury_extrait['persName'])
 			if (jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
 																				" ".join(line.prediction for line in
 																						 jure)) > .7) \
 													  or utils.similarite_ratcliff("Juges", jury_extrait['persName']) > .7):
-				utils.log_print(" ".join(line.prediction for line in jure))
-				utils.log_print("ÉCARTÉ")
 				continue
 			jury_dict = {"extracted": jury_extrait}
 			processed_jures.append(jury_dict)
@@ -2241,7 +2234,6 @@ class Extractor:
 		# Si on ne trouve rien, c'est que la ligne est hors de la boîte. On relance sur l'ensemble des lignes.
 		if general == {"grade": None}:
 			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, image_path=image_path)
-		utils.log_print("Magistrats: OK")
 		return {"president": {"extracted": processed_president,
 							  "baseline": [line.baseline for line in president],
 							  "predictions": [line.prediction for line in president]},

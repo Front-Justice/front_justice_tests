@@ -28,7 +28,6 @@ class GeoExtractor():
 		if departement in self.departments_dict:
 			matching_department = departement
 		else:
-			utils.log_print(departement)
 			liste_des_departements = list(self.departments_dict.keys())
 			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements, departement)
 			corresponding_departments = self.departments_dict[matching_department]
@@ -69,9 +68,9 @@ class GeoExtractor():
 				commune_correspondante = next((item for item in self.geodict.values() if item["nom_1999"] == closest_match))
 			departement_correspondant = commune_correspondante["département"]
 		# On a identifié le département, on va maintenant filtrer.
-		utils.log_print(f"Arrondissement prédit: {arrondissement}")
-		utils.log_print(f"Commune correspondante dans la base: {commune_correspondante}")
-		utils.log_print(f"Département: {departement_correspondant}")
+		# utils.log_print(f"Arrondissement prédit: {arrondissement}")
+		# utils.log_print(f"Commune correspondante dans la base: {commune_correspondante}")
+		# utils.log_print(f"Département: {departement_correspondant}")
 		self.filter_geodict_by_department(departement_correspondant)
 
 	def filter_geodict_by_department(self, departement):
@@ -83,25 +82,22 @@ class GeoExtractor():
 		"""
 		self.filtered_geodict = copy.deepcopy(self.geodict)
 		if departement is None:
-			utils.log_print("None")
 			return
 		if departement in self.departments_dict:
 			corresponding_departments = self.departments_dict[departement]
 			matching_department = departement
 		else:
-			utils.log_print(departement)
 			liste_des_departements = list(self.departments_dict.keys())
 			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements,
 																			departement,
 																			replacement_mapping={"-": " "})
-			utils.log_print(matching_department)
 			corresponding_departments = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
 			if distance > 5:
 				return
 
-		utils.log_print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
+		# utils.log_print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
 		for key, value in self.geodict.items():
 			# Si la clé actuelle ne correspond pas aux départements correspondants, on supprime du dictionnaire.
 			if value["département"] and value["département"] not in corresponding_departments:
@@ -199,7 +195,6 @@ class GeoExtractor():
 		if departement is None:
 			return None
 		else:
-			utils.log_print("Filtrons")
 			# On va nettoyer le département
 			departement = departement.replace("l'", "")
 			departement_extrait = self.filter_geodict_by_department(departement)
@@ -237,16 +232,8 @@ class GeoExtractor():
 						"nom_actuel": ville,
 						"departement": departement_extrait
 					}
-				utils.log_print(closest_1999)
-				utils.log_print(distance_1999)
-				utils.log_print("---")
 				closest_1801, distance_1801 = similarity.find_closest_word_in_list(liste_des_communes_1801, ville)
-				utils.log_print(closest_1801)
-				utils.log_print(distance_1801)
-				utils.log_print("---")
 				closest_actuel, distance_actuel = similarity.find_closest_word_in_list(liste_des_communes_actuelles, ville)
-				utils.log_print(closest_1801)
-				utils.log_print(distance_1801)
 				try:
 					distances = [distance_actuel, distance_1999, distance_1801]
 					min_distance = min(distances)

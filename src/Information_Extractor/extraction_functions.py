@@ -621,10 +621,10 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 	"""
 	# result = pipeline(prediction.lower())
 	result = pipeline(prediction)
-	if debug:
-		utils.log_print("---")
-		utils.log_print(prediction)
-		utils.log_print(result)
+	# if debug:
+	# 	utils.log_print("---")
+	# 	utils.log_print(prediction)
+	# 	utils.log_print(result)
 	try:
 		persName_NER = prediction[result[0]['start']: result[0]['end']].strip() if result[0][
 																					   "entity_group"] == "PER" else None

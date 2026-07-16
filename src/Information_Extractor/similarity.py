@@ -55,7 +55,4 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		min_dist_index = distances.index(min(distances))
 	except ValueError:
 		return None, None
-	utils.log_print(word_list[min_dist_index])
-	utils.log_print(min(distances))
-	utils.log_print(target_word)
 	return word_list[min_dist_index], min(distances)

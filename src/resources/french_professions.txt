@@ -1,5 +1,17 @@
 électricien
 bonnetier
+blanchisseur
+charpentier en fer
+ouvrier agricole
+doreur sur bois
+doreur
+peintre en bâtiments
+chauffeur
+chauffeur d'automobiles
+employé aux chemins de fer
+employé
+verrier
+domestique
 charron
 terrassier
 tonnelier

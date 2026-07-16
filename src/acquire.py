@@ -1,6 +1,8 @@
 import argparse
 import copy
 import os
+import shutil
+
 import PIL.Image
 import tqdm
 import torch
@@ -771,6 +773,24 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 def predict(dossier, ident, image, page_classifier):
 	return (dossier, ident, image), page_classifier.predict(image=image)
 
+def check_minute_consistency(minute_list):
+	try:
+		classes = [int(item["classe"].split("_")[-1]) for item in minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
+	except ValueError:
+		print([item["classe"] for item in minute_list])
+		return False, {}
+	if minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
+		minute_list[-2]["classe"] = "page_3"
+		return True, minute_list
+	if classes == [1, 2, 3, 4]:
+		print("Minute correctement ordonnée")
+		return True, minute_list
+	else:
+		print("Quelque chose ne va pas avec la minute")
+		[shutil.copy(image["image_path"], f"debug/") for image in minute_list]
+		return False, {}
+
+
 def check_image_consistency(current_image, images_name_list):
 	"""
 	Cette fonction vérifie s'il y a un problème au sein des fichiers et si une image est manquante,
@@ -820,6 +840,12 @@ def main(images_dir:str,
 											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 		utils.serialize_dict(minutes, minutes_dir)
+	for ident, minute in minutes.items():
+		conformant, updated_minute = check_minute_consistency(minute)
+		if conformant is True:
+			minutes[ident] = updated_minute
+		else:
+			minutes[ident] = {}
 	minutes_number = len(minutes)
 	utils.log_print("Starting.")
 	minute_annotee = {}

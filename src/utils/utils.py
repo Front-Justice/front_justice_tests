@@ -1899,9 +1899,9 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 			item = item.lower().strip()
 			item = nfc_normalize(item)
 			dist = similarite_ratcliff(word_lower, item)
-			if debug is True:
-				log_print(word_lower)
-				log_print(dist)
+			# if debug is True:
+			# 	log_print(word_lower)
+			# 	log_print(dist)
 			if dist > sensibility:
 				distances.append(dist)
 				matching_word.append(word)
@@ -1921,11 +1921,8 @@ def recursive_search(corresponding_lines: OCRRecord, string_to_match: str, n_gra
 	lines = [line.prediction for line in corresponding_lines]
 	n_gram_lines = [((n, n + n_gram), nfc_normalize(" ".join(lines[n:n + n_gram]))) for n in range(len(lines))]
 	inclusion_test = [string_to_match in line_group[1] for line_group in n_gram_lines]
-	log_print(inclusion_test)
 	if any(inclusion_test):
 		current_lines = next(idx for idx, item in enumerate(inclusion_test) if item is True)
-		log_print(current_lines)
-		log_print(n_gram_lines[current_lines][1])
 		lines_range = n_gram_lines[current_lines][0]
 		return corresponding_lines[slice(*lines_range)]
 	else:
@@ -2100,7 +2097,7 @@ def check_if_line_in_box(box_coord: namedtuple, baseline: list[int], intersect_r
 		try:
 			n_points = [(item, (a * item) + b) for item in range(baseline[0], baseline[-2], steps)]
 		except ValueError as e:
-			log_print(f"La ligne est verticale.")
+			# log_print(f"La ligne est verticale.")
 			steps = x_distance // number_points
 			n_points = [(baseline[0], baseline[1] + (steps*item)) for item in range(20)]
 	number_in = 0
@@ -2156,7 +2153,6 @@ def list_depth(lst: list) -> int:
 
 
 def extraire_frais(chaine_caractere):
-	log_print(chaine_caractere)
 	regexp = re.compile("\^f\s?|[.,]\s?")
 	split = re.split(regexp, chaine_caractere)
 	if isinstance(split, str):
@@ -2187,7 +2183,6 @@ def correct_numbers_in_string(input_string):
 			closest_match = all_french_numbers[all_distances.index(min(all_distances))]
 			corrected_string.append(closest_match)
 
-	log_print(corrected_string)
 	return " ".join(corrected_string)
 
 
@@ -2210,8 +2205,6 @@ def sum_to_float(input: string) -> float:
 				"certainty": "low",
 				"somme": input}
 	centimes = correct_numbers_in_string(centimes)
-	log_print(entiers)
-	log_print(centimes)
 	try:
 		entiers = text_to_num.text2num(entiers, "fr")
 	except ValueError:
@@ -2324,7 +2317,6 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 			y_2 = round(a * x_2 + b)
 			target_baseline = [[x_1, y_1], [x_2, y_2]]
 			baselines.append(target_baseline)
-			log_print(target_baseline)
 			if show_image:
 				assert loaded_image is not None, "Merci d'ajouter l'image si vous voulez la montrer."
 				cropped = loaded_image.crop((x_1, y_1 - 70, x_2, y_2 + 70))
@@ -2333,8 +2325,6 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 					 "image_path": image_path}
 		return baselines
 	else:
-		log_print(type(line))
-		log_print(target_string)
 		cuts = line.cuts
 		baseline = line.baseline
 		prediction = line.prediction
@@ -2391,7 +2381,6 @@ def get_string_between_two_words(target_string: str, word_a: str, word_b: str) -
 	:param word_b: mot b
 	:return: la sous-chaîne visée
 	"""
-	log_print(f"Trying to identify the string between {word_a} and {word_b} in {target_string}")
 	try:
 		after_first_delimiter = approximate_sentence_split(sentence=target_string,
 														   substring=word_a,
@@ -2419,7 +2408,6 @@ def filter_pages(pages: list, page_class: str):
 		filtered = next(item for item in pages if item["classe"] == page_class)
 	except StopIteration:
 		log_print(f"Stop iteration. Pages: {pages}")
-		exit()
 	return filtered
 
 def log_print(message, print_message=True, filepath="logs/log.txt"):
