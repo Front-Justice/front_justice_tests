@@ -6,12 +6,42 @@ ouvrier agricole
 doreur sur bois
 doreur
 peintre en bâtiments
+serrurier ajusteur
+chauffeur mécanincien
 chauffeur
+garçon charcutier
 chauffeur d'automobiles
+conducteur de voitures
 employé aux chemins de fer
-employé
+employé de bureau
+garçon de café
+garçon de restaurant
+cimentier
+domestique de ferme
+marchand-forain
+marchand
+tailleur
+employé comtable
 verrier
 domestique
+représentant de commerce
+inspecteur d'assurances
+réparateur d'objets d'art
+imprimeur
+étudiant
+garçon limonadier
+limonadier
+cahoutchoutier
+ouvrier d'usine
+commis de marchand de vins
+voyageur de commerce
+conducteur de bestiaux
+scieur
+peintre
+télégraphiste
+employé d'hôtel
+ouvrier agricole
+docteur en médecine
 charron
 terrassier
 tonnelier
@@ -26,6 +56,21 @@ caissier
 coltineur
 berger
 chaudronnier
+chaudronnier en fer
+garde-barrière
+employé de banque
+employé de commerce
+apiculteur
+frappeur sur feux
+valet de chambre
+ouvrier boulanger
+charretier
+acteur dramatique
+peintre
+peintre en bâtiments
+garçon de courses
+entrepreneur de plomberie
+domestique de culture
 riveur
 aide-comptable
 ramoneur
@@ -219,7 +264,6 @@ tourier
 maître-chien
 cimier
 coquetier
-marchand
 commerçant
 protiste
 maréchal-ferrant
@@ -266,6 +310,7 @@ boulanger
 mathématicien
 militaire
 ex-plâtrier
+mécanicien en dirigeable
 aide-infirmier
 tisserand
 chansonnier
