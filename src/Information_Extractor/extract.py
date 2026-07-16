@@ -1911,12 +1911,14 @@ class Extractor:
 		)
 
 		description_du_soldat["identite"]["rang"] = rang_extrait
-		rangs_possibles = ["canonnier", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
-						   "soldat détenu", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
+		rangs_possibles = ["canonnier", "canonnier de 2^e classe","2^e canonnier conducteur", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
+						   "soldat détenu","soldat auxiliaire", "soldat territorial", "matelot", "soldat conducteur", "sapeur réserviste"," aspirant",
+						   "travailleur auxiliaire kabyle", "travailleur auxiliaire", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
 						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier",
 						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe",
 						   "médecin auxiliaire", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu",
-						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "zouave", "canonnier fauconnier"]
+						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "zouave", "canonnier fauconnier", "conducteur territorial",
+						   "sous-chef ouvrier", "prisonnier de guerre", "contrôleur de 1^ere classe", "brigadier", "sapeur artilleur"]
 		if rang_extrait["extracted"] is not None:
 			# Il manque le cas "Autre", à gérer avec une distance importante
 			rang_normalise, distance = similarity.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
