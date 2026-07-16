@@ -316,7 +316,10 @@ class Reconciliator:
 			try:
 				float(self.condamnation_pecuniaire)
 			except ValueError:
-				self.condamnation_pecuniaire = self.annotations_page_4["extractions"]["tableau_frais"]["extracted"]["frais_totaux"]["totaux_transcrits"]
+				try:
+					self.condamnation_pecuniaire = self.annotations_page_4["extractions"]["tableau_frais"]["extracted"]["frais_totaux"]["totaux_transcrits"]
+				except TypeError:
+					self.condamnation_pecuniaire = "UNK"
 
 	def reconciliate_date(self, date_a: str, date_b: str):
 		"""

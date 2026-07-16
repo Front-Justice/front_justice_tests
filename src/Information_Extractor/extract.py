@@ -1911,7 +1911,7 @@ class Extractor:
 		)
 
 		description_du_soldat["identite"]["rang"] = rang_extrait
-		rangs_possibles = ["canonnier", "canonnier de 2^e classe","2^e canonnier conducteur", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
+		rangs_possibles = ["canonnier", "canonnier de 2^e classe", "exclu", "2^e canonnier conducteur", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
 						   "soldat détenu","soldat auxiliaire", "soldat territorial", "matelot", "soldat conducteur", "sapeur réserviste", "aspirant",
 						   "travailleur auxiliaire kabyle", "travailleur auxiliaire", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
 						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier", "maréchal des logis réserviste",
