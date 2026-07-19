@@ -1353,7 +1353,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		if isinstance(nom_soldat, list):
 			nom_soldat = " ou ".join(nom_soldat)
 		if isinstance(prenoms_soldat, list):
-			prenoms_soldat = " ou ".join(nom_soldat)
+			prenoms_soldat = " ou ".join(prenoms_soldat)
 		interm.append(nom_soldat)
 		interm.append(prenoms_soldat)
 
