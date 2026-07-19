@@ -1172,7 +1172,7 @@ def strip_punctuation(string: str | None, debug=False) -> str | None:
 def convert_to_csv(extractions: dict, outpath: str):
 	extracted_data = []
 	header = ["Numero_minute",
-			  "Id",
+			  "Erreur de traitement de la minute",
 			  "Plusieurs soldats",
 			  "Date du procès",
 			  "Institution engagée",
@@ -1240,15 +1240,13 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Frais du procès"]
 	for idx_minute, minute in extractions.items():
 		interm = []
+		interm.append(f"{idx_minute}")
 		if minute == {}:
-			print(f"Minute {idx_minute} wrong.")
-			interm.append(f"err_{idx_minute}")
+			interm.append("True")
 		else:
-			interm.append(f"{idx_minute}")
+			interm.append("False")
 		# Image
 
-		# ID
-		interm.append(random_string())
 
 		# Plusieurs soldats
 		try:
@@ -1344,8 +1342,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			prenoms_soldat = minute['soldat']['identite']['prenom']['extracted']
 			nom_soldat = minute['soldat']['identite']['nom']['extracted']
 		except  (KeyError, TypeError):
-			nom_soldat = "Plusieurs soldats"
-			prenoms_soldat = "Plusieurs soldats"
+			nom_soldat = "UNK"
+			prenoms_soldat = "UNK"
 			interm.append(nom_soldat)
 			interm.append(prenoms_soldat)
 			extracted_data.append(interm)

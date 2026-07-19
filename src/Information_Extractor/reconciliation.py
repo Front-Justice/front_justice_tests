@@ -246,7 +246,7 @@ class Reconciliator:
 		:return:
 		"""
 		try:
-			if self.annotations_page_1["extractions"]["commentaire"] == "Plusieurs soldats":
+			if self.annotations_page_1["extractions"]["commentaire"] == "Plusieurs soldats" or self.annotations_page_2["extractions"]["commentaire"] == "Plusieurs soldats":
 				self.plusieurs_soldats = True
 		except KeyError:
 			pass
