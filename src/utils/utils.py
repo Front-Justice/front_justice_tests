@@ -1173,6 +1173,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 	extracted_data = []
 	header = ["Numero_minute",
 			  "Id",
+			  "Plusieurs soldats",
 			  "Date du procès",
 			  "Institution engagée",
 			  "Lieu du procès",
@@ -1248,6 +1249,13 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		# ID
 		interm.append(random_string())
+
+		# Plusieurs soldats
+		try:
+			plusieurs_soldats = "True" if minute["metadata"]["plusieurs_soldats"] is True else "False"
+		except KeyError:
+			plusieurs_soldats = "False"
+		interm.append(plusieurs_soldats)
 		# Date du procès
 		try:
 			date_proces = minute['informations_proces']['date_du_proces']['date_reconciliee']

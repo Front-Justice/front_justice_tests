@@ -1077,15 +1077,12 @@ class Extractor:
 																		intersect_ratio=[.8],
 																		select_highest_prob_zone=True)
 		if lignes_decision is None:
-			return {"prediction": None,
-					"extracted": None,
-					"bbox": zone_decision}, None
+			print("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
-		except TypeError:
-			return {"prediction": None,
-				"extracted": None,
-				"bbox": zone_decision}, None
+		except (TypeError, AttributeError):
+			lignes_decision_as_string = ocr_prediction.join_transcription()
+			lignes_decision = ocr_prediction
 
 		# On doit ajouter 0 comme une métadonnée pour le modèle.
 		lignes_decision_as_string = f"0 {lignes_decision_as_string}"
@@ -1269,8 +1266,9 @@ class Extractor:
 																			  intersect_ratio=[.8],
 																			  select_highest_prob_zone=True)
 		if lignes_requisitoire is None:
-			return None
-		lignes_requisitoire_as_string = lignes_requisitoire.join_transcription()
+			lignes_requisitoire_as_string = ocr_prediction.join_transcription()
+		else:
+			lignes_requisitoire_as_string = lignes_requisitoire.join_transcription()
 		similarite = utils.similarite_ratcliff(string_a="Ouï M. le Commissaire du Gouvernement en ses réquisitions "
 														"tendants à ce que (3)",
 											   string_b=lignes_requisitoire_as_string)

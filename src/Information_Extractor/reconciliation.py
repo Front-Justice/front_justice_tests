@@ -38,6 +38,7 @@ class Reconciliator:
 		self.lieu_jugement = None
 		self.date_proces = None
 		self.decision_tribunal = None
+		self.plusieurs_soldats = False
 		self.images_path = None
 		self.annotations = None
 		self.profession = None
@@ -244,6 +245,11 @@ class Reconciliator:
 		Cette fonction récupèrer l'information qui ne se répète pas.
 		:return:
 		"""
+		try:
+			if self.annotations_page_1["extractions"]["commentaire"] == "Plusieurs soldats":
+				self.plusieurs_soldats = True
+		except KeyError:
+			pass
 		try:
 			self.decision_tribunal = self.annotations_page_3["extractions"]["decision_tribunal"]
 		except (TypeError, KeyError, IndexError):
@@ -658,7 +664,8 @@ class Reconciliator:
 				{
 				"images": self.images_path,
 				"greffier": greffier,
-				"nombre_pages_annexes": self.appendices_number
+				"nombre_pages_annexes": self.appendices_number,
+				"plusieurs_soldats": self.plusieurs_soldats
 			},
 			"informations_proces": {"numero_ordre": self.numero_ordre,
 									"numero_jugement": self.numero_jugement,

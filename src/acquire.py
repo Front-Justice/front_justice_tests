@@ -498,6 +498,9 @@ class Pipeline:
 																		   confidence=0.5,
 																		   model=self.yolo_models["page_1"],
 																		   show_image=False)
+		if len(zones_page_1.filter_zones("Nom du soldat")) > 1:
+			print("Plusieurs soldats")
+			return None, None
 
 		zone_dict = {"zones_identifiées": zones_page_1.to_json(), "zones_manquantes": zones_manquantes}
 
@@ -684,6 +687,9 @@ class Pipeline:
 					zones, annotations = self.traitement_p_4(page=page, show_image=False)
 				else:
 					continue
+				if (zones, annotations) == (None, None):
+					page["extractions"] = {"commentaire": "Plusieurs soldats"}
+					break
 				page["extractions"] = {**annotations, **ajouts}
 				page["zones"] = zones
 				self.reaffecter_dictionnaire(pages)
