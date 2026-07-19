@@ -197,6 +197,10 @@ class Pipeline:
 																		   model=self.yolo_models["page_2"],
 																		   show_image=False)
 
+		if len(zones_page_2.filter_zones("Nom du soldat")) > 1:
+			print("Plusieurs soldats")
+			return None, None
+
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
 			ocr_prediction=self.current_page_transcription,
 			annotations=zones_page_2,
