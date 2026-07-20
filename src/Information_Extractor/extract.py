@@ -1570,7 +1570,10 @@ class Extractor:
 																			  ocr_prediction=ocr_prediction,
 																			  intersect_ratio=0.7)
 		# On commence par l'inculpation
-		corresponding_lines = utils.vertical_order_lines(corresponding_lines)
+		try:
+			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
+		except TypeError:
+			return None
 		lignes_inculpe, _, correct_index_inculpe = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines,
 			string_to_match=["Inculpé de:", "Prévenu de:", "Accusé de:"], return_index=True)
