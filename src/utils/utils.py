@@ -1226,7 +1226,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Rang du soldat (normalisé)",
 			  "Affectation du soldat",
 			  "Numéro de matricule",
-			  "Chef d'accusation",
+			  "Chef d'accusation extrait",
+			  "Chef d'accusation normalisé",
 			  "Antécédents",
 			  "Condamnation (extraite)",
 			  "Condamnation (normalisée)",
@@ -1591,12 +1592,19 @@ def convert_to_csv(extractions: dict, outpath: str):
 			matricule = None
 		interm.append(matricule)
 
-		# Chef d'accusation
+		# Chef d'accusation extrait
 		try:
-			chef_accusation = minute['accusation']['chef_accusation']
+			chef_accusation_extrait = minute['accusation']['chef_accusation_extrait']
 		except  (KeyError, TypeError):
-			chef_accusation = "UNK"
-		interm.append(chef_accusation)
+			chef_accusation_extrait = "UNK"
+		interm.append(chef_accusation_extrait)
+
+		# Chef d'accusation normalise
+		try:
+			chef_accusation_normalise = minute['accusation']['chef_accusation_normalise']
+		except  (KeyError, TypeError):
+			chef_accusation_normalise = "UNK"
+		interm.append(chef_accusation_normalise)
 
 		# Antécédent (juste le nombre)
 		try:

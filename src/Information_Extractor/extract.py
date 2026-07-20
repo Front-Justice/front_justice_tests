@@ -1,10 +1,13 @@
 ###############
+import json
 import math
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
 
 ###############
 import unicodedata
-from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+
+import torch
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline, CamembertForSequenceClassification
 from sentence_transformers import SentenceTransformer
 import src.Information_Extractor.similarity as similarity
 import glob
@@ -67,9 +70,15 @@ class Extractor:
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
 		entity_spotting_model = ("src/Information_Extractor/models/entity_spotting")
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
+		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
+		self.charge_identification_tokenizer = tokenizer
+
+		with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
+			self.charge_identification_labels = json.load(output_json)
+
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=False)
 		self.entity_spotting_pipeline = pipeline('ner',
 												 model=entity_spotting_model,
 												 tokenizer=tokenizer,
@@ -421,6 +430,32 @@ class Extractor:
 
 	def update_dict(self, nouveau_dictionnaire):
 		self.minute_courante = nouveau_dictionnaire
+
+	def extraire_accusation(self,
+							texte):
+		"""
+		Cette fonction extrait l'accusation à partir du texte, en utilisant un modèle de classification multilabel.
+		:param texte:
+		:return:
+		"""
+		inputs = self.tokenizer(
+			[texte],
+			padding=True,
+			truncation=True,
+			max_length=128,
+			return_tensors="pt"
+		)
+		with torch.no_grad():
+			logits = self.charge_identification_model(**inputs).logits
+		probs = torch.sigmoid(logits)
+		# Le threshold est de 0.5. En dessous, la classe n'est pas reconnue.
+		predictions = (probs > 0.5).int()
+		predictions_to_list = predictions.tolist()[0]
+		preds_classes = [index for index, item in enumerate(predictions_to_list) if item == 1]
+		as_labels = [self.charge_identification_labels[str(index)] for index in preds_classes]
+		# On exclut les "nan" qui correspondent à des résultats vides (étant une classe possible)
+		as_labels = ", ".join([item for item in as_labels if isinstance(item, str)])
+		return as_labels
 
 	def extraire_description_soldat_NER_p2(self,
 										   ocr_prediction: OCRRecord,
@@ -1555,6 +1590,7 @@ class Extractor:
 		clean_regexp = re.compile("^\s?d[e']?:?\s?")
 		lignes_inculpation_str = re.sub(clean_regexp, "", lignes_inculpation_str)
 		inculpation["inculpation"]["extracted"] = lignes_inculpation_str
+		inculpation["inculpation"]["normalized"] = self.extraire_accusation(texte=lignes_inculpation_str)
 
 		# On fait de même pour la condamnation, en changeant un peu le split (2 mots)
 		lignes_condamnation = corresponding_lines[correct_index_condamnations:]

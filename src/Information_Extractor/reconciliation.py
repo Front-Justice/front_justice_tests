@@ -39,6 +39,8 @@ class Reconciliator:
 		self.date_proces = None
 		self.decision_tribunal = None
 		self.plusieurs_soldats = False
+		self.chef_accusation_extrait = None
+		self.chef_accusation_normalise = None
 		self.images_path = None
 		self.annotations = None
 		self.profession = None
@@ -279,9 +281,13 @@ class Reconciliator:
 		except (TypeError, KeyError, IndexError):
 			self.date_crime_ou_delit = None
 		try:
-			self.chef_accusation = self.annotations_page_1["extractions"]["chef_accusation"]["extracted"]
+			self.chef_accusation_extrait = self.annotations_page_1["extractions"]["chef_accusation"]["extracted"]
 		except (TypeError, KeyError, IndexError):
-			self.chef_accusation = None
+			self.chef_accusation_extrait = None
+		try:
+			self.chef_accusation_normalise = self.annotations_page_1["extractions"]["chef_accusation"]["normalized"]
+		except (TypeError, KeyError, IndexError):
+			self.chef_accusation_normalise = None
 		try:
 			self.antecedents = len(self.annotations_page_1["extractions"]["antécédents"]["extracted"])
 		except (TypeError, KeyError, IndexError):
@@ -702,7 +708,8 @@ class Reconciliator:
 				},
 			"accusation": {
 				"date_du_crime_ou_delit": self.date_crime_ou_delit,
-				"chef_accusation": self.chef_accusation,
+				"chef_accusation_extrait": self.chef_accusation_extrait,
+				"chef_accusation_normalise": self.chef_accusation_normalise,
 				"questions_posees": self.questions
 			},
 			"decision_tribunal": {
