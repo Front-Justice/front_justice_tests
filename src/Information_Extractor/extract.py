@@ -439,7 +439,7 @@ class Extractor:
 		:return:
 		"""
 		inputs = self.tokenizer(
-			[texte],
+			[unicodedata.normalize('NFC', texte.lower())],
 			padding=True,
 			truncation=True,
 			max_length=128,
