@@ -9,6 +9,19 @@ peintre en bâtiments
 serrurier ajusteur
 chauffeur mécanincien
 chauffeur
+mineur
+plombier
+régisseur de vignoble
+vigneron
+chef vigneron
+cocher-livreur
+nourrisseur
+marchand de bestiaux
+plombier-couvreur
+mouleur en bronze
+fileur
+marchand de quatre saisons
+facteur
 garçon charcutier
 chauffeur d'automobiles
 conducteur de voitures
@@ -121,7 +134,9 @@ maître queux
 fermier
 soignant
 magistrat
-tâcheron
+débitant en verre
+débitant
+courrier-postal
 façonnier
 messer
 plantier
@@ -139,7 +154,8 @@ miroitier
 officier
 platrier
 magicien
-merisier
+charpentier en bois
+marin
 ex-apprenti
 acteur
 buteur
@@ -347,7 +363,7 @@ brancardier
 astronome
 écubier
 principal
-manip
+verrier
 collaborateur
 conférencier
 contremaîtresse
