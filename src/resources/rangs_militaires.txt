@@ -1,0 +1,80 @@
+2^eme canonnier
+2^eme canonnier conducteur
+2^eme canonnier servant
+2^eme canonnier servant réserviste
+2^eme canonnier servant territorial
+2^e ouvrier
+artificier rengagé
+aspirant
+brigadier
+brigadier réserviste
+cannonier conducteur réserviste
+cannonier conducteur territorial
+canonnier
+canonnier conducteur
+canonnier conducteur rengagé
+canonnier de 2^eme classe
+canonnier fauconnier
+canonnier servant
+canonnier servant territorial
+caporal
+caporal fourrier
+cavalier de 1^ere classe
+cavalier de 2^eme classe
+cavalier réserviste
+chasseur
+clairon
+conducteur
+conducteur de 1^ere classe
+conducteur de 2^eme classe
+conducteur territorial
+contrôleur de 1^ere classe
+détenu
+exclu
+garde intérimaire
+maître pointeur
+maréchal des logis
+maréchal des logis fourrier
+maréchal des logis fourrier rengagé
+maréchal des logis réserviste
+matelot
+médecin auxiliaire
+médecin major
+médecin major de 1^ere classe
+médecin major de 2^eme classe
+officier d'administration de 1^ere classe
+officier d'administration de 2^eme classe
+prisonnier de guerre
+quartier-maître
+quartier-maître mécanicien
+sapeur
+sapeur artilleur
+sapeur conducteur réserviste
+sapeur de 1^ere classe
+sapeur de 2^eme classe
+sapeur indigène
+sapeur mineur
+sapeur réserviste
+sapeur réserviste
+sergent
+sergent-major
+soldat
+soldat auxiliaire
+soldat conducteur
+soldat conducteur réserviste
+soldat de 1^ere classe
+soldat de 2^eme classe
+soldat de 2^eme classe réserviste
+soldat de 2^eme classe territorial
+soldat détenu
+soldat infirmier de 2^eme classe
+soldat réserviste
+soldat territorial
+sous-chef ouvrier
+sous-lieutenant
+tirailleur
+travailleur
+travailleur auxiliaire
+travailleur auxiliaire kabyle
+zouave
+

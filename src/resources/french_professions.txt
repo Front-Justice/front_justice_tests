@@ -3,7 +3,12 @@ bonnetier
 blanchisseur
 charpentier en fer
 ouvrier agricole
+garçon coiffeur
+garçon
+chasseur cycliste
+houilleur
 doreur sur bois
+garde-champêtre
 doreur
 peintre en bâtiments
 serrurier ajusteur
@@ -21,7 +26,12 @@ plombier-couvreur
 mouleur en bronze
 fileur
 marchand de quatre saisons
-facteur
+facteur des postes
+vendeuse
+horloger
+tripière
+tripier
+débitante
 garçon charcutier
 chauffeur d'automobiles
 conducteur de voitures
