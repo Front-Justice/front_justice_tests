@@ -2441,7 +2441,8 @@ def extract_lines_from_named_zone(annotations,
 								  loaded_image: PIL.Image.Image = None,
 								  ocr_prediction: OCRRecord = None,
 								  intersect_ratio: float | list[float] = 0.5,
-								  select_highest_prob_zone: bool = False) -> tuple[OCRRecord, list] | tuple[None, None]:
+								  select_highest_prob_zone: bool = False,
+								  resize_factor=1) -> tuple[OCRRecord, list] | tuple[None, None]:
 	"""
 	Cette fonction extrait la ou les lignes correspondant à une zone
 	:param annotations: L'ensemble des zones prédites
@@ -2490,10 +2491,10 @@ def extract_lines_from_named_zone(annotations,
 
 		if show_images:
 			# On doit adapter les dimensions à la taille de l'image chargée qui a été redimensionnée
-			cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0] * self.resize_factor,
-										 coordonnees_zones_filtrees[0][1] * self.resize_factor,
-										 coordonnees_zones_filtrees[1][0] * self.resize_factor,
-										 coordonnees_zones_filtrees[1][1] * self.resize_factor))
+			cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0] * resize_factor,
+										 coordonnees_zones_filtrees[0][1] * resize_factor,
+										 coordonnees_zones_filtrees[1][0] * resize_factor,
+										 coordonnees_zones_filtrees[1][1] * resize_factor))
 			cropped.show()
 
 		# On cherche la ligne qui entre dans la zone zonée

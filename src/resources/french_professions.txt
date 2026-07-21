@@ -7,6 +7,35 @@ garçon coiffeur
 garçon
 chasseur cycliste
 houilleur
+poseur
+marchand de faïences
+volailleur
+graveur
+polisseur en métaux
+tailleur d'habits
+perruquier
+entrepreneur de maçonnerie
+vendeur aux halles
+forgeron serrurier
+forgeron
+garçon de culture
+chauffeur de machines
+tanneur
+potier d'étain
+automobiliste
+ouvrier fondeur
+réceptionnaire
+berger
+menuisier ébéniste
+prospecteur colonial
+tulliste
+sabotier
+marchand de chiffons
+garçon de magasin
+conducteur imprimeur
+charpentier en bateaux
+manoeuvre d'équipe télégraphique
+tailleur de pierre
 doreur sur bois
 garde-champêtre
 doreur
@@ -52,7 +81,6 @@ inspecteur d'assurances
 réparateur d'objets d'art
 imprimeur
 étudiant
-garçon limonadier
 limonadier
 cahoutchoutier
 ouvrier d'usine
@@ -206,6 +234,10 @@ propriétaire
 terrassier-mineur
 employé des postes
 officier d'administration
+houilleur
+chef de culture
+planteur cultivateur
+marchand d'abats
 surveillant de travaux
 paveur
 marchand de métaine
@@ -387,7 +419,8 @@ cordonnier
 rentier
 ânier
 musicien
-maire
+ouvrier boulanger électricien
+ouvrier électricien
 guérisseur
 puériculteur
 journaliste
@@ -447,7 +480,13 @@ menuisier
 adjoint
 prothésiste
 bretteur
-major
+géographe coloniste
+géographe
+agent militarisé
+caviste
+greffier de justice
+garçon-laitier
+garagiste d'automobile
 biographe
 minéralier
 guichetier
@@ -638,9 +677,15 @@ homardier
 majordome
 ourdisseur
 tuyauteur
+manoeuvre en couleurs
 escorteur
+ouvrier bonnetier
 aide-cuisinier
+orfèvre
+soldat boulanger
 porcelainier
+apprêteur
+aurier bijoutier
 reporter
 huîtrier
 programmeur
@@ -650,3 +695,5 @@ pompiste
 doyen
 vacataire
 emboutisseur
+marié
+célibataire

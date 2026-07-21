@@ -1483,10 +1483,11 @@ class Extractor:
 					   "inculpation": {}}
 		corresponding_lines, _ = utils.extract_lines_from_named_zone(annotations=annotations,
 																	target_zone="Inculpation_antecedents",
-																	show_images=show_images,
+																	show_images=True,
 																	loaded_image=loaded_image,
 																	ocr_prediction=ocr_prediction,
-																	intersect_ratio=0.7)
+																	intersect_ratio=0.7,
+																	resize_factor=self.resize_factor)
 		# On commence par l'inculpation
 		try:
 			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
@@ -1497,7 +1498,11 @@ class Extractor:
 			string_to_match=["Inculpé de:", "Prévenu de:", "Accusé de:"], return_index=True)
 		ligne_condamnations, _, correct_index_condamnations = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines, string_to_match="Condamnations", return_index=True)
-		lignes_inculpation = corresponding_lines[correct_index_inculpe:correct_index_condamnations]
+
+		# La première ligne doit correspondre à l'inculpation. Plus efficace que la recherche de la chaîne de début
+		# dans les cas où il y a plusieurs inculpation et que la ligne "inculpé de" se trouve  à cheval
+		# entre 2 inculpations.
+		lignes_inculpation = corresponding_lines[0:correct_index_condamnations]
 		lignes_inculpation_str = " ".join([item.prediction for item in lignes_inculpation])
 		lignes_inculpation_str = utils.nfc_normalize(lignes_inculpation_str)
 		inculpation["inculpation"]["predicted"] = lignes_inculpation_str
