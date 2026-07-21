@@ -1138,7 +1138,6 @@ class Extractor:
 			voix = {"predicted": unanimite["extracted"],
 					"extracted": "5"}
 		else:
-			vote = None
 			voix = None
 
 

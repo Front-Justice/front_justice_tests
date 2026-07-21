@@ -288,7 +288,7 @@ class Reconciliator:
 		except (TypeError, KeyError, IndexError):
 			self.chef_accusation_normalise = None
 		try:
-			self.antecedents = len(self.annotations_page_1["extractions"]["antécédents"]["extracted"])
+			self.antecedents = len(self.annotations_page_1["extractions"]["antécédents"]["extracted"]) if isinstance(self.annotations_page_1["extractions"]["antécédents"]["extracted"], list) else 0
 		except (TypeError, KeyError, IndexError):
 			self.antecedents = None
 		try:
