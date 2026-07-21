@@ -196,10 +196,20 @@ class Pipeline:
 																		   confidence=0.5,
 																		   model=self.yolo_models["page_2"],
 																		   show_image=False)
-
-		if len(zones_page_2.filter_zones("Nom du soldat")) > 1:
-			print("Plusieurs soldats")
-			return None, None
+		zones_nom = zones_page_2.filter_zones("Nom du soldat")
+		# if len(zones_nom) > 1:
+		# 	print(len(zones_nom))
+		# 	for zone in zones_nom:
+		# 		print(f"Zone: {zone}")
+		# 		ligne_soldat = utils.extract_lines_from_given_zone(target_zone=zone,
+		# 														   ocr_prediction=self.current_page_transcription,
+		# 														   ratio=0.05)
+		# 		print(ligne_soldat)
+		# 		chaine_soldat = utils.extract_string_from_bbox(box=zone, lines=ligne_soldat)
+		# 		print(chaine_soldat)
+		# 	exit(0)
+		# 	print("Plusieurs soldats")
+		# 	return None, None
 
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
 			ocr_prediction=self.current_page_transcription,
