@@ -1614,7 +1614,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		# Antécédent (juste le nombre)
 		try:
-			antecedents = minute['soldat']['antecedents']
+			antecedents = len(minute['soldat']['antecedents'])
 		except  (KeyError, TypeError):
 			antecedents = "UNK"
 		interm.append(antecedents)
