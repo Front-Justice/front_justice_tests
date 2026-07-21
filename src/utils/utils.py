@@ -500,6 +500,12 @@ def produce_line_function(baseline) -> tuple[int, int]:
 
 
 def point_in_box(coord, box_coord):
+	"""
+	Vérifie si un point se trouve dans une boîte
+	:param coord:
+	:param box_coord:
+	:return:
+	"""
 	x, y = coord
 	if box_coord.xmin <= x <= box_coord.xmax and box_coord.ymin <= y <= box_coord.ymax:
 		return True
@@ -1693,7 +1699,7 @@ def random_string():
 	return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
 
-def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
+def extract_string_from_bbox(box:YOLOZone, lines: OCRRecord) -> str:
 	"""
 	Cette fonction extrait les caractères compris dans une boîte par la comparaison
 	entre cette boîte et les polygones individuels de la prédiction
@@ -1714,20 +1720,17 @@ def extract_string_from_cuts(box: list[list[int]], line: OCRLine) -> str:
 		}
 	:return: la chaîne de caractères reconstruite à partir des intersections
 	"""
-	assert len(line.prediction) == len(line.cuts), ("Un problème dans les données est apparu. "
-													"La longueur de la prédiction doit être identique "
-													"à celle des cuts")
 	out_string = ""
-	(xmin, ymin), (xmax, ymax) = box
-
-	# Solution tirée de https://gis.stackexchange.com/a/90063
+	(xmin, ymin), (xmax, ymax) = box.coordinates
 	polygon_soldat = Polygon([(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)])
-	for char, cut in zip(line.prediction, line.cuts):
-		cut = Polygon([tuple(coords) for coords in cut])
-		intersection = polygon_soldat.intersects(cut)
-		if intersection:
-			out_string += char
-	return out_string
+	for line in lines:
+		# Solution tirée de https://gis.stackexchange.com/a/90063
+		for char, cut in zip(line.prediction, line.cuts):
+			cut = Polygon([tuple(coords) for coords in cut])
+			intersection = polygon_soldat.intersects(cut)
+			if intersection:
+				out_string += char
+		return out_string
 
 
 def test_number_of_zones(annotations: YOLORecord, label: str, number: int) -> bool:
@@ -2430,3 +2433,126 @@ def log_print(message, print_message=True, filepath="logs/log.txt"):
 	else:
 		with open(filepath, "a") as output_log:
 			output_log.write("\n" + message)
+
+
+def extract_lines_from_named_zone(annotations,
+								  target_zone: str | list,
+								  show_images: bool = False,
+								  loaded_image: PIL.Image.Image = None,
+								  ocr_prediction: OCRRecord = None,
+								  intersect_ratio: float | list[float] = 0.5,
+								  select_highest_prob_zone: bool = False) -> tuple[OCRRecord, list] | tuple[None, None]:
+	"""
+	Cette fonction extrait la ou les lignes correspondant à une zone
+	:param annotations: L'ensemble des zones prédites
+	:param target_zone: Le nom de la ou des zones à récupérer. Dans le cas de plusieurs zones, on récupèrera la ligne
+	inclue dans l'intersection de ces zones
+	:param show_images: Montrer l'image?
+	:param loaded_image: L'image chargée par PIL (debug)
+	:param ocr_prediction: OCRRecord: La liste de lignes transcrites (baseline, prediction, cuts)
+	:param intersect_ratio: La proportion d'intersection minimale pour considérer la ligne dans la zone ciblée. Un flottant
+	ou une liste de flottant si on vise plusieurs zones
+	:param select_highest_prob_zone: Faut-il sélectionner la zone détecter la plus probable, en cas de zones multiples
+	:return: La liste des lignes concernées par la zone et les zones.
+	"""
+	# On récupère la boîte correspondante
+	if isinstance(intersect_ratio, float):
+		intersect_ratio = [intersect_ratio]
+	if isinstance(target_zone, str):
+		all_zones = [target_zone]
+	else:
+		all_zones = target_zone
+	all_filtered_zones = []
+	all_lines = []
+	zones_filtrees = []
+	for target_zone, ratio in zip(all_zones, intersect_ratio):
+		zones = filter_zones(annotations=annotations, category=target_zone)
+		if len(zones) == 0:
+			return None, None
+		elif len(zones) > 1 and len(all_zones) == 1:
+			log_print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
+			# Si on active l'option du choix de la zone la plus probable, il n'y a qu'à ordonner la liste
+			if select_highest_prob_zone:
+				zones.sort(key=lambda x: x.probs, reverse=True)
+			else:
+				return None, None
+
+		# On va commencer par identifier le nom prédit par kraken
+		coordonnees_zones_filtrees = zones[0].coordinates
+		zones_filtrees.append(coordonnees_zones_filtrees)
+
+		rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
+		zones_filtrees_as_rectangle = rectangle(coordonnees_zones_filtrees[0][0],
+													 coordonnees_zones_filtrees[0][1],
+													 coordonnees_zones_filtrees[1][0],
+													 coordonnees_zones_filtrees[1][1])
+		all_filtered_zones.append(coordonnees_zones_filtrees)
+
+		if show_images:
+			# On doit adapter les dimensions à la taille de l'image chargée qui a été redimensionnée
+			cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0] * self.resize_factor,
+										 coordonnees_zones_filtrees[0][1] * self.resize_factor,
+										 coordonnees_zones_filtrees[1][0] * self.resize_factor,
+										 coordonnees_zones_filtrees[1][1] * self.resize_factor))
+			cropped.show()
+
+		# On cherche la ligne qui entre dans la zone zonée
+		corresponding_lines = match_lines_in_zones(ocr_prediction=ocr_prediction,
+														 zone_as_rectangle=zones_filtrees_as_rectangle,
+														 intersect_ratio=ratio)
+		corresponding_lines = vertical_order_lines(lines=corresponding_lines)
+		all_lines.append([ocr_prediction.index(item) for item in corresponding_lines])
+
+	if len(all_lines) == 1:
+		corresponding_line_index = all_lines[0]
+	else:
+		# https://stackoverflow.com/a/3852806
+		corresponding_line_index = set.intersection(*map(set, all_lines))
+	corresponding_lines = OCRRecord()
+	corresponding_lines.recreate_record([ocr_prediction[idx] for idx in corresponding_line_index])
+	return corresponding_lines, zones_filtrees[0] if len(zones_filtrees) == 1 else zones_filtrees
+
+def extract_lines_from_given_zone(target_zone: YOLOZone,
+								  ocr_prediction: OCRRecord = None,
+								  ratio: float | list[float] = 0.5) -> OCRRecord:
+	"""
+	Cette fonction extrait la ou les lignes correspondant à une zone
+	:param target_zone: Le nom de la ou des zones à récupérer. Dans le cas de plusieurs zones, on récupèrera la ligne
+	inclue dans l'intersection de ces zones
+	:param ocr_prediction: OCRRecord: La liste de lignes transcrites (baseline, prediction, cuts)
+	:param ratio: La proportion d'intersection minimale pour considérer la ligne dans la zone ciblée. Un flottant
+	ou une liste de flottant si on vise plusieurs zones
+	:return: La liste des lignes concernées par la zone et les zones.
+	"""
+	# On récupère la boîte correspondante
+	# On va commencer par identifier le nom prédit par kraken
+	coordonnees_zones_filtrees = target_zone.coordinates
+
+	rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
+	zones_filtrees_as_rectangle = rectangle(coordonnees_zones_filtrees[0][0],
+												 coordonnees_zones_filtrees[0][1],
+												 coordonnees_zones_filtrees[1][0],
+												 coordonnees_zones_filtrees[1][1])
+
+
+	# On cherche la ligne qui entre dans la zone zonée
+	corresponding_lines = match_lines_in_zones(ocr_prediction=ocr_prediction,
+													 zone_as_rectangle=zones_filtrees_as_rectangle,
+													 intersect_ratio=ratio)
+	corresponding_lines = vertical_order_lines(lines=corresponding_lines)
+	all_lines = [ocr_prediction.index(item) for item in corresponding_lines]
+
+	corresponding_lines = OCRRecord()
+	corresponding_lines.recreate_record([ocr_prediction[idx] for idx in all_lines])
+	return corresponding_lines
+
+
+def filter_zones(annotations: YOLORecord,
+				 category: str) -> YOLORecord:
+	"""
+	Fonction permettant de filtrer les zones par catégorie
+	:param annotations: un objet YOLORecord
+	:param category: la catégorie à filtrer
+	:return: un YOLORecord contenant uniquement les zones ciblées
+	"""
+	return [annotation for annotation in annotations if annotation.label == category]
