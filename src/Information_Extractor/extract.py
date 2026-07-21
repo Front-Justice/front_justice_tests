@@ -528,7 +528,10 @@ class Extractor:
 			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
 										word_list="src/resources/french_professions.txt",
 										load_file=True)
-			if distance > (len(normalized) / 2):
+			# Parfois le NER n'est pas précis à 100%, et on peut avoir récupérer la situation familiale. On la supprime.
+			if normalized in ["marié", "célibataire"]:
+				description_du_soldat["profession"]["normalized"] = None
+			elif distance > (len(normalized) / 2):
 				description_du_soldat["profession"]["normalized"] = None
 			else:
 				description_du_soldat["profession"]["normalized"] = normalized
@@ -1887,7 +1890,10 @@ class Extractor:
 			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
 																   word_list="src/resources/french_professions.txt",
 																   load_file=True)
-			if distance > (len(normalized) / 2):
+			# Parfois le NER n'est pas précis à 100%, et on peut avoir récupérer la situation familiale. On la supprime.
+			if normalized in ["marié", "célibataire"]:
+				description_du_soldat["profession"]["normalized"] = None
+			elif distance > (len(normalized) / 2):
 				description_du_soldat["profession"]["normalized"] = None
 			else:
 				description_du_soldat["profession"]["normalized"] = normalized

@@ -79,9 +79,11 @@ caissier
 coltineur
 berger
 chaudronnier
+aide-chaudronnier
 chaudronnier en fer
 garde-barrière
 employé de banque
+maître d'hôtel
 employé de commerce
 apiculteur
 frappeur sur feux
@@ -109,7 +111,6 @@ typographe
 livreur
 artisan
 mégissier
-manoeuvrier
 ouvrier
 bachelier
 industrie
@@ -123,7 +124,6 @@ doigtier
 médecin
 muletier
 quartier-maître
-manouvrier
 machiniste
 apprenti
 mi-artisan
@@ -183,6 +183,37 @@ maîtresse
 quartier
 meunier
 manoeuvre
+détective privé
+négociant
+élève en pharmacie
+commis-pharmacien
+dessinateur
+fondeur
+viticulter
+dragueur de sable
+garçon d'hôtel
+employé de cinéma
+artiste lyrique
+charbonnier
+ouvrier quinier
+ajusteur
+artiste
+artiste acrobate
+lamineur
+dessinateur
+peintre décorateur
+propriétaire
+terrassier-mineur
+employé des postes
+officier d'administration
+surveillant de travaux
+paveur
+marchand de métaine
+garçon boucher
+serrurier ajusteur
+ébarbeur
+étudiant en médecine
+néant
 minier
 minotier
 manilleur
@@ -220,6 +251,9 @@ jactancier
 primesautier
 contremaître
 majeur
+rempailleur
+rempailleur de chaises
+polisseur
 ferronnier
 entremetteur
 pompier
