@@ -1492,6 +1492,7 @@ class Extractor:
 		try:
 			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
 		except TypeError:
+			print("Error with lines.")
 			return None
 		lignes_inculpe, _, correct_index_inculpe = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines,
@@ -1530,7 +1531,7 @@ class Extractor:
 		try:
 			mot_condamnations = mot_condamnations[0].matched
 		except IndexError:
-			return None
+			return inculpation
 
 		if check_condamnations:
 			lignes_condamnations_str = lignes_condamnations_str.split(mot_condamnations)[-1]

@@ -403,7 +403,7 @@ def extraire_date_naissance(entity_dict, lignes, image_path):
 		try:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
-			utils.log_print(f"Error with date {date_naissance}")
+			utils.log_print(f"Error with birth date {date_naissance}")
 			date_naissance["extracted"] = None
 			date_normalisee = date_naissance["extracted"]
 		date_naissance["extracted"] = date_normalisee
