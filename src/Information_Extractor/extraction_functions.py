@@ -305,12 +305,19 @@ def extraire_feature(entities_list,
 	}
 	'''
 	"""
-	entite_et_baseline = extraire_entite_baseline(
-		entities_list=entities_list,
-		nom_entite=feature,
-		target_lines=lignes,
-		image_path=image_path
-	)
+	try:
+		entite_et_baseline = extraire_entite_baseline(
+			entities_list=entities_list,
+			nom_entite=feature,
+			target_lines=lignes,
+			image_path=image_path
+		)
+	except IndexError:
+		return {
+		"extracted": None,
+		"baseline": None,
+		"certainty": None
+	}
 	if entite_et_baseline and len(entite_et_baseline) == 1:
 		certainty = 0.8
 	elif not entite_et_baseline:
