@@ -1133,9 +1133,13 @@ class Extractor:
 				"predicted": majorite['extracted'],
 				"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
 			}
-
+			voix = vote
+		elif unanimite['extracted'] not in ['', None]:
+			voix = {"predicted": unanimite["extracted"],
+					"extracted": "5"}
 		else:
 			vote = None
+			voix = None
 
 
 		sursis = extractions.extraire_feature(entities_list=entities,
@@ -1146,7 +1150,7 @@ class Extractor:
 					 "decision_extraite": resultat_condamnation,
 					 "peine": peine,
 					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
-					 "voix": vote if majorite else None,
+					 "voix": voix,
 					 "sursis": True if sursis and sursis["extracted"] != None else False}
 
 
