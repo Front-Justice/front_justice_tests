@@ -1178,6 +1178,7 @@ def strip_punctuation(string: str | None, debug=False) -> str | None:
 def convert_to_csv(extractions: dict, outpath: str):
 	extracted_data = []
 	header = ["Numero_minute",
+			  "Images concernées",
 			  "Erreur de traitement de la minute",
 			  "Plusieurs soldats",
 			  "Date du procès",
@@ -1248,6 +1249,10 @@ def convert_to_csv(extractions: dict, outpath: str):
 	for idx_minute, minute in extractions.items():
 		interm = []
 		interm.append(f"{idx_minute}")
+
+		if minute != {}:
+			interm.append(f'{minute["metadata"]["images"][0].split("/")[-1].split(".")[0]}-{minute["metadata"]["images"][-1].split("/")[-1].split(".")[0]}')
+
 		if minute == {}:
 			interm.append("True")
 		else:
