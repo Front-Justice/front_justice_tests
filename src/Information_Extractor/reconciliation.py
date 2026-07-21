@@ -43,7 +43,6 @@ class Reconciliator:
 		self.chef_accusation_normalise = None
 		self.images_path = None
 		self.annotations = None
-		self.profession = None
 		self.profession_normalisee = None
 		self.date_proces_orig = None
 		self.date_naissance = None
@@ -221,12 +220,12 @@ class Reconciliator:
 		if profession_page_1_normalisee == profession_page_2_normalisee:
 			self.profession_normalisee = profession_page_1_normalisee
 		else:
-			self.profession_normalisee = [profession_page_1_normalisee, profession_page_2_normalisee]
+			self.profession_normalisee = [item for item in [profession_page_1_normalisee, profession_page_2_normalisee] if item]
 			
 		if profession_page_1_extraite == profession_page_2_extraite:
 			self.profession_extraite = profession_page_1_extraite
 		else:
-			self.profession_extraite = [profession_page_1_extraite, profession_page_2_extraite]
+			self.profession_extraite = [item for item in [profession_page_1_extraite, profession_page_2_extraite] if item]
 
 	def _retrieve_annotations(self):
 		self.annotations = []
