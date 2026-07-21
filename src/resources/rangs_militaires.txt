@@ -7,6 +7,7 @@
 artificier rengagé
 aspirant
 brigadier
+brigadier maréchal ferrand réserviste
 brigadier réserviste
 cannonier conducteur réserviste
 cannonier conducteur territorial
@@ -19,6 +20,8 @@ canonnier servant
 canonnier servant territorial
 caporal
 caporal fourrier
+caporal réserviste
+cavalier
 cavalier de 1^ere classe
 cavalier de 2^eme classe
 cavalier réserviste
@@ -27,6 +30,7 @@ clairon
 conducteur
 conducteur de 1^ere classe
 conducteur de 2^eme classe
+conducteur réserviste
 conducteur territorial
 contrôleur de 1^ere classe
 détenu
@@ -47,6 +51,7 @@ officier d'administration de 2^eme classe
 prisonnier de guerre
 quartier-maître
 quartier-maître mécanicien
+réserviste
 sapeur
 sapeur artilleur
 sapeur conducteur réserviste
@@ -76,5 +81,5 @@ tirailleur
 travailleur
 travailleur auxiliaire
 travailleur auxiliaire kabyle
+trompette
 zouave
-
