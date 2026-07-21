@@ -1483,7 +1483,7 @@ class Extractor:
 					   "inculpation": {}}
 		corresponding_lines, _ = utils.extract_lines_from_named_zone(annotations=annotations,
 																	target_zone="Inculpation_antecedents",
-																	show_images=True,
+																	show_images=False,
 																	loaded_image=loaded_image,
 																	ocr_prediction=ocr_prediction,
 																	intersect_ratio=0.7,
