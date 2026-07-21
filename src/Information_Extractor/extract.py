@@ -101,16 +101,6 @@ class Extractor:
 		self.extracted_annotations = {}
 		self.excluded_classes = ["Titre"]
 
-	def filter_zones(self,
-					 annotations: YOLORecord,
-					 category: str) -> YOLORecord:
-		"""
-		Fonction permettant de filtrer les zones par catégorie
-		:param annotations: un objet YOLORecord
-		:param category: la catégorie à filtrer
-		:return: un YOLORecord contenant uniquement les zones ciblées
-		"""
-		return [annotation for annotation in annotations if annotation.label == category]
 
 
 	def extract_signature_greffier(self,
@@ -143,81 +133,7 @@ class Extractor:
 			# utils.polygon_extraction(polygon, image)
 		# return polygon
 
-	def extract_lines_from_zone(self,
-								annotations,
-								target_zone: str | list,
-								show_images: bool = False,
-								loaded_image: PIL.Image.Image = None,
-								ocr_prediction: OCRRecord = None,
-								intersect_ratio: float | list[float] = 0.5,
-								select_highest_prob_zone: bool = False) -> tuple[OCRRecord, list] | tuple[None, None]:
-		"""
-		Cette fonction extrait la ou les lignes correspondant à une zone
-		:param annotations: L'ensemble des zones prédites
-		:param target_zone: Le nom de la ou des zones à récupérer. Dans le cas de plusieurs zones, on récupèrera la ligne
-		inclue dans l'intersection de ces zones
-		:param show_images: Montrer l'image?
-		:param loaded_image: L'image chargée par PIL (debug)
-		:param ocr_prediction: OCRRecord: La liste de lignes transcrites (baseline, prediction, cuts)
-		:param intersect_ratio: La proportion d'intersection minimale pour considérer la ligne dans la zone ciblée. Un flottant
-		ou une liste de flottant si on vise plusieurs zones
-		:param select_highest_prob_zone: Faut-il sélectionner la zone détecter la plus probable, en cas de zones multiples
-		:return: La liste des lignes concernées par la zone et les zones.
-		"""
-		# On récupère la boîte correspondante
-		if isinstance(intersect_ratio, float):
-			intersect_ratio = [intersect_ratio]
-		if isinstance(target_zone, str):
-			all_zones = [target_zone]
-		else:
-			all_zones = target_zone
-		all_filtered_zones = []
-		all_lines = []
-		zones_filtrees = []
-		for target_zone, ratio in zip(all_zones, intersect_ratio):
-			zones = self.filter_zones(annotations=annotations, category=target_zone)
-			if len(zones) == 0:
-				return None, None
-			elif len(zones) > 1 and len(all_zones) == 1:
-				utils.log_print(f"Erreur: plusieurs zones détectées. Target zone: {target_zone}")
-				# Si on active l'option du choix de la zone la plus probable, il n'y a qu'à ordonner la liste
-				if select_highest_prob_zone:
-					zones.sort(key=lambda x: x.probs, reverse=True)
-				else:
-					return None, None
 
-			# On va commencer par identifier le nom prédit par kraken
-			coordonnees_zones_filtrees = zones[0].coordinates
-			zones_filtrees.append(coordonnees_zones_filtrees)
-			zones_filtrees_as_rectangle = self.rectangle(coordonnees_zones_filtrees[0][0],
-														 coordonnees_zones_filtrees[0][1],
-														 coordonnees_zones_filtrees[1][0],
-														 coordonnees_zones_filtrees[1][1])
-			all_filtered_zones.append(coordonnees_zones_filtrees)
-
-			if show_images:
-				# On doit adapter les dimensions à la taille de l'image chargée qui a été redimensionnée
-				cropped = loaded_image.crop((coordonnees_zones_filtrees[0][0] * self.resize_factor,
-											 coordonnees_zones_filtrees[0][1] * self.resize_factor,
-											 coordonnees_zones_filtrees[1][0] * self.resize_factor,
-											 coordonnees_zones_filtrees[1][1] * self.resize_factor))
-				cropped.show()
-
-			# On cherche la ligne qui entre dans la zone zonnée
-			corresponding_lines = utils.match_lines_in_zones(ocr_prediction=ocr_prediction,
-															 zone_as_rectangle=zones_filtrees_as_rectangle,
-															 intersect_ratio=ratio)
-			corresponding_lines = utils.vertical_order_lines(lines=corresponding_lines)
-			all_lines.append([ocr_prediction.index(item) for item in corresponding_lines])
-
-		if len(all_lines) == 1:
-			corresponding_line_index = all_lines[0]
-		else:
-			# https://stackoverflow.com/a/3852806
-			corresponding_line_index = set.intersection(*map(set, all_lines))
-		corresponding_lines = OCRRecord()
-		corresponding_lines.recreate_record([ocr_prediction[idx] for idx in corresponding_line_index])
-		return corresponding_lines, zones_filtrees[0] if len(zones_filtrees) == 1 else zones_filtrees
 
 	def extraire_lieu_jugement(self,
 							   ocr_prediction: OCRRecord,
@@ -251,12 +167,12 @@ class Extractor:
 		  }
 		},
 		"""
-		corresponding_lines, lieu_jugement_zone = self.extract_lines_from_zone(annotations=annotations,
-																			   target_zone="MainZone-judgementPlace",
-																			   show_images=show_images,
-																			   loaded_image=loaded_image,
-																			   ocr_prediction=ocr_prediction,
-																			   intersect_ratio=0.7)
+		corresponding_lines, lieu_jugement_zone = utils.extract_lines_from_named_zone(annotations=annotations,
+																					 target_zone="MainZone-judgementPlace",
+																					 show_images=show_images,
+																					 loaded_image=loaded_image,
+																					 ocr_prediction=ocr_prediction,
+																					 intersect_ratio=0.7)
 
 		kraken_prediction = " ".join([line.prediction for line in corresponding_lines]).strip()
 		corresponding_baselines = [line.baseline for line in corresponding_lines]
@@ -372,12 +288,12 @@ class Extractor:
 		  }
 		},
 		"""
-		corresponding_lines, numero_jugement_zone = self.extract_lines_from_zone(annotations=annotations,
-																				 target_zone="MainZone-judgementNumber",
-																				 show_images=show_images,
-																				 loaded_image=loaded_image,
-																				 ocr_prediction=ocr_prediction,
-																				 intersect_ratio=0.7)
+		corresponding_lines, numero_jugement_zone = utils.extract_lines_from_named_zone(annotations=annotations,
+																					   target_zone="MainZone-judgementNumber",
+																					   show_images=show_images,
+																					   loaded_image=loaded_image,
+																					   ocr_prediction=ocr_prediction,
+																					   intersect_ratio=0.7)
 
 		target_line = []
 		if corresponding_lines is None:
@@ -492,13 +408,13 @@ class Extractor:
 		},
 		"""
 		description_du_soldat = {}
-		lignes_description_du_soldat, zone_identite_soldat = self.extract_lines_from_zone(annotations=annotations,
-																					target_zone=["identite_soldat"],
-																					show_images=False,
-																					loaded_image=loaded_image,
-																					ocr_prediction=ocr_prediction,
-																					intersect_ratio=[.8],
-																					select_highest_prob_zone=True)
+		lignes_description_du_soldat, zone_identite_soldat = utils.extract_lines_from_named_zone(annotations=annotations,
+																								target_zone=["identite_soldat"],
+																								show_images=False,
+																								loaded_image=loaded_image,
+																								ocr_prediction=ocr_prediction,
+																								intersect_ratio=[.8],
+																								select_highest_prob_zone=True)
 		if not lignes_description_du_soldat:
 			return None
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
@@ -655,13 +571,13 @@ class Extractor:
 		"""
 
 		dictionnary = {}
-		lignes_identite_defenseur, zone_identite_defenseur = self.extract_lines_from_zone(annotations=annotations,
-																						  target_zone=[
+		lignes_identite_defenseur, zone_identite_defenseur = utils.extract_lines_from_named_zone(annotations=annotations,
+																								target_zone=[
 																							  "seance_ouverte"],
-																						  show_images=show_images,
-																						  loaded_image=loaded_image,
-																						  ocr_prediction=ocr_prediction,
-																						  intersect_ratio=[.8])
+																								show_images=show_images,
+																								loaded_image=loaded_image,
+																								ocr_prediction=ocr_prediction,
+																								intersect_ratio=[.8])
 		if lignes_identite_defenseur is None:
 			return {"nom_du_defenseur": None}
 		ligne_defenseur, *_ = utils.match_line_by_substring(corresponding_lines=lignes_identite_defenseur,
@@ -729,12 +645,12 @@ class Extractor:
 		"""
 
 		dictionnary = {}
-		lignes_formalites, zone_formalites = self.extract_lines_from_zone(annotations=annotations,
-																		  target_zone=["formalites"],
-																		  show_images=show_images,
-																		  loaded_image=loaded_image,
-																		  ocr_prediction=ocr_prediction,
-																		  intersect_ratio=[.8])
+		lignes_formalites, zone_formalites = utils.extract_lines_from_named_zone(annotations=annotations,
+																				target_zone=["formalites"],
+																				show_images=show_images,
+																				loaded_image=loaded_image,
+																				ocr_prediction=ocr_prediction,
+																				intersect_ratio=[.8])
 		try:
 			lignes_formalites_as_string = lignes_formalites.join_transcription()
 		except AttributeError:
@@ -801,13 +717,13 @@ class Extractor:
 				return {"prediction": target,
 						"extracted": None,
 						"bbox": None}, None
-		lignes_questions, zone_questions = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["questions"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.8],
-																		select_highest_prob_zone=True)
+		lignes_questions, zone_questions = utils.extract_lines_from_named_zone(annotations=annotations,
+																			  target_zone=["questions"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  ocr_prediction=ocr_prediction,
+																			  intersect_ratio=[.8],
+																			  select_highest_prob_zone=True)
 		lignes_questions_as_string = lignes_questions.join_transcription()
 		similarite = utils.similarite_ratcliff(string_a="L'accusé a été reconduit par l'escorte à la prison; "
 														"le Commissaire du Gouvernement, le Greffier et les assistants dans "
@@ -857,13 +773,13 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_questions, zone_questions = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["questions"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.8],
-																		select_highest_prob_zone=True)
+		lignes_questions, zone_questions = utils.extract_lines_from_named_zone(annotations=annotations,
+																			  target_zone=["questions"],
+																			  show_images=False,
+																			  loaded_image=loaded_image,
+																			  ocr_prediction=ocr_prediction,
+																			  intersect_ratio=[.8],
+																			  select_highest_prob_zone=True)
 		lignes_questions_as_string = lignes_questions.join_transcription()
 
 
@@ -954,13 +870,13 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_tableau, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["tableau_frais"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.5],
-																		select_highest_prob_zone=True)
+		lignes_tableau, zone_tableau = utils.extract_lines_from_named_zone(annotations=annotations,
+																		  target_zone=["tableau_frais"],
+																		  show_images=False,
+																		  loaded_image=loaded_image,
+																		  ocr_prediction=ocr_prediction,
+																		  intersect_ratio=[.5],
+																		  select_highest_prob_zone=True)
 
 		lignes_recapitulatif_as_string = lignes_tableau.join_transcription(merge_newlines=False)
 		try:
@@ -1034,13 +950,13 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_recapitulatif, zone_tableau = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["recapitulatif_somme"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.5],
-																		select_highest_prob_zone=True)
+		lignes_recapitulatif, zone_tableau = utils.extract_lines_from_named_zone(annotations=annotations,
+																				target_zone=["recapitulatif_somme"],
+																				show_images=False,
+																				loaded_image=loaded_image,
+																				ocr_prediction=ocr_prediction,
+																				intersect_ratio=[.5],
+																				select_highest_prob_zone=True)
 
 		lignes_recapitulatif_as_string = lignes_recapitulatif.join_transcription()
 		try:
@@ -1108,13 +1024,13 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_decision, zone_decision = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["decision_tribunal"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.8],
-																		select_highest_prob_zone=True)
+		lignes_decision, zone_decision = utils.extract_lines_from_named_zone(annotations=annotations,
+																			target_zone=["decision_tribunal"],
+																			show_images=False,
+																			loaded_image=loaded_image,
+																			ocr_prediction=ocr_prediction,
+																			intersect_ratio=[.8],
+																			select_highest_prob_zone=True)
 		if lignes_decision is None:
 			print("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
 		try:
@@ -1132,115 +1048,107 @@ class Extractor:
 													  feature="nom_du_soldat",
 															 image_path=image_path)}
 
-		if "condamnation" in [item['entity_group'] for item in entities]:
-			cas = {"acquitte": "acquittement", "condamne": "condamnation"}
-			resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
-			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
-			decision_normalisee = cas[result]
-			peine = extractions.extraire_feature(entities_list=entities,
-													  lignes=lignes_decision,
-													  feature="peine",
-															 image_path=image_path)
-			type_de_peine = [
-				"travaux publics",
-				"prison",
-				"peine de mort"
-			]
-			duree_de_la_peine = {
-				1/30: "un jour",
-				2/30: "deux jours",
-				3/30: "trois jours",
-				7/30: "sept jours",
-				15/30: "quinze jours",
-				1: "un mois",
-				2: "deux mois",
-				3: "trois mois",
-				4: "quatre mois",
-				5: "cinq mois",
-				6: "six mois",
-				7: "sept mois",
-				8: "huis mois",
-				9: "neuf mois",
-				10: "dix mois",
-				11: "onze mois",
-				12: "un an",
-				24: "deux ans",
-				36: "trois ans",
-				48: "quatre ans",
-				60: "cinq ans",
-				72: "six ans",
-				84: "sept ans"
+		cas = {"acquitte": "acquittement", "condamne": "condamnation"}
+		resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
+		result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
+		decision_normalisee = cas[result]
+		peine = extractions.extraire_feature(entities_list=entities,
+												  lignes=lignes_decision,
+												  feature="peine",
+														 image_path=image_path)
+		type_de_peine = [
+			"travaux publics",
+			"prison",
+			"peine de mort"
+		]
+		duree_de_la_peine = {
+			1/30: "un jour",
+			2/30: "deux jours",
+			3/30: "trois jours",
+			7/30: "sept jours",
+			15/30: "quinze jours",
+			1: "un mois",
+			2: "deux mois",
+			3: "trois mois",
+			4: "quatre mois",
+			5: "cinq mois",
+			6: "six mois",
+			7: "sept mois",
+			8: "huis mois",
+			9: "neuf mois",
+			10: "dix mois",
+			11: "onze mois",
+			12: "un an",
+			24: "deux ans",
+			36: "trois ans",
+			48: "quatre ans",
+			60: "cinq ans",
+			72: "six ans",
+			84: "sept ans"
+		}
+		if peine and peine["extracted"] != "" and peine["extracted"] is not None:
+			# Essayer de voir si une fonction de proximité formelle ne suffirait pas
+			type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
+																   embedder=self.sentence_camembert)
+		else:
+			type_peine = None
+		if type_peine and type_peine != "peine de mort" and peine["extracted"] != "":
+			duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
+																	embedder=self.sentence_camembert)
+			duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
+		else:
+			duree_peine = None
+
+		peine = {
+			"predicted": peine,
+			"extracted":
+				{"duree": duree_peine,
+				 "type": type_peine}
+		}
+
+
+
+
+		unanimite = extractions.extraire_feature(entities_list=entities,
+												  lignes=lignes_decision,
+												  feature="unanimité",
+														 image_path=image_path)
+
+
+		# On traite la majorité, de la même manière
+		majorite = extractions.extraire_feature(entities_list=entities,
+												  lignes=lignes_decision,
+												  feature="majorité",
+														 image_path=image_path)
+		if majorite and majorite['extracted'] != "" and majorite["extracted"] is not None:
+			types_majorite = {
+				"3/2": "trois voix contre deux",
+				"4/1":"quatre voix contre une"
 			}
-			if peine and peine["extracted"] != "" and peine["extracted"] is not None:
-				# Essayer de voir si une fonction de proximité formelle ne suffirait pas
-				type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
-																	   embedder=self.sentence_camembert)
-			else:
-				type_peine = None
-			if type_peine and type_peine != "peine de mort" and peine["extracted"] != "":
-				duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
-																		embedder=self.sentence_camembert)
-				duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
-			else:
-				duree_peine = None
-
-			peine = {
-				"predicted": peine,
-				"extracted":
-					{"duree": duree_peine,
-					 "type": type_peine}
+			type_de_majorite = similarity.retrieve_most_similar_sentence(sentence=majorite["extracted"],
+																		 queries=[item for item in
+																				  types_majorite.values()],
+																		 embedder=self.sentence_camembert)
+			vote = {
+				"predicted": majorite['extracted'],
+				"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
 			}
-
-
-
-
-			unanimite = extractions.extraire_feature(entities_list=entities,
-													  lignes=lignes_decision,
-													  feature="unanimité",
-															 image_path=image_path)
-
-
-			# On traite la majorité, de la même manière
-			majorite = extractions.extraire_feature(entities_list=entities,
-													  lignes=lignes_decision,
-													  feature="majorité",
-															 image_path=image_path)
-			if majorite and majorite['extracted'] != "" and majorite["extracted"] is not None:
-				types_majorite = {
-					"3/2": "trois voix contre deux",
-					"4/1":"quatre voix contre une"
-				}
-				type_de_majorite = similarity.retrieve_most_similar_sentence(sentence=majorite["extracted"],
-																			 queries=[item for item in
-																					  types_majorite.values()],
-																			 embedder=self.sentence_camembert)
-				vote = {
-					"predicted": majorite['extracted'],
-					"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
-				}
-
-			else:
-				vote = None
-
-
-			sursis = extractions.extraire_feature(entities_list=entities,
-													  lignes=lignes_decision,
-													  feature="sursis",
-															 image_path=image_path)
-			extracted = {"decision_normalisee": decision_normalisee,
-						 "decision_extraite": resultat_condamnation,
-						 "peine": peine,
-						 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
-						 "voix": vote if majorite else None,
-						 "sursis": True if sursis and sursis["extracted"] != None else False}
 
 		else:
-			extracted = {"decision_normalisee": "UNK",
-						 "decision_extraite": "UNK",
-						 "peine": "UNK",
-						 "vote": "UNK",
-						 "voix": "UNK",
-						 "sursis": "UNK"}
+			vote = None
+
+
+		sursis = extractions.extraire_feature(entities_list=entities,
+												  lignes=lignes_decision,
+												  feature="sursis",
+														 image_path=image_path)
+		extracted = {"decision_normalisee": decision_normalisee,
+					 "decision_extraite": resultat_condamnation,
+					 "peine": peine,
+					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
+					 "voix": vote if majorite else None,
+					 "sursis": True if sursis and sursis["extracted"] != None else False}
+
 
 
 
@@ -1261,13 +1169,13 @@ class Extractor:
 		:param loaded_image: l'image chargée (objet PIL.Image.Image)
 		"""
 
-		lignes_reponses, zone_reponses = self.extract_lines_from_zone(annotations=annotations,
-																		target_zone=["reponse_questions"],
-																		show_images=False,
-																		loaded_image=loaded_image,
-																		ocr_prediction=ocr_prediction,
-																		intersect_ratio=[.8],
-																		select_highest_prob_zone=True)
+		lignes_reponses, zone_reponses = utils.extract_lines_from_named_zone(annotations=annotations,
+																			target_zone=["reponse_questions"],
+																			show_images=False,
+																			loaded_image=loaded_image,
+																			ocr_prediction=ocr_prediction,
+																			intersect_ratio=[.8],
+																			select_highest_prob_zone=True)
 		try:
 			lignes_reponses_as_string = lignes_reponses.join_transcription()
 		except AttributeError:
@@ -1297,13 +1205,13 @@ class Extractor:
 		:param show_images: [Debug] afficher l'image?
 		"""
 
-		lignes_requisitoire, zone_requisitoire = self.extract_lines_from_zone(annotations=annotations,
-																			  target_zone=["requisitoire"],
-																			  show_images=show_images,
-																			  loaded_image=loaded_image,
-																			  ocr_prediction=ocr_prediction,
-																			  intersect_ratio=[.8],
-																			  select_highest_prob_zone=True)
+		lignes_requisitoire, zone_requisitoire = utils.extract_lines_from_named_zone(annotations=annotations,
+																					target_zone=["requisitoire"],
+																					show_images=show_images,
+																					loaded_image=loaded_image,
+																					ocr_prediction=ocr_prediction,
+																					intersect_ratio=[.8],
+																					select_highest_prob_zone=True)
 		if lignes_requisitoire is None:
 			lignes_requisitoire_as_string = ocr_prediction.join_transcription()
 		else:
@@ -1376,12 +1284,12 @@ class Extractor:
 		"""
 
 		# On récupère les lignes concernées par les zones
-		corresponding_lines, date_zone = self.extract_lines_from_zone(annotations=annotations,
-																	  target_zone="MainZone-crimeDate",
-																	  show_images=show_images,
-																	  loaded_image=loaded_image,
-																	  ocr_prediction=ocr_prediction,
-																	  intersect_ratio=0.7)
+		corresponding_lines, date_zone = utils.extract_lines_from_named_zone(annotations=annotations,
+																			target_zone="MainZone-crimeDate",
+																			show_images=show_images,
+																			loaded_image=loaded_image,
+																			ocr_prediction=ocr_prediction,
+																			intersect_ratio=0.7)
 
 		# La date du crime est toujours sur la deuxième ligne
 		# sauf quand elle n'est pas renseignée
@@ -1567,12 +1475,12 @@ class Extractor:
 		"""
 		inculpation = {"antécédents": {},
 					   "inculpation": {}}
-		corresponding_lines, _ = self.extract_lines_from_zone(annotations=annotations,
-																			  target_zone="Inculpation_antecedents",
-																			  show_images=show_images,
-																			  loaded_image=loaded_image,
-																			  ocr_prediction=ocr_prediction,
-																			  intersect_ratio=0.7)
+		corresponding_lines, _ = utils.extract_lines_from_named_zone(annotations=annotations,
+																	target_zone="Inculpation_antecedents",
+																	show_images=show_images,
+																	loaded_image=loaded_image,
+																	ocr_prediction=ocr_prediction,
+																	intersect_ratio=0.7)
 		# On commence par l'inculpation
 		try:
 			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
@@ -1672,12 +1580,12 @@ class Extractor:
           }
         },
 		"""
-		corresponding_lines, numero_ordre_zone = self.extract_lines_from_zone(annotations=annotations,
-																			  target_zone="MainZone-orderNumber",
-																			  show_images=show_images,
-																			  loaded_image=loaded_image,
-																			  ocr_prediction=ocr_prediction,
-																			  intersect_ratio=0.7)
+		corresponding_lines, numero_ordre_zone = utils.extract_lines_from_named_zone(annotations=annotations,
+																					target_zone="MainZone-orderNumber",
+																					show_images=show_images,
+																					loaded_image=loaded_image,
+																					ocr_prediction=ocr_prediction,
+																					intersect_ratio=0.7)
 		if (corresponding_lines, numero_ordre_zone) == (None, None):
 			# TODO: reprendre cela, ça semble bizarre.
 			utils.log_print("Error with order number", print_message=True)
@@ -1800,13 +1708,13 @@ class Extractor:
 			"description_physique": {}
 		}
 		# On commence par ne récupérer que les lignes qui décrivent le soldat.
-		lignes_description_du_soldat, soldat_zone = self.extract_lines_from_zone(annotations=annotations,
-																				 target_zone="Description du Soldat",
-																				 show_images=False,
-																				 loaded_image=None,
-																				 ocr_prediction=ocr_prediction,
-																				 intersect_ratio=0.1,
-																				 select_highest_prob_zone=True)
+		lignes_description_du_soldat, soldat_zone = utils.extract_lines_from_named_zone(annotations=annotations,
+																					   target_zone="Description du Soldat",
+																					   show_images=False,
+																					   loaded_image=None,
+																					   ocr_prediction=ocr_prediction,
+																					   intersect_ratio=0.1,
+																					   select_highest_prob_zone=True)
 		try:
 			lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		except AttributeError:
@@ -2023,7 +1931,7 @@ class Extractor:
 								   image_path: str,
 								   loaded_image: PIL.Image.Image = None):
 		"""
-		Cette fonction extrait le nom du soldat à partir des prédictions et des zones.
+		Cette fonction extrait la date à partir des prédictions et des zones.
 		On va comparer la prédiction de Kraken et de Party pour arriver à un meilleur résultat.
 		:param ocr_prediction: Une liste de dictionnaires de la forme:
 		'''
@@ -2057,12 +1965,12 @@ class Extractor:
 				]
 			  }
 		"""
-		corresponding_lines, zone_magistrats = self.extract_lines_from_zone(annotations=annotations,
-																			target_zone="Magistrats",
-																			show_images=False,
-																			loaded_image=loaded_image,
-																			ocr_prediction=ocr_prediction,
-																			intersect_ratio=0.1)
+		corresponding_lines, zone_magistrats = utils.extract_lines_from_named_zone(annotations=annotations,
+																				  target_zone="Magistrats",
+																				  show_images=False,
+																				  loaded_image=loaded_image,
+																				  ocr_prediction=ocr_prediction,
+																				  intersect_ratio=0.1)
 
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
 		cejourdui_date, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
@@ -2162,9 +2070,9 @@ class Extractor:
 		"""
 
 		table_dict = {}
-		zone_englobante_magistrats = self.filter_zones(zones_magistrats, "Magistrats")
-		column_annotation = self.filter_zones(zones_magistrats, "Colonne")
-		lines_annotation = self.filter_zones(zones_magistrats, "ligne")
+		zone_englobante_magistrats = utils.filter_zones(zones_magistrats, "Magistrats")
+		column_annotation = utils.filter_zones(zones_magistrats, "Colonne")
+		lines_annotation = utils.filter_zones(zones_magistrats, "ligne")
 		lignes_table_triees = utils.vertical_order_zones(lines_annotation)
 		first_column, *_ = utils.horizontal_order_zones(column_annotation)
 		first_column = first_column.coordinates
