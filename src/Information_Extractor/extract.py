@@ -74,6 +74,10 @@ class Extractor:
 		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
 		self.charge_identification_tokenizer = tokenizer
 
+
+		with open("src/resources/rangs_militaires.txt", "r") as rangs:
+			self.rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
+
 		with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
 			self.charge_identification_labels = json.load(output_json)
 
@@ -1948,17 +1952,10 @@ class Extractor:
 		)
 
 		description_du_soldat["identite"]["rang"] = rang_extrait
-		rangs_possibles = ["canonnier", "canonnier de 2^e classe", "exclu", "2^e canonnier conducteur", "caporal", "soldat", "soldat de 1^ere classe", "soldat de 2^eme classe",
-						   "soldat détenu","soldat auxiliaire", "soldat territorial", "matelot", "soldat conducteur", "sapeur réserviste", "aspirant",
-						   "travailleur auxiliaire kabyle", "travailleur auxiliaire", "sergent-major", "travailleur", "conducteur", "sapeur", "sergent", "clairon",
-						   "maître pointeur", "caporal fourrier", "maréchal des logis", "maréchal des logis fourrier", "maréchal des logis réserviste",
-						   "officier d'administration de 1^ere classe", "officier d'administration de 2^eme classe", "garde intérimaire",
-						   "médecin auxiliaire", "médecin major", "sapeur mineur", "quartier-maître","quartier-maître mécanicien", "sous-lieutenant", "sapeur indigène", "tirailleur", "chasseur", "détenu",
-						   "médecin major de 2^eme classe", "médecin major de 1^ere classe", "sapeur de 1^ere classe", "sapeur de 2^eme classe", "zouave", "canonnier fauconnier", "2^e canonnier", "conducteur territorial",
-						   "sous-chef ouvrier", "prisonnier de guerre", "contrôleur de 1^ere classe", "brigadier", "sapeur artilleur", "sapeur réserviste"]
+
 		if rang_extrait["extracted"] is not None:
 			# Il manque le cas "Autre", à gérer avec une distance importante
-			rang_normalise, distance = similarity.find_closest_word_in_list(word_list=rangs_possibles, target_word=rang_extrait["extracted"])
+			rang_normalise, distance = similarity.find_closest_word_in_list(word_list=self.rangs_militaires, target_word=rang_extrait["extracted"])
 			if distance > (len(rang_normalise) / 2):
 				rang_normalise = "UNK"
 		else:
