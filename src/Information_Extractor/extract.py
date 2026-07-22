@@ -1062,7 +1062,8 @@ class Extractor:
 		type_de_peine = [
 			"travaux publics",
 			"prison",
-			"peine de mort"
+			"peine de mort",
+			"amende"
 		]
 		duree_de_la_peine = {
 			1/30: "un jour",
