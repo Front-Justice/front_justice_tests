@@ -328,10 +328,10 @@ def extraire_feature(entities_list,
 	if entite_et_baseline:
 		result = []
 		for item in entite_et_baseline:
-			if item["extracted"] == "":
-				continue
 			extracted_feature, target_baseline_extracted_feature = (item["extracted"],
 																	item["baseline"])
+			if utils.clean_small_string(extracted_feature) == '':
+				continue
 			result.append({
 		"extracted": utils.clean_small_string(extracted_feature),
 		"baseline": target_baseline_extracted_feature,
