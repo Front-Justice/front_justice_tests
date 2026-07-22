@@ -326,15 +326,22 @@ def extraire_feature(entities_list,
 		certainty = None
 
 	if entite_et_baseline:
-		extracted_feature, target_baseline_extracted_feature = (entite_et_baseline[0]["extracted"],
-																entite_et_baseline[0]["baseline"])
-	else:
-		extracted_feature, target_baseline_extracted_feature = None, None
-	return {
+		result = []
+		for item in entite_et_baseline:
+			extracted_feature, target_baseline_extracted_feature = (item["extracted"],
+																	item["baseline"])
+			result.append({
 		"extracted": utils.clean_small_string(extracted_feature),
 		"baseline": target_baseline_extracted_feature,
 		"certainty": certainty
-	}
+	})
+		return result[0] if len(result) == 1 else result
+	else:
+		return {
+			"extracted": None,
+			"baseline": None,
+			"certainty": None
+		}
 
 
 
