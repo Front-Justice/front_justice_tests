@@ -89,8 +89,11 @@ class Reconciliator:
 		print("---")
 
 	def _check_multiple_soldiers(self):
-		if any(page["extractions"] == {"commentaire": "Plusieurs soldats"} for page in self.minute_list):
-			self.plusieurs_soldats = True
+		try:
+			if any(page["extractions"] == {"commentaire": "Plusieurs soldats"} for page in self.minute_list):
+				self.plusieurs_soldats = True
+		except KeyError:
+			pass
 
 	def _count_number_appendices(self):
 		self.appendices_number = len([item for item in self.minute_list if item["classe"] == "page_autre"])
