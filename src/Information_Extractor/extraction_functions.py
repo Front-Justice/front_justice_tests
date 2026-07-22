@@ -328,6 +328,8 @@ def extraire_feature(entities_list,
 	if entite_et_baseline:
 		result = []
 		for item in entite_et_baseline:
+			if item["extracted"] == "":
+				continue
 			extracted_feature, target_baseline_extracted_feature = (item["extracted"],
 																	item["baseline"])
 			result.append({
