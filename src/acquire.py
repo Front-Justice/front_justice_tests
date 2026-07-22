@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import re
 import shutil
 
 import PIL.Image
@@ -210,6 +211,17 @@ class Pipeline:
 		# 	exit(0)
 		# 	print("Plusieurs soldats")
 		# 	return None, None
+
+		# On va compter les mots qui entendent plusieurs soldats, pour identifier les minutes avec plusieurs soldats.
+		split_regexp = re.compile(r"[.;!?'\"\s\-:]")
+		vocabulaire = re.split(pattern=split_regexp, string=self.current_page_transcription.join_transcription())
+		vocab_count = (vocabulaire.count("accusés")
+					   + vocabulaire.count("leur")
+					   + vocabulaire.count("leurs")
+					   + vocabulaire.count("eux"))
+		if vocab_count > 4:
+			print("Plusieurs soldat")
+			return None, None
 
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
 			ocr_prediction=self.current_page_transcription,
