@@ -1060,7 +1060,7 @@ class Extractor:
 												  feature="peine",
 												 image_path=image_path)
 		if isinstance(peines, dict):
-			peine = [peines]
+			peines = [peines]
 		type_de_peine = [
 			"travaux publics",
 			"prison",
