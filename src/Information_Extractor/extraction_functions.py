@@ -326,24 +326,15 @@ def extraire_feature(entities_list,
 		certainty = None
 
 	if entite_et_baseline:
-		result = []
-		for item in entite_et_baseline:
-			extracted_feature, target_baseline_extracted_feature = (item["extracted"],
-																	item["baseline"])
-			if utils.clean_small_string(extracted_feature) == '':
-				continue
-			result.append({
+		extracted_feature, target_baseline_extracted_feature = (entite_et_baseline[0]["extracted"],
+																entite_et_baseline[0]["baseline"])
+	else:
+		extracted_feature, target_baseline_extracted_feature = None, None
+	return {
 		"extracted": utils.clean_small_string(extracted_feature),
 		"baseline": target_baseline_extracted_feature,
 		"certainty": certainty
-	})
-		return result[0] if len(result) == 1 else result
-	else:
-		return {
-			"extracted": None,
-			"baseline": None,
-			"certainty": None
-		}
+	}
 
 
 
@@ -436,13 +427,8 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 		image_path=image_path
 	)
 
-	try:
-		lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(
-			lieu_naissance["departement"]["extracted"])
-	except TypeError as e:
-		print(e)
-		print(lieu_naissance)
-		exit(0)
+	lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(
+		lieu_naissance["departement"]["extracted"])
 
 	lieu_naissance["ville"] = extraire_feature(
 		entity_dict,

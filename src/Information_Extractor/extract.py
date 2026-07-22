@@ -1055,12 +1055,10 @@ class Extractor:
 		resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
 		result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
 		decision_normalisee = cas[result]
-		peines = extractions.extraire_feature(entities_list=entities,
+		peine = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
 												  feature="peine",
-												 image_path=image_path)
-		if isinstance(peines, dict):
-			peines = [peines]
+														 image_path=image_path)
 		type_de_peine = [
 			"travaux publics",
 			"prison",
@@ -1092,29 +1090,25 @@ class Extractor:
 			72: "six ans",
 			84: "sept ans"
 		}
-		peines_extraites = []
-		for peine in peines:
-			if peine and peine["extracted"] != "" and peine["extracted"] is not None:
-				# Essayer de voir si une fonction de proximité formelle ne suffirait pas
-				type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
-																	   embedder=self.sentence_camembert)
-			else:
-				type_peine = None
-			if type_peine and type_peine not in  ["amende", "peine de mort"] and peine["extracted"] != "":
-				duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"],
-																		queries=[item for item in duree_de_la_peine.values()],
-																		embedder=self.sentence_camembert)
-				duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
-			else:
-				duree_peine = None
+		if peine and peine["extracted"] != "" and peine["extracted"] is not None:
+			# Essayer de voir si une fonction de proximité formelle ne suffirait pas
+			type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
+																   embedder=self.sentence_camembert)
+		else:
+			type_peine = None
+		if type_peine and type_peine != "peine de mort" and peine["extracted"] != "":
+			duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
+																	embedder=self.sentence_camembert)
+			duree_peine = {val:key for key, val in duree_de_la_peine.items()}[duree_peine]
+		else:
+			duree_peine = None
 
-			peine_courante = {
-				"predicted": peine,
-				"extracted":
-					{"duree": duree_peine,
-					 "type": type_peine}
-			}
-			peines_extraites.append(peine_courante)
+		peine = {
+			"predicted": peine,
+			"extracted":
+				{"duree": duree_peine,
+				 "type": type_peine}
+		}
 
 
 
@@ -1157,7 +1151,7 @@ class Extractor:
 														 image_path=image_path)
 		extracted = {"decision_normalisee": decision_normalisee,
 					 "decision_extraite": resultat_condamnation,
-					 "peine": peines_extraites,
+					 "peine": peine,
 					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
 					 "voix": voix,
 					 "sursis": True if sursis and sursis["extracted"] != None else False}
