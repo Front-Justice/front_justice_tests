@@ -220,7 +220,7 @@ class Pipeline:
 					   + vocabulaire.count("leurs")
 					   + vocabulaire.count("eux"))
 		if vocab_count > 4:
-			print("Plusieurs soldat")
+			print("Plusieurs soldats.")
 			return None, None
 
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(

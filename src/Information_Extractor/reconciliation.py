@@ -70,6 +70,7 @@ class Reconciliator:
 		if self._check_minute_consistency() is False:
 			self.reconciliated_minute = {}
 			return
+		self._check_multiple_soldiers()
 		self._filter_pages()
 		self._count_number_appendices()
 		self._add_images_path()
@@ -86,6 +87,10 @@ class Reconciliator:
 		self._produce_dict()
 		# self._remove_baseline_and_bbox()
 		print("---")
+
+	def _check_multiple_soldiers(self):
+		if any(page["extractions"] == {"commentaire": "Plusieurs soldats"} for page in self.minute_list):
+			self.plusieurs_soldats = True
 
 	def _count_number_appendices(self):
 		self.appendices_number = len([item for item in self.minute_list if item["classe"] == "page_autre"])
@@ -246,11 +251,6 @@ class Reconciliator:
 		Cette fonction récupèrer l'information qui ne se répète pas.
 		:return:
 		"""
-		try:
-			if self.annotations_page_1["extractions"]["commentaire"] == "Plusieurs soldats" or self.annotations_page_2["extractions"]["commentaire"] == "Plusieurs soldats":
-				self.plusieurs_soldats = True
-		except KeyError:
-			pass
 		try:
 			self.decision_tribunal = self.annotations_page_3["extractions"]["decision_tribunal"]
 		except (TypeError, KeyError, IndexError):
@@ -664,56 +664,73 @@ class Reconciliator:
 			greffier = self.magistrats["greffier"]["extracted"]["persName"]
 		except (TypeError, KeyError):
 			greffier = None
-		self.reconciliated_minute = {
-			"metadata":
-				{
-				"images": self.images_path,
-				"greffier": greffier,
-				"nombre_pages_annexes": self.appendices_number,
-				"plusieurs_soldats": self.plusieurs_soldats
-			},
-			"informations_proces": {"numero_ordre": self.numero_ordre,
-									"numero_jugement": self.numero_jugement,
-									"lieu_jugement": self.lieu_jugement,
-									"date_du_proces": {"date_reconciliee": self.date_proces,
-										   "date_originelle": self.date_proces_orig},
-			"magistrats": self.magistrats},
-			"soldat":
-				{
-					"situation_militaire":
-						{"rang_extrait": self.rang,
-						"rang_normalise": self.rang_normalise,
-					"affectation": self.affectation,
-						 "matricule": self.numero_matricule},
-					"identite": {
-						"nom":
-							{"extracted": self.nom_du_soldat,
-							 "certitude": self.certitude_nom_du_soldat},
-						"prenom":
-							{"extracted": self.prenom_du_soldat,
-							 "certitude": self.certitude_prenom_du_soldat},
-						"age": self.age_soldat,
-						"date_naissance": self.date_naissance,
-						"lieu_residence": self.lieu_residence,
-						"lieu_naissance": self.lieu_naissance,
-						"profession_extraite": self.profession_extraite,
-						"profession_normalisee": self.profession_normalisee,
-						"famille":
-						{"situation_maritale": self.situation_maritale,
-						 "enfants": self.enfants},
-						},
-					"description_physique": self.description_physique,
-					"antecedents": self.antecedents
+		if self.plusieurs_soldats is False:
+			self.reconciliated_minute = {
+				"metadata":
+					{
+					"images": self.images_path,
+					"greffier": greffier,
+					"nombre_pages_annexes": self.appendices_number,
+					"plusieurs_soldats": self.plusieurs_soldats
 				},
-			"accusation": {
-				"date_du_crime_ou_delit": self.date_crime_ou_delit,
-				"chef_accusation_extrait": self.chef_accusation_extrait,
-				"chef_accusation_normalise": self.chef_accusation_normalise,
-				"questions_posees": self.questions
-			},
-			"decision_tribunal": {
-				"frais": self.condamnation_pecuniaire,
-				"jugement": self.decision_tribunal
-			},
-			"actualisations_du_jugement": self.annotations
-		}
+				"informations_proces": {"numero_ordre": self.numero_ordre,
+										"numero_jugement": self.numero_jugement,
+										"lieu_jugement": self.lieu_jugement,
+										"date_du_proces": {"date_reconciliee": self.date_proces,
+											   "date_originelle": self.date_proces_orig},
+				"magistrats": self.magistrats},
+				"soldat":
+					{
+						"situation_militaire":
+							{"rang_extrait": self.rang,
+							"rang_normalise": self.rang_normalise,
+						"affectation": self.affectation,
+							 "matricule": self.numero_matricule},
+						"identite": {
+							"nom":
+								{"extracted": self.nom_du_soldat,
+								 "certitude": self.certitude_nom_du_soldat},
+							"prenom":
+								{"extracted": self.prenom_du_soldat,
+								 "certitude": self.certitude_prenom_du_soldat},
+							"age": self.age_soldat,
+							"date_naissance": self.date_naissance,
+							"lieu_residence": self.lieu_residence,
+							"lieu_naissance": self.lieu_naissance,
+							"profession_extraite": self.profession_extraite,
+							"profession_normalisee": self.profession_normalisee,
+							"famille":
+							{"situation_maritale": self.situation_maritale,
+							 "enfants": self.enfants},
+							},
+						"description_physique": self.description_physique,
+						"antecedents": self.antecedents
+					},
+				"accusation": {
+					"date_du_crime_ou_delit": self.date_crime_ou_delit,
+					"chef_accusation_extrait": self.chef_accusation_extrait,
+					"chef_accusation_normalise": self.chef_accusation_normalise,
+					"questions_posees": self.questions
+				},
+				"decision_tribunal": {
+					"frais": self.condamnation_pecuniaire,
+					"jugement": self.decision_tribunal
+				},
+				"actualisations_du_jugement": self.annotations
+			}
+		else:
+			self.reconciliated_minute = {
+				"metadata":
+					{
+						"images": self.images_path,
+						"greffier": greffier,
+						"nombre_pages_annexes": self.appendices_number,
+						"plusieurs_soldats": self.plusieurs_soldats
+					},
+				"informations_proces": {"numero_ordre": self.numero_ordre,
+										"numero_jugement": self.numero_jugement,
+										"lieu_jugement": self.lieu_jugement,
+										"date_du_proces": {"date_reconciliee": self.date_proces,
+														   "date_originelle": self.date_proces_orig},
+										"magistrats": self.magistrats}
+			}
