@@ -1252,7 +1252,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		if minute != {}:
 			interm.append(f'{minute["metadata"]["images"][0].split("/")[-1].split(".")[0]}-{minute["metadata"]["images"][-1].split("/")[-1].split(".")[0]}')
-
+		else:
+			interm.append("UNK")
 		if minute == {}:
 			interm.append("True")
 		else:
