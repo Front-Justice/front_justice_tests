@@ -2173,7 +2173,9 @@ class Extractor:
 		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
 			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
 		closest, distance = similarity.find_closest_word_in_list(target_word=processed_president['persName'], word_list=liste_presidents)
+		# TODO: ajouter les noms de jury au modèle de NER
 		normalized_president = closest
+
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
 		coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates

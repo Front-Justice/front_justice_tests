@@ -1,4 +1,6 @@
 import copy
+import math
+from datetime import datetime
 import json
 import re
 import shutil
@@ -37,6 +39,10 @@ class Reconciliator:
 		self.numero_jugement = None
 		self.lieu_jugement = None
 		self.date_proces = None
+		self.jours_guerre = None
+		self.annee_guerre = None
+		self.mois_guerre = None
+		self.trimestre_guerre = None
 		self.decision_tribunal = None
 		self.plusieurs_soldats = False
 		self.chef_accusation_extrait = None
@@ -203,6 +209,40 @@ class Reconciliator:
 					print("Problemo")
 					self.date_proces = None
 					# self.date_proces =
+			if self.date_proces:
+				# On va compter les jours, mois, trimestre et année de guerre.
+				debut_guerre = "1914-09-03"
+				precision_date = len(self.date_proces.split("/"))
+				if precision_date == 3:
+					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+					self.jours_guerre = abs((d2 - d1).days)
+					self.annee_guerre = math.ceil(self.jours_guerre / 365)
+					self.mois_guerre = math.ceil(self.jours_guerre / 30)
+					self.trimestre_guerre = math.ceil(self.jours_guerre / 90)
+
+				# Dns le cas d'une précision au mois, on accepte 1 mois/trimestre d'écart
+				elif precision_date == 2:
+					self.date_proces = f"01/{self.date_proces}"
+					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+					jours_guerre = abs((d2 - d1).days)
+					self.jours_guerre = None
+					self.annee_guerre = math.ceil(jours_guerre / 365)
+					self.mois_guerre = math.ceil(jours_guerre / 30)
+					self.trimestre_guerre = math.ceil(jours_guerre / 90)
+
+				# Dns le cas d'une précision à l'année, on né calcule que la durée de la guerre
+				elif precision_date == 1:
+					self.date_proces = f"01/01/{self.date_proces}"
+					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+					jours_guerre = abs((d2 - d1).days)
+					self.jours_guerre = None
+					self.annee_guerre = math.ceil(jours_guerre / 365)
+					self.mois_guerre = None
+					self.trimestre_guerre = None
+
 
 
 	def _retrieve_profession(self):
@@ -680,7 +720,11 @@ class Reconciliator:
 										"numero_jugement": self.numero_jugement,
 										"lieu_jugement": self.lieu_jugement,
 										"date_du_proces": {"date_reconciliee": self.date_proces,
-											   "date_originelle": self.date_proces_orig},
+											   "date_originelle": self.date_proces_orig, 
+														   "jours_de_guerre": self.jours_guerre,
+														   "mois_de_guerre": self.mois_guerre,
+														   "trimestres_de_guerre": self.trimestre_guerre,
+														   "annees_de_guerre": self.annee_guerre},
 				"magistrats": self.magistrats},
 				"soldat":
 					{
