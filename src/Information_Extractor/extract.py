@@ -422,6 +422,7 @@ class Extractor:
 		# 1 correspond à la page 1, métadonnée qu'on envoie au modèle.
 		lignes_description_soldat_raw = f"1 {utils.nfc_normalize(lignes_description_soldat_raw)}"
 		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
+		description_du_soldat["entites"] = result_spotting
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
@@ -1154,7 +1155,8 @@ class Extractor:
 					 "peine": peine,
 					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
 					 "voix": voix,
-					 "sursis": True if sursis and sursis["extracted"] != None else False}
+					 "sursis": True if sursis and sursis["extracted"] != None else False,
+					 "entites": entities}
 
 
 
@@ -1742,6 +1744,7 @@ class Extractor:
 		description_du_soldat["prediction"] = target_lines
 		target_lines = f"1 {target_lines}"
 		entities = self.entity_spotting_pipeline(target_lines)
+		description_du_soldat["entites"] = entities
 
 		# On commence par le nom du soldat
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
@@ -1769,6 +1772,7 @@ class Extractor:
 							"bbox": bbox_nom_soldat,
 							"baseline": baseline_nom_du_soldat}
 				}
+
 
 		elif len(soldat) > 1:
 			# plusieurs_soldats = True
