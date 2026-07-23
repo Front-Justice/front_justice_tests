@@ -214,6 +214,7 @@ class Reconciliator:
 				debut_guerre = "1914-09-03"
 				precision_date = len(self.date_proces.split("/"))
 				if precision_date == 3:
+					# https://stackoverflow.com/a/8419655
 					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
 					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
 					self.jours_guerre = abs((d2 - d1).days)

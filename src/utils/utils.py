@@ -1182,6 +1182,10 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Erreur de traitement de la minute",
 			  "Plusieurs soldats",
 			  "Date du procès",
+			  "Jours de guerre",
+			  "Mois de guerre",
+			  "Trimestres de guerre",
+			  "Années de guerre",
 			  "Institution engagée",
 			  "Lieu du procès",
 			  "Numéro du jugement",
@@ -1274,6 +1278,36 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except (TypeError, KeyError):
 			date_proces = "UNK"
 		interm.append(date_proces)
+
+
+		# Jours de guerre
+		try:
+			jours_de_guerre = minute['informations_proces']['date_du_proces']['jours_de_guerre']
+		except (TypeError, KeyError):
+			jours_de_guerre = "UNK"
+		interm.append(jours_de_guerre)
+
+		# mois de guerre
+		try:
+			mois_de_guerre = minute['informations_proces']['date_du_proces']['mois_de_guerre']
+		except (TypeError, KeyError):
+			mois_de_guerre = "UNK"
+		interm.append(mois_de_guerre)
+
+		# trimestres de guerre
+		try:
+			trimestres_de_guerre = minute['informations_proces']['date_du_proces']['trimestres_de_guerre']
+		except (TypeError, KeyError):
+			trimestres_de_guerre = "UNK"
+		interm.append(trimestres_de_guerre)
+		
+
+		# annee de guerre
+		try:
+			annees_de_guerre = minute['informations_proces']['date_du_proces']['annees_de_guerre']
+		except (TypeError, KeyError):
+			annees_de_guerre = "UNK"
+		interm.append(annees_de_guerre)
 
 		# Lieu du procès
 		try:
