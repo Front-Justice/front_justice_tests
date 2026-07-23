@@ -533,10 +533,10 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_
 		except TypeError:
 			lieu_residence["coordonnées"] = None
 
-		lieu_residence["coordonnées"] = {
-			"lon": result["lon"],
-			"lat": result["lat"]
-		}
+	lieu_residence["coordonnées"] = {
+		"lon": result["lon"],
+		"lat": result["lat"]
+	}
 	if adresse["extracted"]:
 		lieu_residence["adresse"] = adresse
 

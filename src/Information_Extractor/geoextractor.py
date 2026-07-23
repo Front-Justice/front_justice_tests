@@ -166,7 +166,12 @@ class GeoExtractor():
 			departement = departement.replace("l'", "")
 			actual_departement, departement_corrige = self.correct_department(departement)
 		else:
-			return None
+			return {
+						"lat": None,
+						"lon": None,
+						"nom_actuel": None,
+						"departement": None
+					}
 		# TODO: Ajouter le Sénégal, le Maroc, Madagascar, la Cochinchine, le Tonkin et utiliser une base de donnée pour tous les pays.
 		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine", "Cochinchine française"]:
 			if ville == "Constantine" or departement_corrige == "Constantine":
