@@ -1311,7 +1311,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 		try:
 			president_normalise = minute['informations_proces']['magistrats']['president']['normalized']
 		except (KeyError, TypeError):
-			president = "UNK"
+			president_normalise = "UNK"
 		interm.append(president_normalise)
 
 		# Jurés (on n'extrait pas les rôles)
