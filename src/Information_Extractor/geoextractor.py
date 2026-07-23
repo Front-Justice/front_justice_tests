@@ -65,7 +65,7 @@ class GeoExtractor():
 		if departement is None:
 			return None, None
 		if departement in self.departments_dict:
-			matching_department = departement
+			return departement, departement
 		else:
 			liste_des_departements = list(self.departments_dict.keys())
 			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements,
@@ -76,7 +76,7 @@ class GeoExtractor():
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
 			if distance > 5:
 				return None, departement
-		return actual_departement, matching_department
+			return actual_departement, matching_department
 
 	def filter_geodict_by_department(self, clean_departement):
 		"""
