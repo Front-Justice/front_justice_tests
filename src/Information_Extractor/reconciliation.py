@@ -721,11 +721,11 @@ class Reconciliator:
 										"numero_jugement": self.numero_jugement,
 										"lieu_jugement": self.lieu_jugement,
 										"date_du_proces": {"date_reconciliee": self.date_proces,
-											   "date_originelle": self.date_proces_orig, 
-														   "jours_de_guerre": self.jours_guerre,
-														   "mois_de_guerre": self.mois_guerre,
-														   "trimestres_de_guerre": self.trimestre_guerre,
-														   "annees_de_guerre": self.annee_guerre},
+										"date_originelle": self.date_proces_orig,
+									   "jours_de_guerre": self.jours_guerre,
+									   "mois_de_guerre": self.mois_guerre,
+									   "trimestres_de_guerre": self.trimestre_guerre,
+									   "annees_de_guerre": self.annee_guerre},
 				"magistrats": self.magistrats},
 				"soldat":
 					{
@@ -779,6 +779,10 @@ class Reconciliator:
 										"numero_jugement": self.numero_jugement,
 										"lieu_jugement": self.lieu_jugement,
 										"date_du_proces": {"date_reconciliee": self.date_proces,
-														   "date_originelle": self.date_proces_orig},
+														   "date_originelle": self.date_proces_orig,
+									   "jours_de_guerre": self.jours_guerre,
+									   "mois_de_guerre": self.mois_guerre,
+									   "trimestres_de_guerre": self.trimestre_guerre,
+									   "annees_de_guerre": self.annee_guerre},
 										"magistrats": self.magistrats}
 			}

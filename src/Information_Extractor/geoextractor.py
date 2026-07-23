@@ -34,7 +34,7 @@ class GeoExtractor():
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			if distance > 4:
 				return departement
-		return matching_department
+		return corresponding_departments, matching_department
 
 	def filter_geodict_by_arrondissement(self, arrondissement):
 		"""
@@ -71,16 +71,10 @@ class GeoExtractor():
 		# utils.log_print(f"Arrondissement prédit: {arrondissement}")
 		# utils.log_print(f"Commune correspondante dans la base: {commune_correspondante}")
 		# utils.log_print(f"Département: {departement_correspondant}")
-		self.filter_geodict_by_department(departement_correspondant)
+		actual_departement, _ = self.correct_department(departement_correspondant)
+		self.filter_geodict_by_department(actual_departement)
 
-	def filter_geodict_by_department(self, departement):
-		"""
-		Cette fonction filtre le dictionnaire contenant les positions géographiques des communes françaises
-		par département.
-		:param departement: le département tel qu'il apparaît dans le minutier
-		:return:
-		"""
-		self.filtered_geodict = copy.deepcopy(self.geodict)
+	def correct_department(self, departement):
 		if departement is None:
 			return
 		if departement in self.departments_dict:
@@ -91,18 +85,28 @@ class GeoExtractor():
 			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements,
 																			departement,
 																			replacement_mapping={"-": " "})
-			corresponding_departments = self.departments_dict[matching_department]
+			actual_departement = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
 			if distance > 5:
 				return
+		return actual_departement, matching_department
+
+	def filter_geodict_by_department(self, clean_departement):
+		"""
+		Cette fonction filtre le dictionnaire contenant les positions géographiques des communes françaises
+		par département.
+		:param departement: le département tel qu'il apparaît dans le minutier
+		:return:
+		"""
+		self.filtered_geodict = copy.deepcopy(self.geodict)
+
 
 		# utils.log_print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
 		for key, value in self.geodict.items():
 			# Si la clé actuelle ne correspond pas aux départements correspondants, on supprime du dictionnaire.
-			if value["département"] and value["département"] not in corresponding_departments:
+			if value["département"] and value["département"] not in clean_departement:
 				del self.filtered_geodict[key]
-		return matching_department
 
 	def paris(self, arrondissement):
 		arrondissement_regexp = re.compile(r"\d{1,2}")
@@ -171,16 +175,29 @@ class GeoExtractor():
 							}
 		"""
 		match = False
-		if ville in ["Constantine", "Oran", "Alger"] or departement in ["Constantine", "Oran", "Alger"]:
+		# TODO: Ajouter le Sénégal, le Maroc, Madagascar, la Cochinchine, le Tonkin et utiliser une base de donnée pour tous les pays.
+		if ville in ["Constantine", "Oran", "Alger"] or departement in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine"]:
 			if ville == "Constantine" or departement == "Constantine":
 				latitude = 36.35
 				longitude =  6.60
-			if ville == "Alger" or departement == "Alger":
+			elif ville == "Alger" or departement == "Alger":
 				latitude = 36.75
 				longitude = 3.04
-			if ville == "Oran" or departement == "Oran":
+			elif ville == "Oran" or departement == "Oran":
 				latitude = 35.70
 				longitude = 0.63
+			elif departement == "Tonkin":
+				latitude = 21.03
+				longitude = 105.83
+			elif departement == "Maroc":
+				latitude = 33.97
+				longitude = -6.85
+			elif departement == "Cochinchine":
+				latitude = 10.79
+				longitude = 106.67
+			elif departement == "Madagascar":
+				latitude = -18.93
+				longitude = 47.51
 			return {
 						"lat": latitude,
 						"lon": longitude,
@@ -197,7 +214,8 @@ class GeoExtractor():
 		else:
 			# On va nettoyer le département
 			departement = departement.replace("l'", "")
-			departement_extrait = self.filter_geodict_by_department(departement)
+			actual_departement, departement_extrait = self.correct_department(departement)
+			self.filter_geodict_by_department(actual_departement)
 
 			# On regarde la liste des villes
 			for key, row in self.filtered_geodict.items():

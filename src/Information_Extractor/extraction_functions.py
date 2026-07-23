@@ -452,9 +452,7 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
 	try:
 		lieu_naissance["departement"]["corrected"] = result["departement"]
-	except KeyError:
-		lieu_naissance["departement"]["corrected"] = None
-	except TypeError:
+	except (KeyError, TypeError):
 		lieu_naissance["departement"]["corrected"] = None
 	try:
 		lieu_naissance["ville"]["nom_actuel"] = result["nom_actuel"]
