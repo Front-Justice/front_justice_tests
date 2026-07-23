@@ -148,7 +148,7 @@ class GeoExtractor():
 		}
 
 
-	def retrieve_coordinates(self, ville, arrondissement, departement):
+	def database_retrieval(self, ville, arrondissement, departement):
 		"""
 		Cette fonction récupère les coordonnées géographique d'une ville, en se servant de l'information de département
 		pour filtrer et éventuellement de l'arrondissement (pour Paris)
@@ -181,6 +181,9 @@ class GeoExtractor():
 			elif departement_corrige == "Tonkin":
 				latitude = 21.03
 				longitude = 105.83
+			elif departement_corrige == "Sénégal":
+				latitude = 14.50
+				longitude = -14.45
 			elif departement_corrige == "Maroc":
 				latitude = 33.97
 				longitude = -6.85

@@ -447,7 +447,7 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 	if arrondissement and "dudit" in arrondissement:
 		lieu_naissance["arrondissement"]["extracted"] = ville
 	departement = lieu_naissance["departement"]["extracted"]
-	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
+	result = geoextractor.database_retrieval(ville=ville, arrondissement=arrondissement, departement=departement)
 	try:
 		lieu_naissance["departement"]["corrected"] = result["departement"]
 	except (KeyError, TypeError):
@@ -516,7 +516,7 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_
 	# le département de naissance.
 	if departement is None:
 		departement = lieu_naissance["departement"]["extracted"]
-	result = geoextractor.retrieve_coordinates(ville=ville, arrondissement=arrondissement, departement=departement)
+	result = geoextractor.database_retrieval(ville=ville, arrondissement=arrondissement, departement=departement)
 	try:
 		lieu_residence["departement"]["corrected"] = result["departement"]
 	except (TypeError, KeyError):
