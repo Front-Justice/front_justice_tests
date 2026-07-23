@@ -1186,7 +1186,8 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Lieu du procès",
 			  "Numéro du jugement",
 			  "Numéro d'ordre",
-			  "Président du jury",
+			  "Président du jury (extrait)",
+			  "Président du jury (normalisé)",
 			  "Juré 1",
 			  "Juré 2",
 			  "Juré 3",
@@ -1307,6 +1308,11 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except (KeyError, TypeError):
 			president = "UNK"
 		interm.append(president)
+		try:
+			president_normalise = minute['informations_proces']['magistrats']['president']['normalized']
+		except (KeyError, TypeError):
+			president = "UNK"
+		interm.append(president_normalise)
 
 		# Jurés (on n'extrait pas les rôles)
 		try:

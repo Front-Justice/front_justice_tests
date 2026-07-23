@@ -2170,6 +2170,10 @@ class Extractor:
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
 																   self.date_recognition_pipeline)
+		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
+			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
+		closest, distance = similarity.find_closest_word_in_list(target_word=processed_president['persName'], word_list=liste_presidents)
+		normalized_president = closest
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
 		coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates
@@ -2200,7 +2204,8 @@ class Extractor:
 			general = extractions.extraire_general(lignes_zone_magistrat=ocr_prediction, image_path=image_path)
 		return {"president": {"extracted": processed_president,
 							  "baseline": [line.baseline for line in president],
-							  "predictions": [line.prediction for line in president]},
+							  "predictions": [line.prediction for line in president],
+							  "normalized": normalized_president},
 				"jures": processed_jures,
 				"greffier": greffier,
 				"commissaire": commissaire,
