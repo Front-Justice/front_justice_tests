@@ -76,7 +76,7 @@ class GeoExtractor():
 
 	def correct_department(self, departement):
 		if departement is None:
-			return
+			return None, None
 		if departement in self.departments_dict:
 			corresponding_departments = self.departments_dict[departement]
 			matching_department = departement
@@ -100,7 +100,8 @@ class GeoExtractor():
 		:return:
 		"""
 		self.filtered_geodict = copy.deepcopy(self.geodict)
-
+		if clean_departement is None:
+			return
 
 		# utils.log_print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
 		for key, value in self.geodict.items():
