@@ -209,40 +209,40 @@ class Reconciliator:
 					print("Problemo")
 					self.date_proces = None
 					# self.date_proces =
-			if self.date_proces:
-				# On va compter les jours, mois, trimestre et année de guerre.
-				debut_guerre = "1914-09-03"
-				precision_date = len(self.date_proces.split("/"))
-				if precision_date == 3:
-					# https://stackoverflow.com/a/8419655
-					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
-					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
-					self.jours_guerre = abs((d2 - d1).days)
-					self.annee_guerre = math.ceil(self.jours_guerre / 365)
-					self.mois_guerre = math.ceil(self.jours_guerre / 30)
-					self.trimestre_guerre = math.ceil(self.jours_guerre / 90)
+		if self.date_proces:
+			# On va compter les jours, mois, trimestre et année de guerre.
+			debut_guerre = "1914-09-03"
+			precision_date = len(self.date_proces.split("/"))
+			if precision_date == 3:
+				# https://stackoverflow.com/a/8419655
+				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+				self.jours_guerre = abs((d2 - d1).days)
+				self.annee_guerre = math.ceil(self.jours_guerre / 365)
+				self.mois_guerre = math.ceil(self.jours_guerre / 30)
+				self.trimestre_guerre = math.ceil(self.jours_guerre / 90)
 
-				# Dns le cas d'une précision au mois, on accepte 1 mois/trimestre d'écart
-				elif precision_date == 2:
-					self.date_proces = f"01/{self.date_proces}"
-					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
-					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
-					jours_guerre = abs((d2 - d1).days)
-					self.jours_guerre = None
-					self.annee_guerre = math.ceil(jours_guerre / 365)
-					self.mois_guerre = math.ceil(jours_guerre / 30)
-					self.trimestre_guerre = math.ceil(jours_guerre / 90)
+			# Dns le cas d'une précision au mois, on accepte 1 mois/trimestre d'écart
+			elif precision_date == 2:
+				self.date_proces = f"01/{self.date_proces}"
+				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+				jours_guerre = abs((d2 - d1).days)
+				self.jours_guerre = None
+				self.annee_guerre = math.ceil(jours_guerre / 365)
+				self.mois_guerre = math.ceil(jours_guerre / 30)
+				self.trimestre_guerre = math.ceil(jours_guerre / 90)
 
-				# Dns le cas d'une précision à l'année, on né calcule que la durée de la guerre
-				elif precision_date == 1:
-					self.date_proces = f"01/01/{self.date_proces}"
-					d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
-					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
-					jours_guerre = abs((d2 - d1).days)
-					self.jours_guerre = None
-					self.annee_guerre = math.ceil(jours_guerre / 365)
-					self.mois_guerre = None
-					self.trimestre_guerre = None
+			# Dns le cas d'une précision à l'année, on né calcule que la durée de la guerre
+			elif precision_date == 1:
+				self.date_proces = f"01/01/{self.date_proces}"
+				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
+				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+				jours_guerre = abs((d2 - d1).days)
+				self.jours_guerre = None
+				self.annee_guerre = math.ceil(jours_guerre / 365)
+				self.mois_guerre = None
+				self.trimestre_guerre = None
 
 
 
