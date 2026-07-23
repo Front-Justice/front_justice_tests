@@ -17,24 +17,6 @@ class GeoExtractor():
 
 
 
-	def correct_department(self, departement):
-		"""
-		Cette fonction corrige un département en utilisant une liste pré-établie
-		:param departement: la chaîne de caractère contenant le nom du département
-		:return: le département correct
-		"""
-		if departement is None:
-			return
-		if departement in self.departments_dict:
-			matching_department = departement
-		else:
-			liste_des_departements = list(self.departments_dict.keys())
-			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements, departement)
-			corresponding_departments = self.departments_dict[matching_department]
-			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
-			if distance > 4:
-				return departement
-		return corresponding_departments, matching_department
 
 	def filter_geodict_by_arrondissement(self, arrondissement):
 		"""
@@ -75,10 +57,14 @@ class GeoExtractor():
 		self.filter_geodict_by_department(actual_departement)
 
 	def correct_department(self, departement):
+		"""
+		Fonction qui permet de corriger le département à partir d'une base de connaissances
+		:param departement:
+		:return:
+		"""
 		if departement is None:
 			return None, None
 		if departement in self.departments_dict:
-			corresponding_departments = self.departments_dict[departement]
 			matching_department = departement
 		else:
 			liste_des_departements = list(self.departments_dict.keys())
@@ -89,7 +75,7 @@ class GeoExtractor():
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
 			if distance > 5:
-				return
+				return None, departement
 		return actual_departement, matching_department
 
 	def filter_geodict_by_department(self, clean_departement):
@@ -176,34 +162,36 @@ class GeoExtractor():
 							}
 		"""
 		match = False
+		if departement is not None:
+			actual_departement, departement_corrige = self.correct_department(departement)
 		# TODO: Ajouter le Sénégal, le Maroc, Madagascar, la Cochinchine, le Tonkin et utiliser une base de donnée pour tous les pays.
-		if ville in ["Constantine", "Oran", "Alger"] or departement in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine"]:
-			if ville == "Constantine" or departement == "Constantine":
+		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine"]:
+			if ville == "Constantine" or departement_corrige == "Constantine":
 				latitude = 36.35
 				longitude =  6.60
-			elif ville == "Alger" or departement == "Alger":
+			elif ville == "Alger" or departement_corrige == "Alger":
 				latitude = 36.75
 				longitude = 3.04
-			elif ville == "Oran" or departement == "Oran":
+			elif ville == "Oran" or departement_corrige == "Oran":
 				latitude = 35.70
 				longitude = 0.63
-			elif departement == "Tonkin":
+			elif departement_corrige == "Tonkin":
 				latitude = 21.03
 				longitude = 105.83
-			elif departement == "Maroc":
+			elif departement_corrige == "Maroc":
 				latitude = 33.97
 				longitude = -6.85
-			elif departement == "Cochinchine":
+			elif departement_corrige == "Cochinchine":
 				latitude = 10.79
 				longitude = 106.67
-			elif departement == "Madagascar":
+			elif departement_corrige == "Madagascar":
 				latitude = -18.93
 				longitude = 47.51
 			return {
 						"lat": latitude,
 						"lon": longitude,
 						"nom_actuel": ville,
-						"departement": departement
+						"departement": departement_corrige
 					}
 		if ville == "Paris":
 			return self.paris(arrondissement)

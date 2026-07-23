@@ -427,8 +427,6 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 		image_path=image_path
 	)
 
-	lieu_naissance["departement"]["corrected"] = geoextractor.correct_department(
-		lieu_naissance["departement"]["extracted"])
 
 	lieu_naissance["ville"] = extraire_feature(
 		entity_dict,
