@@ -281,12 +281,12 @@ class Reconciliator:
 	def _retrieve_categorie_sociopro(self):
 		try:
 			categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-		except KeyError:
+		except (KeyError, TypeError):
 			categorie_sociopro_p1 = None
 
 		try:
 			categorie_sociopro_p2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-		except KeyError:
+		except (KeyError, TypeError):
 			categorie_sociopro_p2 = None
 
 		if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
