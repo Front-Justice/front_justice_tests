@@ -73,6 +73,9 @@ class Extractor:
 		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
 		self.charge_identification_tokenizer = tokenizer
 
+
+		# Les métiers rencontrés dans le corpus sont triés à la main par catégorie sociopro, selon
+		# la classification actuelle de l'INSEE. Des erreurs peuvent encore substister.
 		df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
 		self.professions_et_categories_sociopro = df["Profession"].tolist()
 		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
@@ -544,7 +547,7 @@ class Extractor:
 
 		try:
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = self.dictionnaire_professions_categories[normalized]
-		except KeyError:
+		except (KeyError, UnboundLocalError):
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = "UNK"
 
 		return description_du_soldat
@@ -1922,7 +1925,7 @@ class Extractor:
 		try:
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = \
 			self.dictionnaire_professions_categories[normalized]
-		except KeyError:
+		except (KeyError, UnboundLocalError):
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = "UNK"
 
 
