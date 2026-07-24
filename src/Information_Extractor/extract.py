@@ -1,8 +1,7 @@
 ###############
 import json
-import math
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
-
+import pandas as pd
 ###############
 import unicodedata
 
@@ -74,6 +73,9 @@ class Extractor:
 		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
 		self.charge_identification_tokenizer = tokenizer
 
+		df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
+		self.professions_et_categories_sociopro = df["Profession"].tolist()
+		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
 
 		with open("src/resources/rangs_militaires.txt", "r") as rangs:
 			self.rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
@@ -527,10 +529,10 @@ class Extractor:
 		description_du_soldat["profession"] = profession
 		if description_du_soldat["profession"] and profession["extracted"] is not None:
 			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
-										word_list="src/resources/french_professions.txt",
-										load_file=True)
+										word_list=self.professions_et_categories_sociopro,
+										load_file=False)
 			# Parfois le NER n'est pas précis à 100%, et on peut avoir récupérer la situation familiale. On la supprime.
-			if normalized in ["marié", "célibataire"]:
+			if normalized in ["marié", "célibataire", "veuf", "veuve", "enfants"]:
 				description_du_soldat["profession"]["normalized"] = None
 			elif distance > (len(normalized) / 2):
 				description_du_soldat["profession"]["normalized"] = None
@@ -539,6 +541,11 @@ class Extractor:
 
 		else:
 			description_du_soldat["profession"]["normalized"] = None
+
+		try:
+			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = self.dictionnaire_professions_categories[normalized]
+		except KeyError:
+			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = "UNK"
 
 		return description_du_soldat
 
@@ -1899,10 +1906,10 @@ class Extractor:
 		description_du_soldat["profession"] = profession
 		if description_du_soldat["profession"] and profession["extracted"] is not None:
 			normalized, distance = similarity.find_closest_word_in_list(target_word=profession["extracted"],
-																   word_list="src/resources/french_professions.txt",
-																   load_file=True)
+																		word_list=self.professions_et_categories_sociopro,
+																		load_file=False)
 			# Parfois le NER n'est pas précis à 100%, et on peut avoir récupérer la situation familiale. On la supprime.
-			if normalized in ["marié", "célibataire"]:
+			if normalized in ["marié", "célibataire", "veuf", "veuve", "enfants"]:
 				description_du_soldat["profession"]["normalized"] = None
 			elif distance > (len(normalized) / 2):
 				description_du_soldat["profession"]["normalized"] = None
@@ -1911,6 +1918,12 @@ class Extractor:
 
 		else:
 			description_du_soldat["profession"]["normalized"] = None
+
+		try:
+			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = \
+			self.dictionnaire_professions_categories[normalized]
+		except KeyError:
+			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = "UNK"
 
 
 		# Description physique

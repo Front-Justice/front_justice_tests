@@ -12,6 +12,7 @@ brigadier réserviste
 cannonier conducteur réserviste
 cannonier conducteur territorial
 canonnier
+canonnier artificier
 canonnier conducteur
 canonnier conducteur rengagé
 canonnier de 2^eme classe

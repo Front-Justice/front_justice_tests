@@ -1234,6 +1234,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Enfants",
 			  "Profession extraite",
 			  "Profession normalisée",
+			  "Catégorie socioprofessionnelle",
 			  "Rang du soldat (extrait)",
 			  "Rang du soldat (normalisé)",
 			  "Affectation du soldat",
@@ -1616,6 +1617,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 			interm.append(profession_normalisee)
 		except  (KeyError, TypeError):
 			interm.append(None)
+
+		# catégorie sociopro
+		try:
+			categorie_sociopro = minute['soldat']["identite"]['categorie_socioprofessionnelle']
+			interm.append(categorie_sociopro)
+		except  (KeyError, TypeError):
+			interm.append("UNK")
+
 		# Rang du soldat
 		try:
 			rang_extrait = minute['soldat']["situation_militaire"]['rang_extrait']

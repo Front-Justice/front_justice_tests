@@ -86,6 +86,7 @@ class Reconciliator:
 		self._reconciliate_lieu_naissance()
 		self._retrieve_annotations()
 		self._retrieve_profession()
+		self._retrieve_categorie_sociopro()
 		self._reconciliate_questions()
 		self._reconciliate_trial_date()
 		self._reconciliate_date_naissance()
@@ -276,6 +277,31 @@ class Reconciliator:
 		else:
 			self.profession_extraite = [item for item in [profession_page_1_extraite, profession_page_2_extraite] if item]
 
+
+	def _retrieve_categorie_sociopro(self):
+		try:
+			categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
+		except KeyError:
+			categorie_sociopro_p1 = None
+
+		try:
+			categorie_sociopro_p2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
+		except KeyError:
+			categorie_sociopro_p2 = None
+
+		if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
+			self.categorie_sociopro = categorie_sociopro_p1
+		elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
+			self.categorie_sociopro = "UNK"
+		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None:
+			self.categorie_sociopro = "UNK"
+		elif categorie_sociopro_p1 == None and categorie_sociopro_p2 != None:
+			self.categorie_sociopro = categorie_sociopro_p2
+		elif categorie_sociopro_p1 != None and categorie_sociopro_p2 == None:
+			self.categorie_sociopro = categorie_sociopro_p1
+		else:
+			self.categorie_sociopro = "ERROR"
+
 	def _retrieve_annotations(self):
 		self.annotations = []
 		for page in self.minute_list:
@@ -430,8 +456,6 @@ class Reconciliator:
 			self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
 		except (KeyError, TypeError):
 			self.lieu_residence = None
-
-
 		try:
 			nom_ville_transcrit_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
 		except (KeyError, IndexError, TypeError):
@@ -756,6 +780,7 @@ class Reconciliator:
 							"lieu_naissance": self.lieu_naissance,
 							"profession_extraite": self.profession_extraite,
 							"profession_normalisee": self.profession_normalisee,
+							"categorie_socioprofessionnelle": self.categorie_sociopro,
 							"famille":
 							{"situation_maritale": self.situation_maritale,
 							 "enfants": self.enfants},
