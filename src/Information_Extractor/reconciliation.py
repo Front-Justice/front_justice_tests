@@ -414,14 +414,16 @@ class Reconciliator:
 		try:
 			nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
 		except (KeyError, TypeError):
+			nom_ville_identifie_p1 = None
+		if nom_ville_identifie_p1 is None:
 			try:
 				nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
 			except (KeyError, TypeError):
 				nom_ville_identifie_p1 = None
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
-		except (KeyError, TypeError):
-			print("Page 1 sans annotations")
+		except (KeyError, TypeError) as e:
+			print(f"Page 1 sans annotations: {e}")
 			self.lieu_residence = None
 			return
 		try:
@@ -437,6 +439,8 @@ class Reconciliator:
 		try:
 			nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1801"]
 		except (KeyError, IndexError, TypeError):
+			nom_ville_identifie_p2 = None
+		if nom_ville_identifie_p2 is None:
 			try:
 				nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["nom_1999"]
 			except (KeyError, IndexError, TypeError):
@@ -460,6 +464,7 @@ class Reconciliator:
 				self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
 
 
+
 	def _reconciliate_lieu_naissance(self):
 		try:
 			nom_ville_transcrit_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["extracted"]
@@ -468,6 +473,8 @@ class Reconciliator:
 		try:
 			nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
 		except (KeyError, TypeError):
+			nom_ville_identifie_p1 = None
+		if nom_ville_identifie_p1 is None:
 			try:
 				nom_ville_identifie_p1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
 			except (KeyError, TypeError):
@@ -486,6 +493,8 @@ class Reconciliator:
 		try:
 			nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1801"]
 		except (KeyError, IndexError, TypeError):
+			nom_ville_identifie_p2 = None
+		if nom_ville_identifie_p2 is None:
 			try:
 				nom_ville_identifie_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]["ville"]["nom_1999"]
 			except (KeyError, IndexError, TypeError):

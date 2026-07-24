@@ -441,7 +441,6 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 		"arrondissement_naissance",
 		image_path=image_path
 	)
-
 	ville = lieu_naissance["ville"]["extracted"]
 	arrondissement = lieu_naissance["arrondissement"]["extracted"]
 	if arrondissement and "dudit" in arrondissement:
@@ -460,11 +459,11 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 		pass
 	except TypeError:
 		lieu_naissance["ville"] = None
+		lieu_naissance["coordonnées"] = {
+			"lon": result["lon"],
+			"lat": result["lat"]
+		}
 		return lieu_naissance
-	lieu_naissance["coordonnées"] = {
-		"lon": result["lon"],
-		"lat": result["lat"]
-	}
 	return lieu_naissance
 
 
