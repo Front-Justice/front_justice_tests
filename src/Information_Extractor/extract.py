@@ -516,7 +516,7 @@ class Extractor:
 		description_du_soldat["identite"]["affectation"] = (
 			extractions.extraire_feature(entities_list=result_spotting,
 										 lignes=lignes_description_du_soldat,
-										 feature="affectation_soldat",
+										 feature="assignation_soldat",
 													   image_path=image_path)
 		)
 
@@ -1884,7 +1884,7 @@ class Extractor:
 		description_du_soldat["identite"]["affectation"] = (
 			extractions.extraire_feature(entities_list=entities,
 										 lignes=lignes_description_du_soldat,
-										 feature="affectation_soldat",
+										 feature="assignation_soldat",
 				image_path=image_path)
 		)
 
