@@ -173,7 +173,7 @@ class GeoExtractor():
 						"departement": None
 					}
 		# TODO: Ajouter le Sénégal, le Maroc, Madagascar, la Cochinchine, le Tonkin et utiliser une base de donnée pour tous les pays.
-		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine", "Cochinchine française"]:
+		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine", "Cochinchine française", "Sénégal-Niger", "Soudan français"]:
 			if ville == "Constantine" or departement_corrige == "Constantine":
 				latitude = 36.35
 				longitude =  6.60
@@ -186,12 +186,15 @@ class GeoExtractor():
 			elif departement_corrige == "Tonkin":
 				latitude = 21.03
 				longitude = 105.83
-			elif departement_corrige == "Sénégal":
+			elif departement_corrige in ["Sénégal", "Sénégal-Niger"]:
 				latitude = 14.50
 				longitude = -14.45
 			elif departement_corrige == "Maroc":
 				latitude = 33.97
 				longitude = -6.85
+			elif departement_corrige == "Soudan français":
+				latitude = 12.65
+				longitude = -8.00
 			elif departement_corrige in ["Cochinchine", "Cochinchine française"]:
 				latitude = 10.79
 				longitude = 106.67

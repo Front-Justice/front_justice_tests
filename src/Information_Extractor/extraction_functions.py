@@ -622,46 +622,52 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 	:return:
 	"""
 	# result = pipeline(prediction.lower())
-	result = pipeline(prediction)
+	print(prediction)
+	result = pipeline(f"[2] {prediction}")
+	print(result)
+	print("---")
 	# if debug:
 	# 	utils.log_print("---")
 	# 	utils.log_print(prediction)
 	# 	utils.log_print(result)
-	try:
-		persName_NER = prediction[result[0]['start']: result[0]['end']].strip() if result[0][
-																					   "entity_group"] == "PER" else None
-	except IndexError:
-		utils.log_print(f"La phrase suivante: {prediction} n'a pas mené à reconnaissance d'entité. "
-			  f"Une erreur en amont (zonage, OCR) est possible.")
-		return {"persName": "UNK",
-				"role": "UNK",
-				"certainty": 0}
+	print(prediction)
+	persName = " ".join(item['word'] for item in result if item["entity_group"] == "nom_du_soldat")
+	# try:
+	# 	persName_NER = prediction[result[0]['start']: result[0]['end']].strip() if result[0][
+	# 																				   "entity_group"] == "PER" else None
+	# except IndexError:
+	# 	utils.log_print(f"La phrase suivante: {prediction} n'a pas mené à reconnaissance d'entité. "
+	# 		  f"Une erreur en amont (zonage, OCR) est possible.")
+	# 	return {"persName": "UNK",
+	# 			"role": "UNK",
+	# 			"certainty": 0}
 
 	# La fonction s'extrait après le nom identifié
-	role_NER = prediction[result[0]['end']:] if result[0]["entity_group"] == "PER" else None
+	#role_NER = prediction[result[0]['end']:] if result[0]["entity_group"] == "PER" else None
+	role = " ".join(item['word'] for item in result if item["entity_group"] == "rang")
 
-	# Extraction simple: le premier mot. Pour les noms à particule c'est plus compliqué: aller chercher la virgule?
-	match_first_word = re.search(re.compile(r"[^\s,.]+"), prediction)
-	spans = match_first_word.span()
-	homemade_NER = prediction[spans[0]: spans[1]].strip()
-	homemade_role = prediction[spans[1]:]
-	if persName_NER == homemade_NER:
-		certainty = 1
-		persName = persName_NER
-		role = role_NER
-	elif persName_NER is not None:
-		certainty = 0.5
-		persName = persName_NER
-		role = role_NER
-	else:
-		certainty = 0.3
-		persName = homemade_NER
-		role = homemade_role
+	# # Extraction simple: le premier mot. Pour les noms à particule c'est plus compliqué: aller chercher la virgule?
+	# match_first_word = re.search(re.compile(r"[^\s,.]+"), prediction)
+	# spans = match_first_word.span()
+	# homemade_NER = prediction[spans[0]: spans[1]].strip()
+	# homemade_role = prediction[spans[1]:]
+	# if persName_NER == homemade_NER:
+	# 	certainty = 1
+	# 	persName = persName_NER
+	# 	role = role_NER
+	# elif persName_NER is not None:
+	# 	certainty = 0.5
+	# 	persName = persName_NER
+	# 	role = role_NER
+	# else:
+	# 	certainty = 0.3
+	# 	persName = homemade_NER
+	# 	role = homemade_role
 	role = utils.strip_punctuation(role)
 	persName = utils.strip_punctuation(persName)
 	return {"persName": persName,
 			"role": role,
-			"certainty": certainty}
+			"certainty": 0}
 
 
 def extraire_situation_maritale(string) -> tuple:
