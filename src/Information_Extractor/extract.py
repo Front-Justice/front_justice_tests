@@ -1108,7 +1108,10 @@ class Extractor:
 			48: "quatre ans",
 			60: "cinq ans",
 			72: "six ans",
-			84: "sept ans"
+			84: "sept ans",
+			120: "dix ans",
+			180: "quinze ans",
+			240: "vingt ans"
 		}
 		if peine and peine["extracted"] != "" and peine["extracted"] is not None:
 			# Essayer de voir si une fonction de proximité formelle ne suffirait pas

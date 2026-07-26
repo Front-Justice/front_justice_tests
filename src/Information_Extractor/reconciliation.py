@@ -238,7 +238,14 @@ class Reconciliator:
 			elif precision_date == 1:
 				self.date_proces = f"01/01/{self.date_proces}"
 				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
-				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+				try:
+					d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
+				except ValueError:
+					self.jours_guerre = None
+					self.annee_guerre = None
+					self.mois_guerre = None
+					self.trimestre_guerre = None
+					return
 				jours_guerre = abs((d2 - d1).days)
 				self.jours_guerre = None
 				self.annee_guerre = math.ceil(jours_guerre / 365)

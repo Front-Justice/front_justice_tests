@@ -670,67 +670,6 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"certainty": 0}
 
 
-def extraire_situation_maritale(string) -> tuple:
-	"""
-	Cette fonction permet d'extraire la situation maritale
-	:param string:
-	:return: Un ensemble de données:
-		- la vérification du célibat dans la chaîne de caractère donnée,
-		- l'inférence sur le célibat par rapport aux autre données
-		- le token du célibat trouvé
-		- l'extraction de l'information maritale
-		- le token marital correspondant,
-		- le nombre d'enfants trouvé.
-	"""
-	token_marie, token_celibataire, token_enfants, token_veuf = None, None, None, None
-
-	check_veuf, token_veuf = utils.check_word_in_sentence(string, "veuf", sensibility=0.90)
-
-	check_celibataire, token_celibataire = utils.check_word_in_sentence(string,
-																		"célibataire", sensibility=0.85)
-	if check_celibataire is False:
-		marie, token_marie = utils.check_word_in_sentence(string, "marié", sensibility=0.85)
-		if marie is True:
-			check_enfants, token_enfants = utils.check_word_in_sentence(string, "enfant", sensibility=0.85)
-			if check_enfants is True:
-				nombre_enfants = utils.split_before_keep_delimiter(string, token_enfants)[0].split(token_marie)[-1]
-				nombre_enfants = utils.strip_punctuation(nombre_enfants)
-				try:
-					nombre_enfants = utils.number_dict[
-						utils.correct_based_on_list(nombre_enfants, list(utils.number_dict.keys()))]
-				except KeyError:
-					nombre_enfants = nombre_enfants
-			else:
-				nombre_enfants = None
-		else:
-			# On peut éventuellement (???) avoir une indication d'enfants sans mariage, OU rater l'information du mariage
-			check_enfants, token_enfants = utils.check_word_in_sentence(string, "enfant", sensibility=0.85)
-			if check_enfants is True:
-				tokens_enfants_clean = token_enfants.replace('(', '').replace(')', '')
-				nombre_enfants = utils.strip_punctuation(tokens_enfants_clean)
-				try:
-					nombre_enfants = utils.number_dict[
-						utils.correct_based_on_list(nombre_enfants, list(utils.number_dict.keys()))]
-				except KeyError:
-					nombre_enfants = tokens_enfants_clean
-				regexp = re.compile(rf"(sans|\d+)\s*{nombre_enfants}")
-				try:
-					nombre_enfants = re.search(regexp, string).group(1)
-				except AttributeError:
-					nombre_enfants = "Unknown"
-			else:
-				nombre_enfants = None
-	else:
-		marie = False
-		nombre_enfants = None
-	if (marie, nombre_enfants) == (False, None):
-		celibataire = True
-	else:
-		celibataire = False
-	if check_veuf is True:
-		marie = True
-	return check_veuf, token_veuf, check_celibataire, celibataire, token_celibataire, marie, token_marie, nombre_enfants
-
 
 def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
 	"""
