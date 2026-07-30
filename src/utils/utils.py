@@ -2,6 +2,7 @@ import cv2
 import json
 import math
 from datetime import datetime, timedelta
+import rapidfuzz
 import pickle
 import random
 import string
@@ -1212,6 +1213,9 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Visage",
 			  "Renseignements complémentaires",
 			  "Marques particulières",
+			  "Naissance hors métropole",
+			  "Naissance à l'étranger",
+			  "Pays de naissance",
 			  "Ville de naissance transcrite",
 			  "Ville de naissance - nom actuel",
 			  "Ville de naissance - nom 1999",
@@ -1221,6 +1225,9 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Arrondissement de naissance",
 			  "Département de naissance transcrit",
 			  "Département de naissance",
+			  "Résidence hors métropole",
+			  "Résidence à l'étranger",
+			  "Pays de résidence",
 			  "Ville de résidence transcrite",
 			  "Ville de résidence - nom actuel",
 			  "Ville de résidence - nom 1999",
@@ -1465,6 +1472,29 @@ def convert_to_csv(extractions: dict, outpath: str):
 		interm.append(renseignements_complementaires)
 		interm.append(marques_particulieres)
 
+		# Naissance hors métropole
+		try:
+			naissance_hors_metropole = minute['soldat']['identite']['lieu_naissance']['hors_metropole']
+		except (KeyError, TypeError):
+			naissance_hors_metropole = "UNK"
+		interm.append(naissance_hors_metropole)
+
+		# Naissance étranger
+		try:
+			naissance_etranger = minute['soldat']['identite']['lieu_naissance']['etranger']
+		except (KeyError, TypeError):
+			naissance_etranger = "UNK"
+		interm.append(naissance_etranger)
+
+
+		# Pays naissance
+		try:
+			pays_naissance = minute['soldat']['identite']['lieu_naissance']['pays']
+		except (KeyError, TypeError):
+			pays_naissance = "UNK"
+		interm.append(pays_naissance)
+
+
 		# Lieu de naissance
 		if minute['soldat']['identite']['lieu_naissance']:
 			try:
@@ -1576,6 +1606,29 @@ def convert_to_csv(extractions: dict, outpath: str):
 			'departement']['corrected']
 		except  (KeyError, TypeError):
 			departement_residence = "UNK"
+			
+
+		# residence hors métropole
+		try:
+			hors_metropole = minute['soldat']['identite']['lieu_residence']['hors_metropole']
+		except (KeyError, TypeError):
+			hors_metropole = "UNK"
+		interm.append(hors_metropole)
+		# residence étranger
+		try:
+			residence_etranger = minute['soldat']['identite']['lieu_residence']['etranger']
+		except (KeyError, TypeError):
+			residence_etranger = "UNK"
+		interm.append(residence_etranger)
+		
+
+		# Pays residence
+		try:
+			pays_residence = minute['soldat']['identite']['lieu_residence']['pays']
+		except (KeyError, TypeError):
+			pays_residence = "UNK"
+		interm.append(pays_residence)
+		
 		interm.append(ville_residence_transcrite)
 		interm.append(ville_residence_actuelle)
 		interm.append(ville_residence_1999)
@@ -1830,7 +1883,7 @@ def clean_small_string(input_string):
 	"""
 	if input_string is None:
 		return None
-	regexp = re.compile("^\s?[.:,?\-;!]?\s?|\s?[.:,?\-;!]?\s?$")
+	regexp = re.compile("^\s?[(.:,?\-;!]?\s?|\s?[.:,?\-;!)]?\s?$")
 	return re.sub(regexp, "", input_string)
 
 
@@ -2060,6 +2113,15 @@ def match_line_by_substring(corresponding_lines: OCRRecord,
 def levensthein_distance(string_a, string_b):
 	return distance(string_a, string_b)
 
+def weighted_levenshtein_distance(string_a, string_b):
+	"""
+	Distance de levensthein pondérée adaptée à l'HTR: il doit être plus coûteux d'ajouter ou de supprimer
+	un caractère que d'effectuer une substitution
+	:param string_a: la chaîne a
+	:param string_b: la chaîne b
+	:return: la distance pondérée.
+	"""
+	return rapidfuzz.distance.Levenshtein.distance(s1=string_a, s2=string_b, weights=(1.5, 1.5, 1))
 
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]

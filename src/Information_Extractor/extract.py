@@ -460,10 +460,10 @@ class Extractor:
 		elif len(soldat) > 1:
 			plusieurs_soldats = True
 			bbox_nom_soldat = None
-			utils.log_print("Plusieurs soldats.")
+			# utils.log_print("Plusieurs soldats.")
 		else:
 			bbox_nom_soldat = None
-			utils.log_print("Aucun soldat identifié par YOLO.")
+			# utils.log_print("Aucun soldat identifié par YOLO.")
 
 		description_du_soldat["prediction"] = lignes_description_soldat_raw
 
@@ -1052,7 +1052,8 @@ class Extractor:
 																			intersect_ratio=[.8],
 																			select_highest_prob_zone=True)
 		if lignes_decision is None:
-			print("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
+			pass
+			# print("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
 		except (TypeError, AttributeError):

@@ -1,7 +1,6 @@
 Afghanistan
 Albanie
 Antarctique
-Algérie
 Samoa Américaines
 Andorre
 Angola
@@ -127,7 +126,6 @@ Liechtenstein
 Lituanie
 Luxembourg
 Macao
-Madagascar
 Malawi
 Malaisie
 Maldives
@@ -141,7 +139,6 @@ Monaco
 Mongolie
 République de Moldova
 Montserrat
-Maroc
 Mozambique
 Oman
 Namibie
@@ -190,7 +187,6 @@ Saint-Vincent-et-les Grenadines
 Saint-Marin
 Sao Tomé-et-Principe
 Arabie Saoudite
-Sénégal
 Seychelles
 Sierra Leone
 Singapour
@@ -202,7 +198,6 @@ Afrique du Sud
 Zimbabwe
 Espagne
 Sahara Occidental
-Soudan
 Suriname
 Svalbard etÎle Jan Mayen
 Swaziland
@@ -239,4 +234,3 @@ Samoa
 Yémen
 Serbie-et-Monténégro
 Zambie
-

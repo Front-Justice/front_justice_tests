@@ -11,6 +11,8 @@ class GeoExtractor():
 			self.geodict = json.load(input_json)
 		with open("src/Information_Extractor/databases/correspondance_departements.json", "r") as input_json:
 			self.departments_dict = json.load(input_json)
+		with open("src/resources/liste_pays_2026.txt", "r") as input_file:
+			self.coutries_list = [item.replace("\n", "") for item in input_file.readlines()]
 		with open("src/Information_Extractor/databases/arrondissements_paris.json", "r") as input_json:
 			self.arrondissement_dict = json.load(input_json)
 		self.filtered_geodict = {}
@@ -53,7 +55,7 @@ class GeoExtractor():
 		# utils.log_print(f"Arrondissement prédit: {arrondissement}")
 		# utils.log_print(f"Commune correspondante dans la base: {commune_correspondante}")
 		# utils.log_print(f"Département: {departement_correspondant}")
-		actual_departement, _ = self.correct_department(departement_correspondant)
+		actual_departement, _, is_country = self.correct_department(departement_correspondant)
 		self.filter_geodict_by_department(actual_departement)
 
 	def correct_department(self, departement):
@@ -62,21 +64,34 @@ class GeoExtractor():
 		:param departement:
 		:return:
 		"""
-		if departement is None:
-			return None, None
+		departement = utils.clean_small_string(departement)
+		if departement is None or len(departement) < 2:
+			return None, None, False
+		if departement in self.coutries_list:
+			return departement, departement, True
+
 		if departement in self.departments_dict:
-			return departement, departement
+			return departement, departement, False
 		else:
 			liste_des_departements = list(self.departments_dict.keys())
 			matching_department, distance = similarity.find_closest_word_in_list(liste_des_departements,
 																			departement,
 																			replacement_mapping={"-": " "})
+			matching_country, distance_country = similarity.find_closest_word_in_list(self.coutries_list,
+																			departement,
+																			replacement_mapping={"()": ""})
+			print(f"Chaîne de caractères: {departement}")
+			print(f"Département identifié: {matching_department}, distance: {distance}")
+			print(f"Pays identifié: {matching_country}, distance: {distance_country}")
+			if distance_country < distance:
+				print("Pays etranger identifié.")
+				return departement, matching_country, True
 			actual_departement = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
-			if distance > 5:
-				return None, departement
-			return actual_departement, matching_department
+			if distance > 5 or distance == len(departement):
+				return None, departement, False
+			return actual_departement, matching_department, False
 
 	def filter_geodict_by_department(self, clean_departement):
 		"""
@@ -107,7 +122,10 @@ class GeoExtractor():
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
-				"lon": "2.44162"
+				"lon": "2.44162",
+				"etranger": False,
+				"hors_metropole": False,
+				"pays": "France"
 			}
 		try:
 			arrondissement_extrait = search.group()
@@ -122,7 +140,10 @@ class GeoExtractor():
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
-				"lon": "2.44162"
+				"lon": "2.44162",
+				"etranger": False,
+				"hors_metropole": False,
+				"pays": "France"
 			}
 		try:
 			corresponding_entry = next(item for item in self.arrondissement_dict if int(item["numero_arrondissement"]) == int(arrondissement_extrait))
@@ -134,7 +155,10 @@ class GeoExtractor():
 				"departement": "Seine",
 				"arrondissement": None,
 				"lat": "48.829839",
-				"lon": "2.44162"
+				"lon": "2.44162",
+				"etranger": False,
+				"hors_metropole": False,
+				"pays": "France"
 			}
 		coordinates = corresponding_entry['geo_point_2d']
 		return {
@@ -144,7 +168,10 @@ class GeoExtractor():
 			"departement": "Seine",
 			"arrondissement": arrondissement_extrait,
 			"lon": coordinates["lon"],
-			"lat": coordinates["lat"]
+			"lat": coordinates["lat"],
+				"etranger": False,
+				"hors_metropole": False,
+				"pays": "France"
 		}
 
 
@@ -164,14 +191,27 @@ class GeoExtractor():
 		match = False
 		if departement is not None:
 			departement = departement.replace("l'", "")
-			actual_departement, departement_corrige = self.correct_department(departement)
+			actual_departement, departement_corrige, is_country = self.correct_department(departement)
 		else:
 			return {
 						"lat": None,
 						"lon": None,
 						"nom_actuel": None,
-						"departement": None
+						"departement": None,
+						"etranger": None,
+						"hors_metropole": None,
+						"pays": None,
 					}
+		if is_country is True:
+			return {
+				"lat": None,
+				"lon": None,
+				"nom_actuel": None,
+				"departement": None,
+				"pays": departement_corrige,
+				"hors_metropole": False,
+				"etranger": True,
+			}
 		# TODO: Ajouter le Sénégal, le Maroc, Madagascar, la Cochinchine, le Tonkin et utiliser une base de donnée pour tous les pays.
 		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc", "Madagascar", "Tonkin", "Cochinchine", "Cochinchine française", "Sénégal-Niger", "Soudan français"]:
 			if ville == "Constantine" or departement_corrige == "Constantine":
@@ -205,7 +245,10 @@ class GeoExtractor():
 						"lat": latitude,
 						"lon": longitude,
 						"nom_actuel": ville,
-						"departement": departement_corrige
+						"departement": departement_corrige,
+						"pays": "France",
+						"etranger": False,
+						"hors_metropole": True
 					}
 		if ville == "Paris":
 			return self.paris(arrondissement)
@@ -246,7 +289,10 @@ class GeoExtractor():
 					"lat": None,
 					"lon": None,
 					"nom_actuel": ville,
-					"departement": departement_corrige
+					"departement": departement_corrige,
+					"pays": "France",
+					"etranger": False,
+					"hors_metropole": False
 				}
 			closest_1801, distance_1801 = similarity.find_closest_word_in_list(liste_des_communes_1801, ville)
 			closest_actuel, distance_actuel = similarity.find_closest_word_in_list(liste_des_communes_actuelles, ville)
@@ -272,7 +318,10 @@ class GeoExtractor():
 					"lat": None,
 					"lon": None,
 					"nom_actuel": ville,
-					"departement": departement_corrige
+					"departement": departement_corrige,
+					"pays": "France",
+					"etranger": False,
+					"hors_metropole": False
 				}
 			current_name = closest_match
 			longitude = commune_correspondante["longitude"]
@@ -283,5 +332,8 @@ class GeoExtractor():
 				"nom_actuel": current_name,
 				"nom_1999": commune_correspondante["nom_1999"],
 				"nom_1801": commune_correspondante["nom_1801"],
-				"departement": departement_corrige
+				"departement": departement_corrige,
+				"pays": "France",
+				"etranger": False,
+				"hors_metropole": False
 			}

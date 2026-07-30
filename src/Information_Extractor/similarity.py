@@ -49,7 +49,7 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		if replacement_mapping:
 			for key, value in replacement_mapping.items():
 				word_lower = word_lower.replace(key, value)
-		dist = utils.levensthein_distance(word_lower, target_word)
+		dist = utils.weighted_levenshtein_distance(word_lower, target_word)
 		distances.append(dist)
 	try:
 		min_dist_index = distances.index(min(distances))

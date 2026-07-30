@@ -52,6 +52,10 @@ class Reconciliator:
 		self.profession_normalisee = None
 		self.date_proces_orig = None
 		self.date_naissance = None
+		self.naissance_hors_metropole = None
+		self.naissance_etranger = None
+		self.residence_hors_metropole = None
+		self.residence_etranger = None
 		self.questions = None
 		self.condamnation_pecuniaire = None
 		self.age = None
@@ -514,7 +518,6 @@ class Reconciliator:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
 		except TypeError:
 			distance_p1 = None
-			print("Ville page 1 non identifiée")
 
 
 		try:
@@ -534,7 +537,6 @@ class Reconciliator:
 			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
 		except TypeError:
 			distance_p2 = None
-			print("Ville page 2 non identifiée")
 		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
 		if distance_p1 is None:
@@ -547,10 +549,8 @@ class Reconciliator:
 			self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			return
 		if distance_p1 < distance_p2:
-			print("Page 1 choisie.")
 			self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
 		else:
-			print("Page 2 choisie.")
 			try:
 				self.lieu_naissance = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			except (KeyError, TypeError):
@@ -613,7 +613,6 @@ class Reconciliator:
 			self.prenom_du_soldat = None
 			return
 		prenoms_correct = []
-		print("---")
 		for prenom_1, prenom_2 in liste_comparaison_prenoms:
 			try:
 				prenom_1 = prenom_1.lower()
@@ -626,27 +625,21 @@ class Reconciliator:
 			if prenom_1 == prenom_2:
 				self.prenom_du_soldat.append(prenom_1)
 				self.certitude_prenom_du_soldat.append(0.9)
-				print("cas 1")
 			else:
 				if prenom_1 in self.list_of_names and prenom_2 not in self.list_of_names:
 					self.prenom_du_soldat.append(prenom_1)
 					self.certitude_prenom_du_soldat.append(0.7)
-					print("cas 2")
 				elif prenom_2 in self.list_of_names and prenom_1 not in self.list_of_names:
 					self.prenom_du_soldat.append(prenom_2)
 					self.certitude_prenom_du_soldat.append(0.7)
-					print("cas 3")
 				elif prenom_2 in self.list_of_names and prenom_1 in self.list_of_names:
 					self.prenom_du_soldat.extend([prenom_1, prenom_2])
 					self.certitude_prenom_du_soldat.append(0.1)
-					print("cas 4")
 				else:
 					self.prenom_du_soldat.extend([prenom_1, prenom_2])
 					self.certitude_prenom_du_soldat.append(0.1)
-					print("cas 5")
 		if isinstance(self.prenom_du_soldat, list):
 			self.prenom_du_soldat = " ".join(self.prenom_du_soldat)
-		print(f"Prénom du soldat: {self.prenom_du_soldat}.")
 
 
 	def _reconciliate_nom_soldat(self):
@@ -703,7 +696,6 @@ class Reconciliator:
 						dictionnary[item] += 1
 					except KeyError:
 						dictionnary[item] = 1
-			print(dictionnary)
 			# https://www.geeksforgeeks.org/python/python-get-key-with-maximum-value-in-dictionary/
 			dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
 			# On va vérifier qu'on n'ait pas d'égalité des fréquences

@@ -450,7 +450,7 @@ class Pipeline:
 		"""
 
 		# On segmente la page 1: boxes générales
-		utils.log_print(f"Checking additions")
+		# utils.log_print(f"Checking additions")
 
 
 		zones_ajouts, zones_manquantes = self.YOLO_Segmenter.segment_zones(page["image_path"],

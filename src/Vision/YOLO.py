@@ -72,7 +72,8 @@ class YOLOSegmenter():
 
 		missing = utils.check_if_missing(target_classes, check_list)
 		if len(missing) > 0:
-			print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
+			pass
+			# print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
 		else:
 			missing = []
 		return YOLORecord(results_list), missing
