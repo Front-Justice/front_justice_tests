@@ -200,8 +200,8 @@ class Extractor:
 
 		chaine_seant = "séant"
 		chaine_permanent = "permanent"
-		clean_regexp_lieu = re.compile("^\s?[àa]\s?")
-		clean_regexp_institution = re.compile("^\s?d[eu]?\s?")
+		clean_regexp_lieu = re.compile(r"^\s?[àa]\s?")
+		clean_regexp_institution = re.compile(r"^\s?d[eu]?\s?")
 
 		try:
 			avant_seant_kraken = \
@@ -317,7 +317,7 @@ class Extractor:
 		for line in corresponding_lines:
 			prediction = line.prediction
 			# On va chercher une ligne avec un nombre uniquement ici
-			expression_jugement = re.compile("\d+")
+			expression_jugement = re.compile(r"\d+")
 			is_jugement = re.match(expression_jugement, prediction)
 			if is_jugement:
 				target_line.append(line)
@@ -1540,7 +1540,7 @@ class Extractor:
 			lignes_inculpation_str = lignes_inculpation_str.replace(mot_inculpe, "")
 
 		lignes_inculpation_str = utils.strip_punctuation(lignes_inculpation_str)
-		clean_regexp = re.compile("^\s?d[e']?:?\s?")
+		clean_regexp = re.compile(r"^\s?d[e']?:?\s?")
 		lignes_inculpation_str = re.sub(clean_regexp, "", lignes_inculpation_str)
 		inculpation["inculpation"]["extracted"] = lignes_inculpation_str
 		inculpation["inculpation"]["normalized"] = self.extraire_accusation(texte=lignes_inculpation_str)
@@ -1684,7 +1684,7 @@ class Extractor:
 
 		target_line = target_line[0]
 
-		numero_regexp = re.compile("\d+")
+		numero_regexp = re.compile(r"\d+")
 		try:
 			target_number_kraken = re.search(numero_regexp, target_line.prediction).group()
 		except AttributeError:

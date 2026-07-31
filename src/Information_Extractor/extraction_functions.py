@@ -212,11 +212,11 @@ def extraire_matricule(lignes_description_physique,
 def extraire_age_soldat(lignes_identite_soldat: OCRRecord) -> dict:
 	out_dict = {}
 	lines_as_text = " ".join([line.prediction for line in lignes_identite_soldat])
-	regexp_age = re.compile("(\d+) ans")
+	regexp_age = re.compile(r"(\d+) ans")
 	age = re.search(regexp_age, lines_as_text)
 	# Si on trouve déjà quelque chose
 	if not age:
-		regexp_age = re.compile("([^\s]+)\sans[\s,.]")
+		regexp_age = re.compile(r"([^\s]+)\sans[\s,.]")
 		age = re.search(regexp_age, lines_as_text)
 	try:
 		full_age = age.group()

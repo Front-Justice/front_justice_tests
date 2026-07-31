@@ -1134,7 +1134,7 @@ def full_clean_string(string) -> str:
 
 
 def strip_stopwords(string):
-	stopwords = re.compile("^du |^de la |^de |^[àa] |y |de l'")
+	stopwords = re.compile(r"^du |^de la |^de |^[àa] |y |de l'")
 	clean = re.sub(stopwords, "", string)
 	return clean
 
