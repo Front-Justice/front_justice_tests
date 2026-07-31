@@ -462,7 +462,7 @@ class Reconciliator:
 		except (KeyError, TypeError) as e:
 			print(f"Page 1 sans annotations: {e}")
 			self.lieu_residence = None
-			return
+			distance_p1 = 999
 		try:
 			self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
 		except (KeyError, TypeError):
