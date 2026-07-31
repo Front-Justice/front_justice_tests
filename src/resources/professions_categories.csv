@@ -9,7 +9,6 @@ aérostier	Artisans, commerçants et chefs d’entreprise
 afféterie	Ouvriers
 agent	Professions intermédiaires
 agent de police	Professions intermédiaires
-	
 agent militarisé	Employés
 agriculteur	Agriculteurs
 aide-chaudronnier	Ouvriers
@@ -123,7 +122,6 @@ clerc	Professions intermédiaires
 clerc de notaire	Professions intermédiaires
 clinicien	Cadres
 cloutier	Ouvriers
-cocher	Employés
 cocher	Ouvriers
 cocher de louage	Ouvriers
 cocher de paire	Ouvriers
@@ -138,7 +136,6 @@ commis-pharmacien	Professions intermédiaires
 commis-voyageur	Employés
 commissionnaire	Cadres
 compotier	Artisans, commerçants et chefs d’entreprise
-comptable	Cadres
 comptable	Professions intermédiaires
 conducteur de bestiaux	Ouvriers
 conducteur de voitures	Ouvriers
@@ -217,7 +214,6 @@ employé de banque	Professions intermédiaires
 employé de bureau	Employés
 employé de cinéma	Employés
 employé de commerce	Employés
-employé de commerce	Employés
 employé de tramway	Employés
 employé des postes	Employés
 enfant de troupe	autre
@@ -268,7 +264,6 @@ fondeur en cuivre	Ouvriers
 fontainier	Artisans, commerçants et chefs d’entreprise
 footballeur	Professions intermédiaires
 forain	Artisans, commerçants et chefs d’entreprise
-forain	Artisans, commerçants et chefs d’entreprise
 forgeron	Artisans, commerçants et chefs d’entreprise
 forgeron serrurier	Ouvriers
 formateur	Professions intermédiaires
@@ -280,10 +275,8 @@ garagiste d'automobile	Artisans, commerçants et chefs d’entreprise
 garçon	Employés
 garçon boucher	Ouvriers
 garçon charcutier	Ouvriers
-garçon charcutier	Ouvriers
 garçon coiffeur	Ouvriers
 garçon d'hôtel	Employés
-garçon de café	Employés
 garçon de café	Employés
 garçon de courses	Employés
 garçon de culture	Employés
@@ -301,7 +294,6 @@ géographe	Cadres
 géographe coloniste	Cadres
 glacier	Artisans, commerçants et chefs d’entreprise
 gommier	Agriculteurs
-grainetier	Agriculteurs
 grainetier	Agriculteurs
 graphiste	Cadres
 graveur	Artisans, commerçants et chefs d’entreprise
@@ -325,7 +317,6 @@ huîtrière	Agriculteurs
 humoriste	Artisans, commerçants et chefs d’entreprise
 îlotier	Employés
 imprésario	Cadres
-imprimeur	Ouvriers
 imprimeur	Artisans, commerçants et chefs d’entreprise
 indienneur	Ouvriers
 industriel	Artisans, commerçants et chefs d’entreprise
@@ -456,7 +447,6 @@ odontologiste	Cadres
 odontologue	Cadres
 officiant	Professions intermédiaires
 officier	Cadres
-officier	Cadres
 officier d'administration	Cadres
 opérateur	Ouvriers
 ophtalmologiste	Cadres
@@ -464,13 +454,10 @@ ophtalmologue	Cadres
 opticien	Artisans, commerçants et chefs d’entreprise
 optométriste	Professions intermédiaires
 orfèvre	Artisans, commerçants et chefs d’entreprise
-orfèvre	Artisans, commerçants et chefs d’entreprise
 orthopédiste	Professions intermédiaires
 ostéopathe	Professions intermédiaires
 outilleur	Ouvriers
 ouvrier	Ouvriers
-ouvrier	Ouvriers
-ouvrier agricole	Ouvriers
 ouvrier agricole	Ouvriers
 ouvrier bisquetier	Ouvriers
 ouvrier bonnetier	Ouvriers
@@ -480,8 +467,6 @@ ouvrier d'usine	Ouvriers
 ouvrier de fabrique	Ouvriers
 ouvrier de filature	Ouvriers
 ouvrier électricien	Ouvriers
-ouvrier électricien	Ouvriers
-ouvrier en chaussures	Ouvriers
 ouvrier en chaussures	Ouvriers
 ouvrier fondeur	Ouvriers
 ouvrier horloger	Ouvriers
@@ -503,11 +488,9 @@ peintre décorateur	Artisans, commerçants et chefs d’entreprise
 peintre en bâtiments	Ouvriers
 peintre en lettres	Ouvriers
 peintre en voitures	Ouvriers
-peintre en voitures	Ouvriers
 peintre sur porcelaine	Artisans, commerçants et chefs d’entreprise
 pelletier	Ouvriers
 percepteur	Professions intermédiaires
-perceur	Ouvriers
 perceur	Ouvriers
 perruquier	Artisans, commerçants et chefs d’entreprise
 pharmacien	Cadres
@@ -522,7 +505,6 @@ planteur cultivateur	Agriculteurs
 plantier	Agriculteurs
 platière	Artisans, commerçants et chefs d’entreprise
 platrier	Artisans, commerçants et chefs d’entreprise
-platrier	Ouvriers
 plâtrier-peintre	Artisans, commerçants et chefs d’entreprise
 plombier	Artisans, commerçants et chefs d’entreprise
 plombier-couvreur	Ouvriers
@@ -632,17 +614,12 @@ vannière	Artisans, commerçants et chefs d’entreprise
 veilleur	Employés
 vendeur aux halles	Employés
 vendeur d'automobiles	Employés
-vendeur d'automobiles	Employés
 vendeuse	Employés
-vendeuse	Employés
-verrier	Artisans, commerçants et chefs d’entreprise
-verrier	Artisans, commerçants et chefs d’entreprise
 verrier	Artisans, commerçants et chefs d’entreprise
 vétérinaire	Professions intermédiaires
 veuf	None
 veuve	None
 vigneron	Agriculteurs
-viticulteur	Agriculteurs
 viticulteur	Agriculteurs
 voiturier	Ouvriers
 volailleur	Artisans, commerçants et chefs d’entreprise
