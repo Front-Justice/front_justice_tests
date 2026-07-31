@@ -459,14 +459,10 @@ class Reconciliator:
 				nom_ville_identifie_p1 = None
 		try:
 			distance_p1 = utils.levensthein_distance(nom_ville_transcrit_p1, nom_ville_identifie_p1)
-		except (KeyError, TypeError) as e:
-			print(f"Page 1 sans annotations: {e}")
-			self.lieu_residence = None
-			distance_p1 = 999
-		try:
-			self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
-		except (KeyError, TypeError):
-			self.lieu_residence = None
+		except TypeError:
+			distance_p1 = None
+
+
 		try:
 			nom_ville_transcrit_p2 = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]["ville"]["extracted"]
 		except (KeyError, IndexError, TypeError):
@@ -482,21 +478,28 @@ class Reconciliator:
 				nom_ville_identifie_p2 = None
 		try:
 			distance_p2 = utils.levensthein_distance(nom_ville_transcrit_p2, nom_ville_identifie_p2)
-		except (KeyError, TypeError):
-			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
-			print("Page 2 sans annotations")
-			return
+		except TypeError:
+			distance_p2 = None
 		# Si la distance est plus grande c'est possiblement à cause d'une erreur sur le département
 		# Autre option à envisager, faire la correction au niveau du département, extraire les villes à nouveau
-		if distance_p1 < distance_p2:
-			print("Page 1 choisie.")
-			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
-		else:
-			print("Page 2 choisie.")
+		if distance_p1 is None:
 			try:
 				self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
-			except KeyError:
+			except (KeyError, TypeError):
+				self.lieu_residence = "UNK"
+			return
+		elif distance_p2 is None:
+			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
+			return
+		if distance_p1 < distance_p2:
+			self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
+		else:
+			try:
+				self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
+			except (KeyError, TypeError):
 				self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
+		print(f'Page 1: {self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]}')
+		print(f'Page 2: {self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]}')
 
 
 

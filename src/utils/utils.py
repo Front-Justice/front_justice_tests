@@ -1146,7 +1146,7 @@ def remove_all_punctuation(string: str, debug=False) -> str:
 	:return: la chaîne nettoyée
 	"""
 	orig_string = string
-	expression = "[\(\),;.!?\-:]"
+	expression = r"[\(\),;.!?\-:]"
 	punct_regexp = re.compile(expression)
 	string = string.strip()
 	string = re.sub(punct_regexp, " ", string)
@@ -1165,8 +1165,8 @@ def strip_punctuation(string: str | None, debug=False) -> str | None:
 	if string is None:
 		return None
 	orig_string = string
-	punctuation = "[\(\),;.!?\-:]"
-	expression = "^" + punctuation + "\s{0,}|\s{0,}" + punctuation + "$"
+	punctuation = r"[\(\),;.!?\-:]"
+	expression = r"^" + punctuation + r"\s{0,}|\s{0,}" + punctuation + r"$"
 	punct_regexp = re.compile(expression)
 	string = string.strip()
 	string = re.sub(punct_regexp, "", string)
