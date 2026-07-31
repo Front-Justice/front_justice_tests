@@ -80,7 +80,9 @@ class Extractor:
 		# Les métiers rencontrés dans le corpus sont triés à la main par catégorie sociopro, selon
 		# la classification actuelle de l'INSEE. Des erreurs peuvent encore substister.
 		df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
+		df = df.dropna()
 		self.professions_et_categories_sociopro = df["Profession"].tolist()
+		print(self.professions_et_categories_sociopro)
 		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
 
 		with open("src/resources/rangs_militaires.txt", "r") as rangs:
