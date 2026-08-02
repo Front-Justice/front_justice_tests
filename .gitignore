@@ -7,6 +7,7 @@ __pycache__/
 __init__.py
 *.png
 *.json
+results/
 *.joblib
 *.model
 *.bin
