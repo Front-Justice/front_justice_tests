@@ -381,8 +381,9 @@ class Extractor:
 		with torch.no_grad():
 			logits = self.charge_identification_model(**inputs).logits
 		probs = torch.sigmoid(logits)
-		# Le threshold est de 0.5. En dessous, la classe n'est pas reconnue.
-		predictions = (probs > 0.5).int()
+		# Le threshold est de 0.3, par tests. En dessous, la classe n'est pas reconnue.
+		threshold = 0.3
+		predictions = (probs > threshold).int()
 		predictions_to_list = predictions.tolist()[0]
 		preds_classes = [index for index, item in enumerate(predictions_to_list) if item == 1]
 		as_labels = [self.charge_identification_labels[str(index)] for index in preds_classes]
@@ -2203,8 +2204,12 @@ class Extractor:
 																   self.entity_spotting_pipeline)
 		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
 			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
-		closest, distance = similarity.find_closest_word_in_list(target_word=processed_president['persName'], word_list=liste_presidents)
+		processed_president_name = utils.clean_small_string(processed_president['persName'])
+		if processed_president_name != "":
+			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name, word_list=liste_presidents)
 		# TODO: ajouter les noms de jury au modèle de NER
+		else:
+			closest = ""
 		normalized_president = closest
 
 
