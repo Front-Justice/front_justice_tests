@@ -13,7 +13,6 @@ import re
 from typing import Union, Self
 
 import numpy as np
-import spellchecker
 from thefuzz import fuzz
 from Levenshtein import distance
 from difflib import SequenceMatcher
@@ -433,15 +432,7 @@ def correct_description_soldat(string: str):
 							  'cheveux']
 
 
-def correct_string(string: str) -> str:
-	correcteur = spellchecker.spellchecker.SpellChecker(language='fr')
-	corrected_string = []
-	tokens = tokenize_sent(string)
-	for token in tokens:
-		corr = correcteur.correction(token)
-		if corr:
-			corrected_string.append(corr)
-	return " ".join(corrected_string)
+
 
 
 def nfc_normalize(input_string: str) -> str:
