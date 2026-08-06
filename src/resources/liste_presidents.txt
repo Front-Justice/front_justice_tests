@@ -1,8 +1,10 @@
-Bonnet
+Bergeron
+Bonnet 
 Bralet
 Brody
 Busignier
 Chatoney
+Compagnon
 de la Robrie
 Delin
 Delouche
@@ -13,6 +15,7 @@ Fabre
 Fayard
 Grimard
 Grouselles
+Hayot
 Loubet
 Mac Mahon
 Martenet
