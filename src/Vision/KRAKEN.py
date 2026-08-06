@@ -3,6 +3,8 @@ from kraken.lib import vgsl
 from kraken.serialization import serialize as serialize
 from kraken import blla
 from kraken.lib import models
+from kraken.tasks import RecognitionTaskModel
+from kraken.configs import RecognitionInferenceConfig
 from kraken import rpred
 import kraken.containers
 
@@ -49,8 +51,10 @@ class KRAKEN():
 		:param segments: Les segments (objet Kraken)
 		:return: un objet OCRRecord.
 		"""
-		model = models.load_any(self.ocr_model, device=self.device)
-		pred_it = rpred.rpred(model, im, segments)
+		model = RecognitionTaskModel.RecognitionTaskModel(self.ocr_model, device=self.device)
+		config = RecognitionInferenceConfig()
+		# pred_it = rpred.rpred(model, im, segments)
+		pred_it = model.predict(im, segments, config)
 		if return_kraken_preds == True:
 			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)
 			return results
