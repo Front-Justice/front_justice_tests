@@ -51,7 +51,7 @@ class KRAKEN():
 		:param segments: Les segments (objet Kraken)
 		:return: un objet OCRRecord.
 		"""
-		model = RecognitionTaskModel.load_model(self.ocr_model, device=self.device)
+		model = RecognitionTaskModel.load_model(self.ocr_model)
 		config = RecognitionInferenceConfig()
 		# pred_it = rpred.rpred(model, im, segments)
 		pred_it = model.predict(im, segments, config)
