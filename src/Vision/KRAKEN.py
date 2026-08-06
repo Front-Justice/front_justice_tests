@@ -52,7 +52,7 @@ class KRAKEN():
 		:return: un objet OCRRecord.
 		"""
 		model = RecognitionTaskModel.load_model(self.ocr_model)
-		config = RecognitionInferenceConfig()
+		config = RecognitionInferenceConfig(device=self.device)
 		# pred_it = rpred.rpred(model, im, segments)
 		pred_it = model.predict(im, segments, config)
 		if return_kraken_preds == True:
