@@ -23,7 +23,6 @@ import pandas as pd
 from dataclasses import dataclass
 import text_to_num
 import fuzzysearch
-from spellchecker import SpellChecker
 
 import src.Vision.KRAKEN as KRAKEN
 import kraken.containers as containers
