@@ -86,6 +86,7 @@ class Pipeline:
 			"autre": "src/Vision/models/modele_ligne_page_1.mlmodel",
 		}
 		self.kraken_ocr_model = "src/Vision/models/modele_33500l.mlmodel"
+		self.kraken_ocr_model = "src/Vision/models/htr_33000l.safetensors"
 		self.kraken_gloses_model = "src/Vision/models/modele_33500l.mlmodel"
 		self.kraken_gloses_model = self.kraken_ocr_model
 		self.party_model = "src/Vision/models/model.safetensors"
