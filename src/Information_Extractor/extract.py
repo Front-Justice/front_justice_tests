@@ -1421,7 +1421,10 @@ class Extractor:
 			sorted_lines = utils.sort_lines_with_rotation(as_record, zones_filtrees_as_rectangle)
 			lignes_fusionnees = sorted_lines.join_transcription()
 			lignes_fusionnees = lignes_fusionnees.lower()
-			resultat = self.ner_pipeline(lignes_fusionnees.lower())
+			try:
+				resultat = self.ner_pipeline(lignes_fusionnees.lower())
+			except RuntimeError:
+				continue
 			# TODO: reprendre ça, il peut y avoir plusieurs dates
 			normalized_dates = []
 			dates = [item for item in resultat if item['entity_group'] == 'DATE']

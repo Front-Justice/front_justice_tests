@@ -3,7 +3,6 @@ import re
 from text_to_num import text2num
 import src.date.parse_date as date
 import regex
-import pyo3_runtime
 from src.utils.utils import OCRLine, OCRRecord
 
 
