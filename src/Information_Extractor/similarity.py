@@ -11,7 +11,10 @@ def retrieve_most_similar_sentence(sentence:str, queries:list, embedder, mode="s
 	:return: La phrase la plus proche
 	"""
 	if mode == "semantic":
-		queries_embeddings = embedder.encode(queries, convert_to_tensor=True)
+		try:
+			queries_embeddings = embedder.encode(queries, convert_to_tensor=True)
+		except IndexError:
+			return None
 		top_k = min(5, len(queries))
 		query_embedding = embedder.encode(sentence, convert_to_tensor=True)
 		similarity_scores = embedder.similarity(query_embedding, queries_embeddings)[0]
