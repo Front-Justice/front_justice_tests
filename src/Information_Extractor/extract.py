@@ -434,7 +434,11 @@ class Extractor:
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		# 1 correspond à la page 1, métadonnée qu'on envoie au modèle.
 		lignes_description_soldat_raw = f"[1] {utils.nfc_normalize(lignes_description_soldat_raw)}"
-		result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
+		try:
+			result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
+		except IndexError:
+			description_du_soldat["prediction"] = lignes_description_soldat_raw
+			description_du_soldat["identite"] = None
 		description_du_soldat["entites"] = result_spotting
 		if len(soldat) == 1:
 			bbox_nom_soldat = soldat[0].coordinates
