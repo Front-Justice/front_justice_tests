@@ -1771,7 +1771,15 @@ class Extractor:
 
 		description_du_soldat["prediction"] = target_lines
 		target_lines = f"[1] {target_lines}"
-		entities = self.entity_spotting_pipeline(target_lines)
+		try:
+			entities = self.entity_spotting_pipeline(target_lines)
+		except IndexError:
+			description_du_soldat["identite"] = {
+				"nom": {"extracted": None,
+						"bbox": None,
+						"baseline": None}
+			}
+			return description_du_soldat
 		description_du_soldat["entites"] = entities
 
 		# On commence par le nom du soldat
