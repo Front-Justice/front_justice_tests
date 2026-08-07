@@ -20,11 +20,7 @@ import PIL.Image as Image
 import src.Information_Extractor.geoextractor as geoextractor
 import PIL
 from collections import namedtuple
-# import src.Vision.PARTY as PARTY
-import src.Vision.KRAKEN as KRAKEN
-import kraken.containers as containers
 import src.date.parse_date as date
-import fuzzysearch
 import src.Information_Extractor.extraction_functions as extractions
 
 
@@ -379,7 +375,10 @@ class Extractor:
 			return_tensors="pt"
 		)
 		with torch.no_grad():
-			logits = self.charge_identification_model(**inputs).logits
+			try:
+				logits = self.charge_identification_model(**inputs).logits
+			except IndexError:
+				return None
 		probs = torch.sigmoid(logits)
 		# Le threshold est de 0.3, par tests. En dessous, la classe n'est pas reconnue.
 		threshold = 0.3
