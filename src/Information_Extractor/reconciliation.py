@@ -716,7 +716,12 @@ class Reconciliator:
 						dictionnary[item] = 1
 				dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
 				all_values = dictionnary.values()
-				max_value = max(all_values)
+				try:
+					max_value = max(all_values)
+				except ValueError:
+					self.nom_du_soldat = None
+					self.certitude_nom_du_soldat = 0
+					return
 				if all([item == liste_noms[0] for item in liste_noms[1:] if item]):
 					self.nom_du_soldat = dict_sorted_by_freq[0]
 					self.certitude_nom_du_soldat = 0.5
