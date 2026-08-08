@@ -2451,7 +2451,7 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 	else:
 		try:
 			cuts = line.cuts
-		except TypeError:
+		except AttributeError:
 			return None
 		baseline = line.baseline
 		prediction = line.prediction
