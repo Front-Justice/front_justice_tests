@@ -22,7 +22,9 @@ import PIL
 from collections import namedtuple
 import src.date.parse_date as date
 import src.Information_Extractor.extraction_functions as extractions
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Extractor:
 	"""
@@ -54,7 +56,6 @@ class Extractor:
 		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		self.ner_model.to(device)
-		self.logger = logger
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
 		
 		
@@ -376,7 +377,9 @@ class Extractor:
 		with torch.no_grad():
 			try:
 				logits = self.charge_identification_model(**inputs).logits
-			except IndexError:
+			except IndexError as e:
+				logger.info(f"Erreur avec le modèle de classification d'inculpation: {e}.\n"
+							f"Texte: {texte.lower()}, longueur {len(texte)}.")
 				return None
 		probs = torch.sigmoid(logits)
 		# Le threshold est de 0.3, par tests. En dessous, la classe n'est pas reconnue.
@@ -428,6 +431,7 @@ class Extractor:
 																								intersect_ratio=[.8],
 																								select_highest_prob_zone=True)
 		if not lignes_description_du_soldat:
+			print("Pas de lignes de description du soldat")
 			return None
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
@@ -435,11 +439,17 @@ class Extractor:
 		lignes_description_soldat_raw = f"[1] {utils.nfc_normalize(lignes_description_soldat_raw)}"
 		try:
 			result_spotting = self.entity_spotting_pipeline(lignes_description_soldat_raw)
-		except IndexError:
+		except IndexError as e:
 			description_du_soldat["prediction"] = lignes_description_soldat_raw
 			description_du_soldat["identite"] = None
+			logger.error(f"Problème avec le spotting. Exemple: {lignes_description_soldat_raw} de taille"
+						 f"{len(lignes_description_soldat_raw)}.")
 		description_du_soldat["entites"] = result_spotting
 		if len(soldat) == 1:
+			logger.info("Un seul soldat.")
+			print("1 seul soldat")
+			print(logger)
+			exit(0)
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
 				entities_list=result_spotting,
@@ -465,8 +475,9 @@ class Extractor:
 		elif len(soldat) > 1:
 			plusieurs_soldats = True
 			bbox_nom_soldat = None
-			# utils.log_print("Plusieurs soldats.")
+			logger.info("Plusieurs soldats identifiés")
 		else:
+			logger.info("Nom du soldat non trouvé en page 2")
 			bbox_nom_soldat = None
 			# utils.log_print("Aucun soldat identifié par YOLO.")
 
@@ -621,6 +632,7 @@ class Extractor:
 		try:
 			nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
 		except IndexError:
+			logger.info("Nom du défenseur non trouvé.")
 			return {'nom_du_defenseur': {
 				"extracted": "UNK",
 				"prediction": apres_defenseur}

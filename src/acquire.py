@@ -3,7 +3,6 @@ import copy
 import os
 import re
 import shutil
-
 import PIL.Image
 import tqdm
 import torch
@@ -22,17 +21,23 @@ import Vision.YOLO as YOLO
 from src.utils.utils import OCRRecord
 import src.Vision.LinesDeletion as Deletions
 
-class Logger:
-	"""Logger simple pour garder une trace de toutes les opérations."""
-	def __init__(self, log_file_path):
-		self.log_file_path = log_file_path
-		# On efface le fichier de log à l'initialisation.
-		with open(self.log_file_path, "w") as log_file:
-			log_file.truncate(0)
+import logging
 
-	def log(self, message):
-		with open(self.log_file_path, "a") as log_file:
-			log_file.write(message)
+logging.basicConfig(
+	level=logging.INFO,
+	format="%(asctime)s | %(name)s | %(funcName)s | %(levelname)s | %(message)s"
+)
+
+
+
+class ListHandler(logging.Handler):
+
+    def __init__(self):
+        super().__init__()
+        self.logs = []
+
+    def emit(self, record):
+        self.logs.append(self.format(record))
 
 class Pipeline:
 	"""
@@ -52,7 +57,7 @@ class Pipeline:
 		self.minutes_reconciliees_file = None
 		self.current_page_type = None
 		self.debug = debug
-		self.logger = Logger(log_file_path="logs/logs.txt")
+		self.logger = logging.getLogger(__name__)
 		self.current_image = None
 		self.current_image_path = None
 		self.current_page_transcription = None
@@ -669,63 +674,76 @@ class Pipeline:
 		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
 		"""
+		handler = ListHandler()
+		handler.setFormatter(
+			logging.Formatter(
+				"%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+			)
+		)
+
+		root_logger = logging.getLogger()
+		root_logger.addHandler(handler)
 		utils.log_print("Début du workflow")
-		# Il faudra supprimer ça pour la mise en production
-		minute_number = list(minute.keys())[0]
-		self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}.json"
-		self.minutes_reconciliees_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}_reconcilie.json"
-		self.minutes_reconciliees = None
-		image_index = 0
-		previous_pages = None
-		for minute_id, pages in self.minutes.items():
-			for page in pages:
-				if start_after > image_index:
-					image_index += 1
-					continue
-				else:
-					image_index += 1
-				if target:
-					if page['image_path'] != target:
+		try:
+			# Il faudra supprimer ça pour la mise en production
+			minute_number = list(minute.keys())[0]
+			self.minutes_annotation_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}.json"
+			self.minutes_reconciliees_file = f"results/{self.images_basedir}_minutes_annotations_{minute_number}_reconcilie.json"
+			self.minutes_reconciliees = None
+			image_index = 0
+			previous_pages = None
+			for minute_id, pages in self.minutes.items():
+				for page in pages:
+					if start_after > image_index:
+						image_index += 1
 						continue
-				# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
-				if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
-					utils.log_print("---", print_message=True)
-					utils.log_print(f"Treating {page}", print_message=True)
-					if page["classe"] == "page_4":
-						force_resegment = True
-						extract_polygons = True
 					else:
+						image_index += 1
+					if target:
+						if page['image_path'] != target:
+							continue
+					# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
+					if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
+						utils.log_print("---", print_message=True)
+						utils.log_print(f"Treating {page}", print_message=True)
+						if page["classe"] == "page_4":
+							force_resegment = True
+							extract_polygons = True
+						else:
+							force_resegment = False
+							extract_polygons = False
 						force_resegment = False
-						extract_polygons = False
-					force_resegment = False
-					self.transcription_page(page=page,
-											show_image=False,
-											force_resegment=force_resegment)
-					zones_ajouts, ajouts = self.process_additions(page=page)
-					if ajouts is None:
-						ajouts = {"ajouts": None}
-				if page["classe"] == "page_1":
-					zones, annotations = self.traitement_p_1(page=page, show_image=False)
-				elif page['classe'] == "page_2":
-					zones, annotations = self.traitement_p_2(page=page)
-				elif page['classe'] == "page_3":
-					zones, annotations = self.traitement_p_3(page=page)
-				elif page['classe'] == "page_4":
-					zones, annotations = self.traitement_p_4(page=page, show_image=False)
-				else:
-					continue
-				if (zones, annotations) == (None, None):
-					page["extractions"] = {"commentaire": "Plusieurs soldats"}
-					break
-				page["extractions"] = {**annotations, **ajouts}
-				page["zones"] = zones
-				self.reaffecter_dictionnaire(pages)
-			if target is None:
-				reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
-				previous_pages = copy.copy(pages)
-				reconciliator.reconciliate_minute()
-				self.minutes_reconciliees = reconciliator.reconciliated_minute
-				# self.minutes_reconciliees = {}
+						self.transcription_page(page=page,
+												show_image=False,
+												force_resegment=force_resegment)
+						zones_ajouts, ajouts = self.process_additions(page=page)
+						if ajouts is None:
+							ajouts = {"ajouts": None}
+					if page["classe"] == "page_1":
+						zones, annotations = self.traitement_p_1(page=page, show_image=False)
+					elif page['classe'] == "page_2":
+						zones, annotations = self.traitement_p_2(page=page)
+					elif page['classe'] == "page_3":
+						zones, annotations = self.traitement_p_3(page=page)
+					elif page['classe'] == "page_4":
+						zones, annotations = self.traitement_p_4(page=page, show_image=False)
+					else:
+						continue
+					if (zones, annotations) == (None, None):
+						page["extractions"] = {"commentaire": "Plusieurs soldats"}
+						break
+					page["extractions"] = {**annotations, **ajouts}
+					page["zones"] = zones
+					self.reaffecter_dictionnaire(pages)
+				if target is None:
+					reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
+					previous_pages = copy.copy(pages)
+					reconciliator.reconciliate_minute()
+					self.minutes_reconciliees = reconciliator.reconciliated_minute
+					# self.minutes_reconciliees = {}
+		finally:
+			root_logger.removeHandler(handler)
+		return handler.logs
 
 
 def regroupement_minutes(pages_classees):
@@ -897,20 +915,24 @@ def main(images_dir:str,
 	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
 	# exit(0)
 	minute_reconciliee = {}
+	minute_log = {}
 	if focus:
 		minutes = {k:v for k, v in minutes.items() if k==focus}
 	if workers != 1:
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
-			for minute_n, annotations, reconciliation in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
+			for minute_n, annotations, reconciliation, log in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				minute_annotee = {**minute_annotee, **annotations}
 				minute_reconciliee[minute_n] = reconciliation
+				minute_log[minute_n] = log
 	else:
 		for idx, minute in minutes.items():
-			minute_n, annotations, reconciliation = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
+			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
+			minute_log[minute_n] = log
+	utils.serialize_dict(minute_log, f"results/log.json")
 	utils.serialize_dict(minute_annotee, f"results/results_{images_basedir}.json")
 	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated_{images_basedir}.json")
 	utils.convert_to_csv(minute_reconciliee, f"results/results_{images_basedir}.csv")
@@ -939,9 +961,9 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe
 						device=device,
 						images_dir=images_dir,
 						current_minute = minute)
-	pipeline.workflow(minute)
+	logger = pipeline.workflow(minute)
 	minute_number = list(minute.keys())[0]
-	return minute_number, pipeline.minutes, pipeline.minutes_reconciliees
+	return minute_number, pipeline.minutes, pipeline.minutes_reconciliees, logger
 
 if __name__ == '__main__':
 	arguments = argparse.ArgumentParser()

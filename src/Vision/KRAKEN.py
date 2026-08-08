@@ -2,14 +2,16 @@ import PIL.Image
 from kraken.lib import vgsl
 from kraken.serialization import serialize as serialize
 from kraken import blla
-from kraken.lib import models
 from kraken.tasks import RecognitionTaskModel
 from kraken.configs import RecognitionInferenceConfig
-from kraken import rpred
 import kraken.containers
 
 import src.utils.utils as utils
 import dataclasses
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 class KRAKEN():
 	"""
@@ -53,22 +55,25 @@ class KRAKEN():
 		"""
 		model = RecognitionTaskModel.load_model(self.ocr_model)
 		config = RecognitionInferenceConfig(accelerator=self.device, num_workers=0, num_line_workers=0)
-		# pred_it = rpred.rpred(model, im, segments)
 		pred_it = model.predict(im, segments, config)
 		if return_kraken_preds == True:
 			results = dataclasses.replace(pred_it.bounds, lines=[item for item in pred_it], imagename=image_name)
 			return results
 		prediction = []
-		for line, record in zip(segments.lines, pred_it):
-			interm_dict = {}
-			interm_dict['baseline'] = line.baseline
-			if extract_polygons:
-				interm_dict['polygon'] = line.boundary
-			else:
-				interm_dict['polygon'] = None
-			interm_dict['prediction'] = utils.nfc_normalize(record.prediction)
-			interm_dict['cuts'] = record.cuts
-			interm_dict['image_path'] = image_name
-			prediction.append(interm_dict)
-		my_OCR_record = utils.OCRRecord(record=prediction)
+		try:
+			for line, record in zip(segments.lines, pred_it):
+				interm_dict = {}
+				interm_dict['baseline'] = line.baseline
+				if extract_polygons:
+					interm_dict['polygon'] = line.boundary
+				else:
+					interm_dict['polygon'] = None
+				interm_dict['prediction'] = utils.nfc_normalize(record.prediction)
+				interm_dict['cuts'] = record.cuts
+				interm_dict['image_path'] = image_name
+				prediction.append(interm_dict)
+			my_OCR_record = utils.OCRRecord(record=prediction)
+		except RuntimeError as e:
+			logger.error(f"Erreur avec la prédiction: {e}.")
+			return None
 		return my_OCR_record
