@@ -469,10 +469,6 @@ class Extractor:
 							"baseline": baseline_nom_du_soldat}
 				}
 
-		# elif len(soldat) > 1:
-		# 	plusieurs_soldats = True
-		# 	bbox_nom_soldat = None
-		# 	logger.info("Plusieurs soldats identifiés")
 		elif len(soldat) == 0:
 			logger.info("Nom du soldat non trouvé en page 2")
 			bbox_nom_soldat = None
@@ -857,6 +853,7 @@ class Extractor:
 			date_normalisee = None
 
 		return {
+			"predicted": ligne_jugement_lu,
 			"extracted": date_identifiee,
 			"corrected": corrected_date,
 			"normalized": date_normalisee
@@ -1009,21 +1006,23 @@ class Extractor:
 		total = utils.sum_to_float(somme_toutes_lettres)
 		
 		# On cherche la date du jugement, dans la dernière phrase du dernier paragraphe
-		try:
-			phrase_date = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
-		except TypeError:
-			date_line, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match="Fait en la Chambre du Conseil de Guerre")
-			try:
-				phrase_date = utils.approximate_sentence_split(sentence=date_line.prediction, substring="Fait en la Chambre")[-1]
-			except TypeError:
-				return {"predicted": lignes_recapitulatif_as_string,
-						"extracted": total,
-						"bbox": zone_tableau}, None
-		ner = self.ner_pipeline(phrase_date.lower())
+		# try:
+		# 	phrase_date = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
+		# except TypeError:
+		# 	date_line, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match="Fait en la Chambre du Conseil de Guerre")
+		# 	try:
+		# 		phrase_date = utils.approximate_sentence_split(sentence=date_line.prediction, substring="Fait en la Chambre")[-1]
+		# 	except TypeError:
+		# 		logger.error("Date du procès non identifiée en page 4.")
+		# 		return {"predicted": lignes_recapitulatif_as_string,
+		# 				"extracted": total,
+		# 				"bbox": zone_tableau}, None
+		ner = self.ner_pipeline(lignes_recapitulatif_as_string.lower())
 		identified_date = [item for item in ner if item['entity_group'] == "DATE"]
 		try:
 			corrected = utils.correct_date(identified_date[0]['word'])
 		except IndexError:
+			logger.error("Date du procès non identifiée en page 4.")
 			return {"predicted": lignes_recapitulatif_as_string,
 				"extracted": total,
 				"bbox": zone_tableau}, None
@@ -1643,8 +1642,7 @@ class Extractor:
 																					intersect_ratio=0.7)
 		if (corresponding_lines, numero_ordre_zone) == (None, None):
 			# TODO: reprendre cela, ça semble bizarre.
-			utils.log_print("Error with order number", print_message=True)
-			exit(0)
+			logger.error("Error with order number")
 			return {"extracted": None,
 					"baseline": None,
 					"bbox": None,
@@ -1668,8 +1666,8 @@ class Extractor:
 		if numero_nomenclature == "967":
 			pass
 		elif numero_nomenclature == "974":
-			utils.log_print("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
-			exit(0)
+			logger.warning("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
+			return
 		else:
 			utils.log_print("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
 				  "ou de classification de la page.")
@@ -2062,6 +2060,7 @@ class Extractor:
 		try:
 			date_extraite = date_span[-1]
 		except TypeError:
+			logger.error("Date du procès non récupérée en page 1.")
 			return None
 		baseline = utils.get_baseline_from_string(line=correct_lines,
 												  target_string=date_extraite,
