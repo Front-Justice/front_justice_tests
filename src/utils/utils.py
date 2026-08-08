@@ -2449,7 +2449,10 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 					 "image_path": image_path}
 		return baselines
 	else:
-		cuts = line.cuts
+		try:
+			cuts = line.cuts
+		except TypeError:
+			return None
 		baseline = line.baseline
 		prediction = line.prediction
 		prediction = prediction.lower()
