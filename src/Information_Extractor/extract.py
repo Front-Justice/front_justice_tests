@@ -445,7 +445,7 @@ class Extractor:
 			logger.error(f"Problème avec le spotting. Exemple: {lignes_description_soldat_raw} de taille"
 						 f"{len(lignes_description_soldat_raw)}.")
 		description_du_soldat["entites"] = result_spotting
-		if len(soldat) == 1:
+		if len(soldat) > 0:
 			logger.info("Un seul soldat.")
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
@@ -469,11 +469,11 @@ class Extractor:
 							"baseline": baseline_nom_du_soldat}
 				}
 
-		elif len(soldat) > 1:
-			plusieurs_soldats = True
-			bbox_nom_soldat = None
-			logger.info("Plusieurs soldats identifiés")
-		else:
+		# elif len(soldat) > 1:
+		# 	plusieurs_soldats = True
+		# 	bbox_nom_soldat = None
+		# 	logger.info("Plusieurs soldats identifiés")
+		elif len(soldat) == 0:
 			logger.info("Nom du soldat non trouvé en page 2")
 			bbox_nom_soldat = None
 			# utils.log_print("Aucun soldat identifié par YOLO.")
