@@ -741,9 +741,9 @@ class Pipeline:
 					reconciliator.reconciliate_minute()
 					self.minutes_reconciliees = reconciliator.reconciliated_minute
 					# self.minutes_reconciliees = {}
+			return handler.logs
 		finally:
 			root_logger.removeHandler(handler)
-		return handler.logs
 
 
 def regroupement_minutes(pages_classees):
@@ -932,7 +932,7 @@ def main(images_dir:str,
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
 			minute_log[minute_n] = log
-	utils.serialize_dict(minute_log, f"results/log.json")
+	utils.serialize_dict(minute_log, f"results/log_{images_basedir}.json")
 	utils.serialize_dict(minute_annotee, f"results/results_{images_basedir}.json")
 	utils.serialize_dict(minute_reconciliee, f"results/results_reconciliated_{images_basedir}.json")
 	utils.convert_to_csv(minute_reconciliee, f"results/results_{images_basedir}.csv")

@@ -213,7 +213,6 @@ class Reconciliator:
 					dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
 					print("Problemo")
 					self.date_proces = None
-					# self.date_proces =
 		if self.date_proces:
 			# On va compter les jours, mois, trimestre et année de guerre.
 			debut_guerre = "1914-09-03"

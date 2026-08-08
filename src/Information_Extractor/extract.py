@@ -447,9 +447,6 @@ class Extractor:
 		description_du_soldat["entites"] = result_spotting
 		if len(soldat) == 1:
 			logger.info("Un seul soldat.")
-			print("1 seul soldat")
-			print(logger)
-			exit(0)
 			bbox_nom_soldat = soldat[0].coordinates
 			entite_et_baseline = extractions.extraire_entite_baseline(
 				entities_list=result_spotting,
