@@ -89,8 +89,7 @@ class Extractor:
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
 
-		# entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting/")
-		entity_spotting_model = AutoModelForTokenClassification.from_pretrained("/home/mgl/Téléchargements/bernet_09aout")
+		entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting/")
 		entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-base")
 		self.entity_spotting_pipeline = pipeline('ner',
 										model=entity_spotting_model,
