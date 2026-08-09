@@ -1,3 +1,5 @@
+import logging
+
 import src.utils.utils as utils
 import re
 from text_to_num import text2num
@@ -354,10 +356,12 @@ def extraire_date_naissance(entity_dict, lignes, image_path):
 		try:
 			date_normalisee = date.process_date(date_naissance_corrigee)
 		except TypeError:
-			utils.log_print(f"Error with birth date {date_naissance}")
+			logging.error(f"Erreur d'extraction de la date de naissance {date_naissance_corrigee}.")
 			date_naissance["extracted"] = None
 			date_normalisee = date_naissance["extracted"]
 		date_naissance["extracted"] = date_normalisee
+	else:
+		logging.error(f"Date de naissance non identifiée: {entity_dict}; {lignes.}")
 
 	return date_naissance
 
