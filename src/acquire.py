@@ -564,11 +564,7 @@ class Pipeline:
 			date_naissance = current_dict["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except (KeyError, TypeError):
 			date_naissance = None
-		try:
-			current_dict["soldat"]["identite"]["age"] = utils.calcule_age(date_naissance,
-																   date_proces=current_dict["date_proces"]["date_normalisee"]["when"])
-		except (TypeError, KeyError, ValueError):
-			current_dict["soldat"]["identite"]["age"] = None
+
 
 
 
@@ -626,6 +622,7 @@ class Pipeline:
 
 		# On extrait la date du crime
 		if "MainZone-crimeDate" in zones_manquantes:
+			logging.error("Zone de date du crime non identifiée.")
 			current_dict["date_du_crime_ou_delit"] = None
 		else:
 			current_dict["date_du_crime_ou_delit"] = self.extractor.extraire_date_crime_ou_delit(
