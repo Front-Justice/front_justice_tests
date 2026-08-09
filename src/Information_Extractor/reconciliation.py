@@ -171,10 +171,10 @@ class Reconciliator:
 			elif age_theorique != age_soldat and age_soldat:
 				try:
 					if 18 < int(age_soldat) < 60:
-						logging.info("L'âge extrait du soldat est vraisemblable.")
+						logging.info(f"L'âge extrait du soldat est vraisemblable: {age_soldat}.")
 						self.age_soldat = age_soldat
 					else:
-						logging.error("L'âge extrait du soldat est invraisemblable. On prend l'âge théorique")
+						logging.error(f"L'âge extrait du soldat est invraisemblable. On prend l'âge théorique: {age_theorique}")
 						self.age_soldat = age_theorique
 				except ValueError:
 					logging.error(f"L'âge du soldat n'a pas été correctement extrait: {age_soldat}. On prend l'âge calculé.")
@@ -185,7 +185,7 @@ class Reconciliator:
 			else:
 				self.age_soldat = None
 		else:
-			logging.info("L'âge du soldat ne peut être recalculé. On garde l'âge identifié.")
+			logging.info(f"L'âge du soldat ne peut être recalculé. On garde l'âge identifié: {age_soldat}.")
 			self.age_soldat = age_soldat
 		if self.age_soldat and date_page_1:
 			annee_naissance = date_page_1.split("/")[-1]
@@ -193,7 +193,7 @@ class Reconciliator:
 			if verif_age is True:
 				logging.info("Âge du soldat logique.")
 			else:
-				logging.error("Âge du soldat discordant avec les années de guerre.")
+				logging.error(f"Âge du soldat discordant avec les années de guerre: {self.age_soldat} et {annee_naissance}.")
 				self.age_soldat = None
 
 

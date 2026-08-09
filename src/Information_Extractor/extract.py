@@ -1364,8 +1364,8 @@ class Extractor:
 		try:
 			# TODO: la correction supprime les tirets et la ponctuation, marqueur de période ou répétition, voir comment corriger ça
 			corrected_date = utils.correct_date(target_date)
-			logger.error(f"La date du crime ou délit n'a pas été correctement corrigée: {target_date}")
 		except TypeError:
+			logger.error(f"La date du crime ou délit n'a pas été correctement corrigée: {target_date}")
 			return {"normalized": None,
 					"corrected": None,
 					"extracted": date_crime_party,
