@@ -336,7 +336,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 	return greffier_dict
 
 
-def extraire_date_naissance(entity_dict, lignes, image_path):
+def extraire_date_naissance(entity_dict, lignes:OCRRecord, image_path):
 	"""
 	Cette fonction extrait la date de naissance et les baselines
 	:param entity_dict:
@@ -361,7 +361,7 @@ def extraire_date_naissance(entity_dict, lignes, image_path):
 			date_normalisee = date_naissance["extracted"]
 		date_naissance["extracted"] = date_normalisee
 	else:
-		logging.error(f"Date de naissance non identifiée: {entity_dict}; {lignes}")
+		logging.error(f"Date de naissance non identifiée: {entity_dict}; {lignes.join_transcription()}")
 
 	return date_naissance
 
