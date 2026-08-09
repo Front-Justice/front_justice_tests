@@ -1978,6 +1978,14 @@ def check_substring_in_sentence(sentence: str,
 								target_substring: str,
 								return_subtring: bool = False,
 								max_distance: int = 1) -> bool:
+	"""
+	Recherche d'une sous-chaîne dans une chaîne, avec distance possible.
+	:param sentence: la phrase
+	:param target_substring: le mot à chercher
+	:param return_subtring: retourner la sous-chaîne trouvée ?
+	:param max_distance: distance maximale autorisée
+	:return:
+	"""
 	search = fuzzysearch.find_near_matches(target_substring,
 										   sentence,
 										   max_l_dist=max_distance)

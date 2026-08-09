@@ -53,19 +53,18 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
-		self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
-		self.ner_model.to(device)
+		# self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
+		# self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
 		
 		
 
 
-		self.ner_pipeline = pipeline('ner',
-									 model=self.ner_model,
-									 tokenizer=self.tokenizer,
-									 aggregation_strategy="simple",
-									 device=-1 if device == "cpu" else device)
+		# self.ner_pipeline = pipeline('ner',
+		# 							 model=self.ner_model,
+		# 							 tokenizer=self.tokenizer,
+		# 							 aggregation_strategy="simple",
+		# 							 device=-1 if device == "cpu" else device)
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
@@ -90,7 +89,8 @@ class Extractor:
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription
 
-		entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting/")
+		# entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting/")
+		entity_spotting_model = AutoModelForTokenClassification.from_pretrained("/home/mgl/Téléchargements/bernet_09aout")
 		entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-base")
 		self.entity_spotting_pipeline = pipeline('ner',
 										model=entity_spotting_model,
@@ -367,7 +367,7 @@ class Extractor:
 		:param texte:
 		:return:
 		"""
-		inputs = self.tokenizer(
+		inputs = self.charge_identification_tokenizer(
 			[unicodedata.normalize('NFC', texte.lower())],
 			padding=True,
 			truncation=True,
@@ -621,9 +621,10 @@ class Extractor:
 				"extracted": None,
 				"prediction": None}
 			}
-		entites_nommees = self.ner_pipeline(apres_defenseur)
+		# entites_nommees = self.ner_pipeline(apres_defenseur)
+		entites_nommees = self.entity_spotting_pipeline(f"[3] {apres_defenseur}")
 		try:
-			nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'PER'][0]
+			nom_defenseur = [item["word"] for item in entites_nommees if item['entity_group'] == 'nom_du_soldat'][0]
 		except IndexError:
 			logger.info("Nom du défenseur non trouvé.")
 			return {'nom_du_defenseur': {
@@ -829,11 +830,9 @@ class Extractor:
 													string_to_match="le présent jugement a été lu par nous",
 													return_index=True)
 		ligne_jugement_lu = jugement_lu.prediction
-		NER = self.ner_pipeline(ligne_jugement_lu)
+		NER = self.entity_spotting_pipeline(f"[4] {ligne_jugement_lu}")
 		if any(["date" in item.values() for item in NER]):
-			date_identifiee = extractions.extraire_feature(entities_list=NER,
-												lignes=jugement_lu,
-												feature="date")
+			date_identifiee = [item["word"] for item in NER if item["entity_group"] == "date"][0]
 		else:
 			try:
 				date_identifiee = utils.approximate_sentence_split(sentence=ligne_jugement_lu,
@@ -850,6 +849,7 @@ class Extractor:
 		try:
 			date_normalisee = date.process_date(corrected_date)
 		except TypeError:
+			logger.error(f"La première occurrence de date n'a pas été correctement parsée. Texte: {corrected_date}")
 			date_normalisee = None
 
 		return {
@@ -1017,8 +1017,9 @@ class Extractor:
 		# 		return {"predicted": lignes_recapitulatif_as_string,
 		# 				"extracted": total,
 		# 				"bbox": zone_tableau}, None
-		ner = self.ner_pipeline(lignes_recapitulatif_as_string.lower())
-		identified_date = [item for item in ner if item['entity_group'] == "DATE"]
+		# ner = self.ner_pipeline(lignes_recapitulatif_as_string.lower())
+		ner = self.entity_spotting_pipeline(f"[4] {lignes_recapitulatif_as_string}")
+		identified_date = [item for item in ner if item['entity_group'] == "date"]
 		try:
 			corrected = utils.correct_date(identified_date[0]['word'])
 		except IndexError:
@@ -1433,12 +1434,12 @@ class Extractor:
 			lignes_fusionnees = sorted_lines.join_transcription()
 			lignes_fusionnees = lignes_fusionnees.lower()
 			try:
-				resultat = self.ner_pipeline(lignes_fusionnees.lower())
+				resultat = self.entity_spotting_pipeline(f"[4] {lignes_fusionnees}")
 			except RuntimeError:
 				continue
 			# TODO: reprendre ça, il peut y avoir plusieurs dates
 			normalized_dates = []
-			dates = [item for item in resultat if item['entity_group'] == 'DATE']
+			dates = [item for item in resultat if item['entity_group'] == 'date']
 			for current_date in dates:
 				extracted_date = current_date['word']
 				try:
@@ -1589,7 +1590,7 @@ class Extractor:
 		else:
 			check_date_regexp = re.compile(r"\d{4}")
 
-			all_dates = [item for item in self.ner_pipeline(lignes_condamnations_str) if item['entity_group'] == "DATE"]
+			all_dates = [item for item in self.entity_spotting_pipeline(f"[4] {lignes_condamnations_str}") if item['entity_group'] == "date"]
 			bornes_dates = []
 			for date in all_dates:
 				is_date = len(re.findall(check_date_regexp, date['word'])) > 0

@@ -183,6 +183,7 @@ class Pipeline:
 		# On segmente la page 2: boxes générales
 		# On s'occupe d'abord de la transcription des lignes
 
+		logging.info("Traitement de la page 2")
 		classes_page_2 = ["avertissement",
 						  "defense",
 						  "formalites",
@@ -285,6 +286,7 @@ class Pipeline:
 		# On s'occupe d'abord de la transcription des lignes
 
 
+		logging.info("Traitement de la page 3")
 		classes_page_3 = ["questions",
 							"reponse_questions",
 							"decision_tribunal"]
@@ -338,6 +340,7 @@ class Pipeline:
 		# On s'occupe d'abord de la transcription des lignes
 
 
+		logging.info("Traitement de la page 4")
 		classes_page_4 = ["recapitulatif_somme",
 							"tableau_frais"]
 		current_dict = {}
@@ -507,7 +510,7 @@ class Pipeline:
 
 		# On segmente la page 1: boxes générales
 		# On s'occupe d'abord de la transcription des lignes
-
+		logging.info("Traitement de la page 1")
 		# La liste qui suit permet de vérifier si une zone est manquante.
 		classes_page_1 = ["Description du Soldat",
 						  "Inculpation_antecedents",
