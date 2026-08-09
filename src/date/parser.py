@@ -36,6 +36,38 @@ class Parser(lexer.Lexer):
         ('left', 'AND'),  # Priorité pour "et"
     )
 
+
+    def p_date_an(self, p):
+        '''
+        an_toutes_lettres : token_an_toutes_lettres millier centaine dizaine
+                            | token_an_toutes_lettres millier centaine unite
+        '''
+
+        p[0] = {"annee": sum([item for item in p[2:]])}
+
+
+    def p_date_complete_toutes_lettres_inversee(self, p):
+        '''
+        date_toutes_lettres_inversee : an_toutes_lettres jour_toutes_lettres_mois
+        '''
+        p[0] = {**p[1], **p[2]}
+
+
+    def p_date_jour(self, p):
+        '''
+        jour_toutes_lettres :  dizaine unite
+            | dizaine
+            | unite
+        '''
+        p[0] = {"jour": sum([item for item in p[1:]])}
+
+
+    def p_jour_toutes_lettres_mois(self, p):
+        '''
+        jour_toutes_lettres_mois : jour_toutes_lettres mois
+        '''
+        p[0] = {**p[1], **p[2]}
+
     def p_mois_annee_range(self, p):
         '''
         mois_annee_range : mois_annee RANGE mois_annee
@@ -77,13 +109,6 @@ class Parser(lexer.Lexer):
             p[0] = {"courant": p[3]}
 
 
-    def p_date_jour(self, p):
-        '''
-        jour_toutes_lettres : unite
-            | dizaine unite
-            | dizaine
-        '''
-        p[0] = {"jour": sum([item for item in p[1:]])}
 
 
 
@@ -93,11 +118,6 @@ class Parser(lexer.Lexer):
         '''
         p[0] = {"mois": p[1]}
 
-    def p_jour_toutes_lettres_mois(self, p):
-        '''
-        jour_toutes_lettres_mois : jour_toutes_lettres mois
-        '''
-        p[0] = {**p[1], **p[2]}
 
 
     def p_unite(self, p):
@@ -143,13 +163,6 @@ class Parser(lexer.Lexer):
         '''
         p[0] = None
 
-    def p_date_an(self, p):
-        '''
-        an_toutes_lettres : token_an_toutes_lettres millier centaine dizaine unite
-                            | token_an_toutes_lettres millier centaine dizaine
-        '''
-
-        p[0] = {"annee": sum([item for item in p[2:]])}
 
 
     def p_succession_mois_annees(self, p):
@@ -176,11 +189,6 @@ class Parser(lexer.Lexer):
         p[0] = {"and": [p[1], p[3]]}
 
 
-    def p_date_complete_toutes_lettres_inversee(self, p):
-        '''
-        date_toutes_lettres_inversee : an_toutes_lettres jour_toutes_lettres_mois
-        '''
-        p[0] = {**p[1], **p[2]}
 
     def p_date_complete_toutes_lettres(self, p):
         '''
@@ -193,6 +201,7 @@ class Parser(lexer.Lexer):
         '''
         date_complete : plage ANNEE
                      | jour_mois ANNEE
+                     | date_toutes_lettres_inversee
                      | jour_toutes_lettres_mois ANNEE
                      | groupe_annee
                      | courant_de_groupe
@@ -210,7 +219,6 @@ class Parser(lexer.Lexer):
                      | deux_dates_completes
                      | range_jour_mois ANNEE
                      | date_toutes_lettres
-                     | date_toutes_lettres_inversee
                      | mois_annee_range
         '''
         if len(p) == 3:

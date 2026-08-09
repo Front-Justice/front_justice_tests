@@ -206,7 +206,7 @@ def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915")
 	"""
 	MyLexer = lexer.Lexer()
 	MyLexer.tokenize(text, debug=debug)
-	MyParser = parser.Parser(MyLexer, debug=False)
+	MyParser = parser.Parser(MyLexer, debug=debug)
 	if debug:
 		print(json.dumps(MyParser.ast,
 						 sort_keys=False, indent=4))
@@ -320,7 +320,10 @@ def test():
 	"juin juillet 1917",
 	"an mil neuf cent dix sept le dix huit août",
 	"mai 1916 à mai 1917",
-	"an mil neuf cent dix sept"]
+	"an mil neuf cent dix sept",
+	"an mil neuf cent dix sept le dix huit août",
+	"l'an mil neuf cent dix huit le huit avril",
+	"l'an mil neuf cent dix huit le dix huit avril"]
 	dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")
@@ -334,6 +337,5 @@ def test():
 
 if __name__ == '__main__':
 	test()
-	# date = process_date("5 janvier au 21 fevrier 1917")
-	# print(date)
-	exit(0)
+	date = process_date()
+	print(date)
