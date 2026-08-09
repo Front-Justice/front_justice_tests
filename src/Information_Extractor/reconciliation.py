@@ -143,6 +143,8 @@ class Reconciliator:
 			questions_page_3 = ""
 
 		self.questions = f"{questions_page_2} {questions_page_3}".strip()
+
+
 	def _reconciliate_date_naissance(self):
 		try:
 			date_page_1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
@@ -166,14 +168,16 @@ class Reconciliator:
 			if age_theorique == age_soldat:
 				logging.info(f"L'âge théorique concorde avec l'âge du soldat: {age_soldat} ans")
 				self.age_soldat = age_soldat
-			elif age_theorique != age_soldat:
-				if 18 < age_soldat < 60:
+			elif age_theorique != age_soldat and age_soldat:
+				if 18 < int(age_soldat) < 60:
 					self.age_soldat = age_soldat
 				else:
 					self.age_soldat = age_theorique
 			elif not age_soldat and age_theorique:
 				logging.info(f"Âge calculé: {age_theorique}")
 				self.age_soldat = age_theorique
+			else:
+				self.age_soldat = None
 		else:
 			self.age_soldat = age_soldat
 
