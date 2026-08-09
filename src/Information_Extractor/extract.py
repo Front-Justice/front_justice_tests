@@ -839,6 +839,7 @@ class Extractor:
 				date_identifiee = utils.split_before_keep_delimiter(target_string=date_identifiee, delimiter="an")[-1]
 				date_identifiee = date_identifiee.replace("L'", "")
 			except TypeError:
+				logger.error(f"La première occurrence de date n'a pas été correctement identifiée. Texte: {ligne_jugement_lu}")
 				return {
 					"extracted": None,
 					"corrected": None,

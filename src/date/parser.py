@@ -45,6 +45,14 @@ class Parser(lexer.Lexer):
 
         p[0] = {"annee": sum([item for item in p[2:]])}
 
+    def p_date_an_sans_token(self, p):
+        '''
+		an_toutes_lettres_no_token :  millier centaine dizaine
+							| millier centaine unite
+		'''
+
+        p[0] = {"annee": sum([item for item in p[1:]])}
+
 
     def p_date_complete_toutes_lettres_inversee(self, p):
         '''
@@ -193,6 +201,7 @@ class Parser(lexer.Lexer):
     def p_date_complete_toutes_lettres(self, p):
         '''
         date_toutes_lettres : jour_toutes_lettres_mois an_toutes_lettres
+                            | jour_toutes_lettres_mois an_toutes_lettres_no_token
         '''
         p[0] = {**p[1], **p[2]}
 
