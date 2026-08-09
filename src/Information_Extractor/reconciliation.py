@@ -189,11 +189,11 @@ class Reconciliator:
 			self.age_soldat = age_soldat
 		if self.age_soldat and date_page_1:
 			annee_naissance = date_page_1.split("/")[-1]
-			verif_age = 1913 < self.age_soldat + annee_naissance < 1920
+			verif_age = 1913 < int(self.age_soldat) + int(annee_naissance) < 1920
 			if verif_age is True:
 				logging.info("Âge du soldat logique.")
 			else:
-				logging.info("Âge du soldat discordant avec les années de guerre.")
+				logging.error("Âge du soldat discordant avec les années de guerre.")
 				self.age_soldat = None
 
 
