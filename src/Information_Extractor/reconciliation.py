@@ -1,4 +1,5 @@
 import copy
+import logging
 import math
 from datetime import datetime
 import json
@@ -199,20 +200,27 @@ class Reconciliator:
 				return
 			# Cas le plus simple, toutes les trois dates s'accordent
 			if all([item == filtered_dates[0] for item in filtered_dates[1:]]):
+				logging.info(f"Toutes les dates s'accordent: {filtered_dates[0]}")
 				self.date_proces = filtered_dates[0]
 			else:
+				logging.info(f"Il y a désaccord dans les dates retenues: {filtered_dates[0]}")
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
+					logging.info(f"Deux dates retenues: {filtered_dates[0], filtered_dates[1]}")
 					self.date_proces = self.reconciliate_date(filtered_dates[0], filtered_dates[1])
+					logging.info(f"Date conservées: {self.date_proces}")
 
 				# Si la taille est de 3
 				else:
 					# On regarde la précision des dates récupérées
 					full_precision_date = [item for item in filtered_dates if len(item.split("/")) == 3]
 					if len(full_precision_date) == 1:
-						self.date_proces == full_precision_date[0]
+						logging.info(f"Une date précise: {full_precision_date[0]}")
+						self.date_proces = full_precision_date[0]
 					elif len(full_precision_date) == 2:
+						logging.info(f"Deux dates retenues: {filtered_dates[0], filtered_dates[1]}")
 						self.date_proces = self.reconciliate_date(full_precision_date[0], full_precision_date[1])
+						logging.info(f"Date conservées: {self.date_proces}")
 					else:
 						dictionnary = {}
 						for date in filtered_dates:
