@@ -1034,7 +1034,8 @@ class Extractor:
 		date_du_proces = {
 			"predicted": identified_date[0]['word'],
 			"corrected": corrected,
-			"normalized": parsed
+			"normalized": parsed,
+			"entities": ner
 		}
 
 
