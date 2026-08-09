@@ -1,3 +1,5 @@
+import logging
+
 import cv2
 import json
 import math
@@ -520,11 +522,15 @@ def point_in_box(coord, box_coord):
 # 								   self.cuts)
 
 def split_date(date:str):
-	try:
+	if len(date.split("/")) == 3:
 		day, month, year = date.split("/")
-	except ValueError:
+	elif len(date.split("/")) == 2:
 		month, year = date.split("/")
-		return 1, int(month), int(year)
+		day = 1
+	elif len(date.split("/")) == 1:
+		year = date
+		month = 1
+		day = 1
 	return int(day), int(month), int(year)
 
 def is_anterior_or_equal(date_a:str, date_b:str) -> bool:
@@ -538,6 +544,8 @@ def is_anterior_or_equal(date_a:str, date_b:str) -> bool:
 	day_b, month_b, year_b = split_date(date_b)
 	date_a_formatted = datetime(year_a, month_a, day_a)
 	date_b_formatted = datetime(year_b, month_b, day_b)
+	if date_a_formatted <= date_b_formatted is False:
+		logging.warning(f"{date_a_formatted} is before {date_b_formatted}, there must be an error. Ignoring the date.")
 	return date_a_formatted <= date_b_formatted
 
 def extract_bbox_from_baseline(target_line:OCRLine, image:Image.Image, height_rectangle:int=150):
