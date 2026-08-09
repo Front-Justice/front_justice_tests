@@ -155,16 +155,20 @@ class Reconciliator:
 		try:
 			age_soldat = self.annotations_page_2["extractions"]["soldat"]["identite"]["age"]["extracted"]
 		except (IndexError, TypeError, KeyError):
+			logging.error("L'âge n'a pas été identifié en page 2.")
 			age_soldat = None
-		if self.date_proces:
+		if self.date_proces and date_page_1:
 			try:
 				age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
 			except (AttributeError, TypeError, KeyError):
+				logging.error(f"Le calcul de l'âge a échoué: date de naissance: {date_page_1}; date du procès: {self.date_proces}")
 				age_theorique = None
 			if age_theorique == age_soldat:
+				logging.info(f"L'âge théorique concorde avec l'âge du soldat: {age_soldat} ans")
 				self.age_soldat = age_soldat
-			else:
-				self.age_soldat = age_soldat
+			elif not age_soldat and age_theorique:
+				logging.info(f"Âge calculé: {age_theorique}")
+				self.age_soldat = age_theorique
 		else:
 			self.age_soldat = age_soldat
 
