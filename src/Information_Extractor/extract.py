@@ -1032,7 +1032,7 @@ class Extractor:
 			parsed = None
 
 		date_du_proces = {
-			"predicted": identified_date[0]['word'],
+			"predicted": identified_date,
 			"corrected": corrected,
 			"normalized": parsed,
 			"entities": ner
