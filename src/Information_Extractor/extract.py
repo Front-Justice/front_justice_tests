@@ -1018,11 +1018,11 @@ class Extractor:
 		# 				"bbox": zone_tableau}, None
 		# ner = self.ner_pipeline(lignes_recapitulatif_as_string.lower())
 		ner = self.entity_spotting_pipeline(f"[4] {lignes_recapitulatif_as_string}")
-		identified_date = [item for item in ner if item['entity_group'] == "date"]
+		identified_date = " ".join([item['word'] for item in ner if item['entity_group'] == "date"])
 		try:
-			corrected = utils.correct_date(identified_date[0]['word'])
+			corrected = utils.correct_date(identified_date)
 		except IndexError:
-			logger.error("Date du procès non identifiée en page 4.")
+			logger.warning("Date du procès non identifiée en page 4.")
 			return {"predicted": lignes_recapitulatif_as_string,
 				"extracted": total,
 				"bbox": zone_tableau}, None
