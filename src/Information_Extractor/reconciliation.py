@@ -203,7 +203,7 @@ class Reconciliator:
 				logging.info(f"Toutes les dates s'accordent: {filtered_dates[0]}")
 				self.date_proces = filtered_dates[0]
 			else:
-				logging.info(f"Il y a désaccord dans les dates retenues: {filtered_dates[0]}")
+				logging.info(f"Il y a désaccord dans les dates retenues: {filtered_dates}")
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
 					logging.info(f"Deux dates retenues: {filtered_dates[0], filtered_dates[1]}")
@@ -436,6 +436,13 @@ class Reconciliator:
 		:param date_b: date sous la forme jj/mm/aaaa
 		:return: la date réconciliée
 		"""
+
+		if utils.is_anterior_or_equal(date_a, "03/09/2014"):
+			logging.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
+			return date_b
+		if utils.is_anterior_or_equal(date_b, "03/09/2014"):
+			logging.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
+			return date_a
 		splitted_a = date_a.split("/")
 		splitted_b = date_b.split("/")
 		# Dans le cas de dates de longueur identique (jj/mm/aaaa ou mm/aaaa)
