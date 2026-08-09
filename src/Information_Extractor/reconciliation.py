@@ -180,12 +180,22 @@ class Reconciliator:
 					logging.error(f"L'âge du soldat n'a pas été correctement extrait: {age_soldat}. On prend l'âge calculé.")
 					self.age_soldat = age_theorique
 			elif not age_soldat and age_theorique:
-				logging.info(f"Âge calculé: {age_theorique}")
+				logging.info(f"Âge non identifié. Âge calculé: {age_theorique}")
 				self.age_soldat = age_theorique
 			else:
 				self.age_soldat = None
 		else:
+			logging.info("L'âge du soldat ne peut être recalculé. On garde l'âge identifié.")
 			self.age_soldat = age_soldat
+		if self.age_soldat and date_page_1:
+			annee_naissance = date_page_1.split("/")[-1]
+			verif_age = 1913 < self.age_soldat + annee_naissance < 1920
+			if verif_age is True:
+				logging.info("Âge du soldat logique.")
+			else:
+				logging.info("Âge du soldat discordant avec les années de guerre.")
+				self.age_soldat = None
+
 
 	def _reconciliate_trial_date(self):
 		try:
