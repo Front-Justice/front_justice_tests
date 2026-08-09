@@ -1003,20 +1003,7 @@ class Extractor:
 					"bbox": zone_tableau}, None
 		somme_toutes_lettres = somme_toutes_lettres.strip()
 		total = utils.sum_to_float(somme_toutes_lettres)
-		
-		# On cherche la date du jugement, dans la dernière phrase du dernier paragraphe
-		# try:
-		# 	phrase_date = utils.approximate_sentence_split(sentence=lignes_recapitulatif_as_string, substring="Fait en la Chambre")[-1]
-		# except TypeError:
-		# 	date_line, _ = utils.match_line_by_substring(corresponding_lines=ocr_prediction, string_to_match="Fait en la Chambre du Conseil de Guerre")
-		# 	try:
-		# 		phrase_date = utils.approximate_sentence_split(sentence=date_line.prediction, substring="Fait en la Chambre")[-1]
-		# 	except TypeError:
-		# 		logger.error("Date du procès non identifiée en page 4.")
-		# 		return {"predicted": lignes_recapitulatif_as_string,
-		# 				"extracted": total,
-		# 				"bbox": zone_tableau}, None
-		# ner = self.ner_pipeline(lignes_recapitulatif_as_string.lower())
+
 		ner = self.entity_spotting_pipeline(f"[4] {lignes_recapitulatif_as_string}")
 		identified_date = " ".join([item['word'] for item in ner if item['entity_group'] == "date"])
 		try:
@@ -1029,6 +1016,7 @@ class Extractor:
 		try:
 			parsed = date.process_date(corrected)
 		except TypeError:
+			logger.error(f"La seconde occurrence de date n'a pas été correctement parsée. Texte: {corrected}")
 			parsed = None
 
 		date_du_proces = {
@@ -2061,7 +2049,7 @@ class Extractor:
 		try:
 			date_extraite = date_span[-1]
 		except TypeError:
-			logger.error("Date du procès non récupérée en page 1.")
+			logger.error(f"Date du procès non trouvée en page 1: {line_as_string}")
 			return None
 		baseline = utils.get_baseline_from_string(line=correct_lines,
 												  target_string=date_extraite,
@@ -2072,6 +2060,7 @@ class Extractor:
 		try:
 			normalized = date.process_date(corrected_date)
 		except TypeError:
+			logger.error(f"Date du procès non normalisée en page 1: {corrected_date}.")
 			normalized = None
 		self.date_proces = normalized
 		current_date = utils.DateRecord(extracted=date_extraite,
