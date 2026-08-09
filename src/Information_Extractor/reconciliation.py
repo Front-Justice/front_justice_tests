@@ -234,6 +234,8 @@ class Reconciliator:
 			# On va compter les jours, mois, trimestre et année de guerre.
 			debut_guerre = "1914-09-03"
 			precision_date = len(self.date_proces.split("/"))
+			if len(self.date_proces.split("/")) == 2:
+				self.date_proces = self.date_proces.split("/")[0] + "/" + self.date_proces.split("/")[1] + "/19" + self.date_proces.split("/")[2]
 			if precision_date == 3:
 				# https://stackoverflow.com/a/8419655
 				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
@@ -437,10 +439,10 @@ class Reconciliator:
 		:return: la date réconciliée
 		"""
 
-		if utils.is_anterior_or_equal(date_a, "03/09/2014"):
+		if utils.is_anterior_or_equal(date_a, "03/09/1914"):
 			logging.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
 			return date_b
-		if utils.is_anterior_or_equal(date_b, "03/09/2014"):
+		if utils.is_anterior_or_equal(date_b, "03/09/1914"):
 			logging.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
 			return date_a
 		splitted_a = date_a.split("/")
