@@ -189,7 +189,7 @@ class Reconciliator:
 			self.age_soldat = age_soldat
 		try:
 			self.age_soldat = int(self.age_soldat)
-		except ValueError:
+		except (ValueError, TypeError):
 			logging.error(f"L'âge du soldat n'a pas été correctement extrait: {self.age_soldat}.")
 			self.age_soldat = None
 		if self.age_soldat and date_page_1:
