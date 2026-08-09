@@ -207,7 +207,7 @@ def build_grammar(debug: bool=False, text: str="19 février 1914, 21 mars 1915")
 	MyLexer = lexer.Lexer()
 	MyLexer.tokenize(text, debug=debug)
 	MyParser = parser.Parser(MyLexer, debug=debug)
-	if debug:
+	if debug is True:
 		print(json.dumps(MyParser.ast,
 						 sort_keys=False, indent=4))
 	return MyParser.ast
