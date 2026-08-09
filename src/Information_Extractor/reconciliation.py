@@ -229,6 +229,7 @@ class Reconciliator:
 							except KeyError:
 								dictionnary[date] = 1
 						dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
+						logging.info(f"La date la plus fréquente est: {dict_sorted_by_freq[0]} parmi {filtered_dates}")
 						self.date_proces = dict_sorted_by_freq[0]
 		if self.date_proces:
 			# On va compter les jours, mois, trimestre et année de guerre.

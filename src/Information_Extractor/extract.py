@@ -1331,6 +1331,8 @@ class Extractor:
 		try:
 			target_line = [corresponding_lines[1]]
 		except IndexError:
+			logger.error(f"La date du crime ou délit n'a pas été identifiée. "
+						 f"Pas de ligne identifiée dans la zone de date du crime.")
 			return {"bbox": date_zone,
 					"normalized": None,
 					"extracted": None,
@@ -1362,6 +1364,7 @@ class Extractor:
 		try:
 			# TODO: la correction supprime les tirets et la ponctuation, marqueur de période ou répétition, voir comment corriger ça
 			corrected_date = utils.correct_date(target_date)
+			logger.error(f"La date du crime ou délit n'a pas été correctement corrigée: {target_date}")
 		except TypeError:
 			return {"normalized": None,
 					"corrected": None,
@@ -1374,6 +1377,7 @@ class Extractor:
 		try:
 			normalized_date = date.process_date(corrected_date, debug=False)
 		except TypeError:
+			logger.error(f"La date du crime ou délit n'a pas été correctement parsée: {corrected_date}")
 			normalized_date = None
 
 		return {"normalized": normalized_date,
