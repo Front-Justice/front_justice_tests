@@ -361,7 +361,7 @@ def extraire_date_naissance(entity_dict, lignes, image_path):
 			date_normalisee = date_naissance["extracted"]
 		date_naissance["extracted"] = date_normalisee
 	else:
-		logging.error(f"Date de naissance non identifiée: {entity_dict}; {lignes.}")
+		logging.error(f"Date de naissance non identifiée: {entity_dict}; {lignes}")
 
 	return date_naissance
 
