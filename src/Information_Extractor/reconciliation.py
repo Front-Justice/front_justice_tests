@@ -197,22 +197,31 @@ class Reconciliator:
 			if filtered_dates == []:
 				self.date_proces = None
 				return
+			# Cas le plus simple, toutes les trois dates s'accordent
 			if all([item == filtered_dates[0] for item in filtered_dates[1:]]):
 				self.date_proces = filtered_dates[0]
 			else:
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
 					self.date_proces = self.reconciliate_date(filtered_dates[0], filtered_dates[1])
+
+				# Si la taille est de 3
 				else:
-					dictionnary = {}
-					for date in filtered_dates:
-						try:
-							dictionnary[date] += 1
-						except KeyError:
-							dictionnary[date] = 1
-					dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-					print("Problemo")
-					self.date_proces = None
+					# On regarde la précision des dates récupérées
+					full_precision_date = [item for item in filtered_dates if len(item.split("/") == 3)]
+					if len(full_precision_date) == 1:
+						self.date_proces == full_precision_date[0]
+					elif len(full_precision_date) == 2:
+						self.date_proces = self.reconciliate_date(full_precision_date[0], full_precision_date[1])
+					else:
+						dictionnary = {}
+						for date in filtered_dates:
+							try:
+								dictionnary[date] += 1
+							except KeyError:
+								dictionnary[date] = 1
+						dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
+						self.date_proces = dict_sorted_by_freq[0]
 		if self.date_proces:
 			# On va compter les jours, mois, trimestre et année de guerre.
 			debut_guerre = "1914-09-03"
