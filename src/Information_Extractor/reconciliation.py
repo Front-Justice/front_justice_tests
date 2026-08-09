@@ -208,7 +208,7 @@ class Reconciliator:
 				# Si la taille est de 3
 				else:
 					# On regarde la précision des dates récupérées
-					full_precision_date = [item for item in filtered_dates if len(item.split("/") == 3)]
+					full_precision_date = [item for item in filtered_dates if len(item.split("/")) == 3]
 					if len(full_precision_date) == 1:
 						self.date_proces == full_precision_date[0]
 					elif len(full_precision_date) == 2:
