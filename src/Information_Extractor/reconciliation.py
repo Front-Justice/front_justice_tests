@@ -187,6 +187,11 @@ class Reconciliator:
 		else:
 			logging.info(f"L'âge du soldat ne peut être recalculé. On garde l'âge identifié: {age_soldat}.")
 			self.age_soldat = age_soldat
+		try:
+			self.age_soldat = int(self.age_soldat)
+		except ValueError:
+			logging.error(f"L'âge du soldat n'a pas été correctement extrait: {self.age_soldat}.")
+			self.age_soldat = None
 		if self.age_soldat and date_page_1:
 			annee_naissance = date_page_1.split("/")[-1]
 			verif_age = 1913 < int(self.age_soldat) + int(annee_naissance) < 1920
