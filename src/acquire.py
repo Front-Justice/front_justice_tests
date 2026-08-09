@@ -183,7 +183,8 @@ class Pipeline:
 		# On segmente la page 2: boxes générales
 		# On s'occupe d'abord de la transcription des lignes
 
-		logging.info("Traitement de la page 2")
+
+		logging.info(f"Traitement de la page 2 ({page['image_path']})")
 		classes_page_2 = ["avertissement",
 						  "defense",
 						  "formalites",
@@ -286,7 +287,7 @@ class Pipeline:
 		# On s'occupe d'abord de la transcription des lignes
 
 
-		logging.info("Traitement de la page 3")
+		logging.info(f"Traitement de la page 3 ({page['image_path']})")
 		classes_page_3 = ["questions",
 							"reponse_questions",
 							"decision_tribunal"]
@@ -340,7 +341,7 @@ class Pipeline:
 		# On s'occupe d'abord de la transcription des lignes
 
 
-		logging.info("Traitement de la page 4")
+		logging.info(f"Traitement de la page 4 ({page['image_path']})")
 		classes_page_4 = ["recapitulatif_somme",
 							"tableau_frais"]
 		current_dict = {}
@@ -353,7 +354,7 @@ class Pipeline:
 
 		if show_image:
 			utils.log_print("Show image")
-			utils.draw_lines_on_image(image_path=page["image_path"],
+			utils.draw_lines_on_image(image=page["image_path"],
 									  baselines=[line.baseline for line in self.current_page_transcription])
 
 		# current_dict["polygon_signature_greffier"] = self.extractor.extract_signature_greffier(ocr_prediction=self.current_page_transcription,
@@ -448,7 +449,7 @@ class Pipeline:
 
 		if show_image:
 			baselines = [line.baseline for line in self.current_page_transcription]
-			utils.draw_lines_on_image(image_path=page["image_path"], baselines=baselines)
+			utils.draw_lines_on_image(image=page["image_path"], baselines=baselines)
 
 
 	def process_additions(self, page:json) -> tuple[dict, dict]:
@@ -510,7 +511,7 @@ class Pipeline:
 
 		# On segmente la page 1: boxes générales
 		# On s'occupe d'abord de la transcription des lignes
-		logging.info("Traitement de la page 1")
+		logging.info(f"Traitement de la page 1 ({page['image_path']})")
 		# La liste qui suit permet de vérifier si une zone est manquante.
 		classes_page_1 = ["Description du Soldat",
 						  "Inculpation_antecedents",

@@ -2496,9 +2496,10 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 		return target_baseline
 
 
-def draw_lines_on_image(image_path, baselines: list, return_image=False):
+def draw_lines_on_image(image, baselines: list, return_image=False, load_image=True):
 	log_print("Attempting to show image")
-	image = Image.open(image_path)
+	if load_image:
+		image = Image.open(image)
 	draw = PIL.ImageDraw.Draw(image)
 	for line in baselines:
 		draw.line(line, width=5, fill="green", joint="curve")
