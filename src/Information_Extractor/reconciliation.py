@@ -166,6 +166,11 @@ class Reconciliator:
 			if age_theorique == age_soldat:
 				logging.info(f"L'âge théorique concorde avec l'âge du soldat: {age_soldat} ans")
 				self.age_soldat = age_soldat
+			elif age_theorique != age_soldat:
+				if 18 < age_soldat < 60:
+					self.age_soldat = age_soldat
+				else:
+					self.age_soldat = age_theorique
 			elif not age_soldat and age_theorique:
 				logging.info(f"Âge calculé: {age_theorique}")
 				self.age_soldat = age_theorique
