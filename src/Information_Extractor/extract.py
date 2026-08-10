@@ -1067,7 +1067,6 @@ class Extractor:
 													  feature="nom_du_soldat",
 															 image_path=image_path)}
 
-		cas = {"acquitte": "acquittement", "condamne": "condamnation"}
 		is_condamnation = len([item['word'] for item in entities if item['entity_group'] == "condamnation"]) > 0
 		is_acquittement = len([item['word'] for item in entities if item['entity_group'] == "acquittement"]) > 0
 		if is_condamnation is True:
@@ -1180,7 +1179,6 @@ class Extractor:
 												  feature="sursis",
 														 image_path=image_path)
 		extracted = {"decision_normalisee": decision_normalisee,
-					 "decision_extraite": resultat_condamnation,
 					 "peine": peine,
 					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
 					 "voix": voix,
