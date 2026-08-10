@@ -27,6 +27,10 @@ import fuzzysearch
 
 import src.Vision.KRAKEN as KRAKEN
 import kraken.containers as containers
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class DateRecord:
@@ -545,7 +549,7 @@ def is_anterior_or_equal(date_a:str, date_b:str) -> bool:
 	date_a_formatted = datetime(year_a, month_a, day_a)
 	date_b_formatted = datetime(year_b, month_b, day_b)
 	if date_a_formatted <= date_b_formatted is False:
-		logging.warning(f"{date_a_formatted} is before {date_b_formatted}, there must be an error. Ignoring the date.")
+		logger.warning(f"{date_a_formatted} is before {date_b_formatted}, there must be an error. Ignoring the date.")
 	return date_a_formatted <= date_b_formatted
 
 def extract_bbox_from_baseline(target_line:OCRLine, image:Image.Image, height_rectangle:int=150):

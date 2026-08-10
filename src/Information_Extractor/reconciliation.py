@@ -8,7 +8,9 @@ import shutil
 
 import src.utils.utils as utils
 import pandas as pd
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Reconciliator:
 	"""
@@ -475,10 +477,10 @@ class Reconciliator:
 		"""
 
 		if utils.is_anterior_or_equal(date_a, "03/09/1914"):
-			logging.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
+			logger.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
 			return date_b
 		if utils.is_anterior_or_equal(date_b, "03/09/1914"):
-			logging.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
+			logger.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
 			return date_a
 		splitted_a = date_a.split("/")
 		splitted_b = date_b.split("/")

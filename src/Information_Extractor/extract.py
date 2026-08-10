@@ -487,11 +487,6 @@ class Extractor:
 													   image_path=image_path)
 			}
 
-		description_du_soldat["identite"]["date_naissance"] = (
-			extractions.extraire_date_naissance(entity_dict=result_spotting,
-												lignes=lignes_description_du_soldat,
-				image_path=image_path)
-		)
 
 		description_du_soldat["identite"]["lieu_naissance"] = (
 			extractions.extraire_lieu_naissance(entity_dict=result_spotting,
@@ -1074,8 +1069,13 @@ class Extractor:
 
 		cas = {"acquitte": "acquittement", "condamne": "condamnation"}
 		resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
-		result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
-		decision_normalisee = cas[result]
+		if resultat_condamnation != "":
+			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
+			decision_normalisee = cas[result]
+		else:
+			logger.error(f"Décision du tribunal non trouvée: \n{entities}\n"
+						 f"Paragraphe: {lignes_decision_as_string}")
+			decision_normalisee = "UNK"
 		peine = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
 												  feature="peine",
