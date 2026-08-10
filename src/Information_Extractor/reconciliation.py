@@ -121,6 +121,10 @@ class Reconciliator:
 			logger.info("La condamnation n'a pas été extraite, mais la peine est identifiée. Le soldat"
 						"a donc été condamné.")
 			self.condamnation = "condamnation"
+		elif condamnation == "UNK" and peine == None and sursis is False:
+			logger.info("La condamnation n'a pas été extraite, la peine n'est identifiée, il n'y a pas de sursis."
+						" Le soldat a probablement été acquitté.")
+			self.condamnation = "acquittement"
 		else:
 			self.condamnation = condamnation
 
