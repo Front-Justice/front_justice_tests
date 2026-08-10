@@ -97,10 +97,32 @@ class Reconciliator:
 		self._reconciliate_questions()
 		self._reconciliate_trial_date()
 		self._reconciliate_date_naissance()
+		self._reconciliate_condamnation()
 		self._copy_unici()
 		self._produce_dict()
 		# self._remove_baseline_and_bbox()
 		print("---")
+
+	def _reconciliate_condamnation(self):
+		try:
+			condamnation = self.annotations_page_3["extractions"]["decision_tribunal"]["decision_normalisee"]
+		except KeyError:
+			condamnation = None
+		try:
+			peine = self.annotations_page_3["extractions"]["decision_tribunal"]["peine"]["extracted"]["type"]
+		except KeyError:
+			peine = None
+		try:
+			sursis = self.annotations_page_3["extractions"]["decision_tribunal"]["sursis"]
+		except KeyError:
+			sursis = None
+
+		if condamnation == "UNK" and sursis is True and peine != None:
+			logger.info("La condamnation n'a pas été extraite, mais le sursis et la peine sont identifiés. Le soldat"
+						"a donc été condamné.")
+			self.condamnation = "condamnation"
+		else:
+			self.condamnation = condamnation
 
 	def _check_multiple_soldiers(self):
 		try:
@@ -172,7 +194,7 @@ class Reconciliator:
 				self.age_soldat = age_soldat
 			elif age_theorique != age_soldat and age_soldat:
 				try:
-					if 18 < int(age_soldat) < 60:
+					if 18 < int(age_soldat) < 80:
 						logging.info(f"L'âge extrait du soldat est vraisemblable: {age_soldat}.")
 						self.age_soldat = age_soldat
 					else:
@@ -196,7 +218,7 @@ class Reconciliator:
 			self.age_soldat = None
 		if self.age_soldat and date_page_1:
 			annee_naissance = date_page_1.split("/")[-1]
-			verif_age = 1913 < int(self.age_soldat) + int(annee_naissance) < 1920
+			verif_age = 1912 < int(self.age_soldat) + int(annee_naissance) < 1921
 			if verif_age is True:
 				logging.info("Âge du soldat logique.")
 			else:
@@ -389,6 +411,7 @@ class Reconciliator:
 		"""
 		try:
 			self.decision_tribunal = self.annotations_page_3["extractions"]["decision_tribunal"]
+			self.decision_tribunal["decision_normalisee"] = self.condamnation
 		except (TypeError, KeyError, IndexError):
 			self.decision_tribunal = None
 		try:

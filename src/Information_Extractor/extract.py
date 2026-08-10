@@ -1068,14 +1068,17 @@ class Extractor:
 															 image_path=image_path)}
 
 		cas = {"acquitte": "acquittement", "condamne": "condamnation"}
-		resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
-		if resultat_condamnation != "":
-			result, distance = similarity.find_closest_word_in_list(word_list=list(cas.keys()), target_word=resultat_condamnation)
-			decision_normalisee = cas[result]
+		is_condamnation = len([item['word'] for item in entities if item['entity_group'] == "condamnation"]) > 0
+		is_acquittement = len([item['word'] for item in entities if item['entity_group'] == "acquittement"]) > 0
+		if is_condamnation is True:
+			decision_normalisee = "condamnation"
+		elif is_acquittement is True:
+			decision_normalisee = "acquittement"
 		else:
 			logger.error(f"Décision du tribunal non trouvée: \n{entities}\n"
 						 f"Paragraphe: {lignes_decision_as_string}")
 			decision_normalisee = "UNK"
+
 		peine = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
 												  feature="peine",
@@ -1636,7 +1639,7 @@ class Extractor:
 																					intersect_ratio=0.7)
 		if (corresponding_lines, numero_ordre_zone) == (None, None):
 			# TODO: reprendre cela, ça semble bizarre.
-			logger.error("Error with order number")
+			logger.error("Le numéro d'ordre n'a pas été trouvé.")
 			return {"extracted": None,
 					"baseline": None,
 					"bbox": None,
@@ -1663,7 +1666,7 @@ class Extractor:
 			logger.warning("Le formulaire 974 (bis) a été identifié: révision de procès. Le processus s'arrête pour l'instant.")
 			return
 		else:
-			utils.log_print("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
+			logger.warning("Le numéro de formulaire n'est pas trouvé. Il peut s'agir d'une erreur d'OCR "
 				  "ou de classification de la page.")
 
 		target_line = []
@@ -1676,7 +1679,7 @@ class Extractor:
 				target_line.append(line)
 
 		if len(target_line) != 1:
-			utils.log_print(f"Erreur. Zéro ou  Plusieurs lignes trouvées pour le numéro d'ordre:\n"
+			logger.error(f"Erreur. Zéro ou  Plusieurs lignes trouvées pour le numéro d'ordre:\n"
 				  f"{target_line}")
 			return None
 

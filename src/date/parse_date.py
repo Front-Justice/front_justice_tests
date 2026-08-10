@@ -325,7 +325,8 @@ def test():
 	"l'an mil neuf cent dix huit le huit avril",
 	"l'an mil neuf cent dix huit le dix huit avril",
 	"onze janvier mil neuf cent dix huit",
-	"l'an mil neuf cent seize le six octobre"]
+	"l'an mil neuf cent seize le six octobre",
+	"l'an mil neuf cent dix  huit le dix sept"]
 	# dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")

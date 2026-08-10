@@ -558,17 +558,8 @@ class Pipeline:
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 			image_path=page["image_path"])
-			# Production de corpus, à supprimer
-
-		try:
-			date_naissance = current_dict["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
-		except (KeyError, TypeError):
-			date_naissance = None
 
 
-
-
-		# if "Inculpation_antecedents" in zones_manquantes or current_dict['soldat']['nom_du_soldat'] == "Plusieurs soldats":
 		if "Inculpation_antecedents" in zones_manquantes:
 			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
 		else:
