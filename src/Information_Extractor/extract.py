@@ -1071,12 +1071,15 @@ class Extractor:
 		is_acquittement = len([item['word'] for item in entities if item['entity_group'] == "acquittement"]) > 0
 		if is_condamnation is True:
 			decision_normalisee = "condamnation"
+			resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "condamnation"])
 		elif is_acquittement is True:
 			decision_normalisee = "acquittement"
+			resultat_condamnation = " ".join([item['word'] for item in entities if item['entity_group'] == "acquittement"])
 		else:
 			logger.error(f"Décision du tribunal non trouvée: \n{entities}\n"
 						 f"Paragraphe: {lignes_decision_as_string}")
 			decision_normalisee = "UNK"
+			resultat_condamnation = "UNK"
 
 		peine = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
@@ -1179,6 +1182,7 @@ class Extractor:
 												  feature="sursis",
 														 image_path=image_path)
 		extracted = {"decision_normalisee": decision_normalisee,
+					 "decision_extraite": resultat_condamnation,
 					 "peine": peine,
 					 "vote": "unanimité" if unanimite['extracted'] not in ['', None] else "majoritaire",
 					 "voix": voix,
