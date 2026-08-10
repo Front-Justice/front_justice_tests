@@ -117,8 +117,8 @@ class Reconciliator:
 		except KeyError:
 			sursis = None
 
-		if condamnation == "UNK" and peine != None:
-			logger.info("La condamnation n'a pas été extraite, mais la peine est identifiée. Le soldat"
+		if condamnation == "UNK" and (peine != None or sursis is True):
+			logger.info("La condamnation n'a pas été extraite, mais la peine ou le sursis sont identifiés. Le soldat"
 						"a donc été condamné.")
 			self.condamnation = "condamnation"
 		elif condamnation == "UNK" and peine == None and sursis is False:
