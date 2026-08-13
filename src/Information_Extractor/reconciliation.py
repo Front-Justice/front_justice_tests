@@ -700,12 +700,6 @@ class Reconciliator:
 			self.prenom_du_soldat = liste_prenoms_page_1
 			return
 
-		# if len(liste_prenoms_page_1) != len(liste_prenoms_page_2):
-		# 	print(liste_prenoms_page_2)
-		# 	print(liste_prenoms_page_1)
-		# 	print("Oups")
-		# 	exit(0)
-
 
 		# On va zipper pour comparer un à un les multiples prénoms
 		try:
@@ -797,6 +791,7 @@ class Reconciliator:
 					dictionnary[item] = coef
 			# https://www.geeksforgeeks.org/python/python-get-key-with-maximum-value-in-dictionary/
 			# On classe par fréquence
+			logger.info(f"Noms du soldat: {liste_noms}")
 			logger.info(f"Noms du soldat classés par fréquence pondérée: {dictionnary}")
 			dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
 

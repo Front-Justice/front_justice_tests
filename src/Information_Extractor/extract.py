@@ -2249,7 +2249,7 @@ class Extractor:
 			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name, word_list=liste_presidents)
 		# TODO: ajouter les noms de jury au modèle de NER
 		else:
-			closest = ""
+			closest = "UNK"
 		normalized_president = closest
 		logger.info(f"Présdient extrait: {processed_president['persName']}, normalisé: {closest}")
 
