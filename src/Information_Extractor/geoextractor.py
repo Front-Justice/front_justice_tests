@@ -47,17 +47,20 @@ class GeoExtractor():
 			matching_country, distance_country = similarity.find_closest_word_in_list(self.coutries_list,
 																			departement,
 																			replacement_mapping={"()": ""})
-			print(f"Chaîne de caractères: {departement}")
-			print(f"Département identifié: {matching_department}, distance: {distance}")
-			print(f"Pays identifié: {matching_country}, distance: {distance_country}")
+			logger.info(f"Chaîne de caractères: {departement}")
+			logger.info(f"Département identifié: {matching_department}, distance: {distance}")
+			logger.info(f"Pays le plus similaire: {matching_country}, distance: {distance_country}")
 			if distance_country < distance:
-				print("Pays etranger identifié.")
+				logger.info("Pays etranger identifié.")
 				return departement, matching_country, True
 			actual_departement = self.departments_dict[matching_department]
 			# Si la distance est trop grande, il s'agit probablement d'une erreur de transcription. On ne filtre pas
 			# Problème avec une distance absolue: pénalise les chaînes de caractères longues.
 			if distance > 5 or distance == len(departement):
 				return None, departement, False
+				logger.info(f"Département actuel: {departement}")
+
+			logger.info(f"Département actuel: {actual_departement}")
 			return actual_departement, matching_department, False
 
 	def filter_geodict_by_department(self, clean_departement: list):
