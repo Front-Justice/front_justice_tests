@@ -60,7 +60,7 @@ class GeoExtractor():
 				return None, departement, False
 			return actual_departement, matching_department, False
 
-	def filter_geodict_by_department(self, clean_departement):
+	def filter_geodict_by_department(self, clean_departement: list):
 		"""
 		Cette fonction filtre le dictionnaire contenant les positions géographiques des communes françaises
 		par département.
@@ -70,6 +70,9 @@ class GeoExtractor():
 		self.filtered_geodict = copy.deepcopy(self.geodict)
 		if clean_departement is None:
 			return
+		if isinstance(clean_departement, str):
+			logger.warning(f"{clean_departement} devrait être une liste.")
+			clean_departement = [clean_departement]
 		clean_departement = [unicodedata.normalize('NFC', dpt).replace("’", "'") for dpt in clean_departement]
 		logger.info(f"On filtre la base de données géographique en ne retenant que {clean_departement}")
 		for key, value in self.geodict.items():
