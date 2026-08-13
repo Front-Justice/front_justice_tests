@@ -80,6 +80,12 @@ class Extractor:
 		self.professions_et_categories_sociopro = df["Profession"].tolist()
 		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
 
+		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
+			self.liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
+		with open("src/resources/liste_jures.txt", "r") as input_presidents:
+			self.liste_jures = [item.replace("\n", "") for item in input_presidents.readlines()]
+
+
 		with open("src/resources/rangs_militaires.txt", "r") as rangs:
 			self.rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
 
@@ -2142,6 +2148,7 @@ class Extractor:
 			}
 		"""
 
+		logger.info("On extrait les magistrats.")
 		table_dict = {}
 		zone_englobante_magistrats = utils.filter_zones(zones_magistrats, "Magistrats")
 		column_annotation = utils.filter_zones(zones_magistrats, "Colonne")
@@ -2207,21 +2214,30 @@ class Extractor:
 		# On va itérer jury par jury
 		for jure in jures:
 			jury_extrait = extractions.extraire_nom_et_fonction(
-				prediction="[2] " + " ".join(line.prediction for line in jure),
+				prediction=" ".join(line.prediction for line in jure),
 				pipeline=self.entity_spotting_pipeline)
 			jury_extrait['baseline'] = [line.baseline for line in jure]
 			jury_extrait['prediction'] = " ".join([line.prediction for line in jure])
-			if (jury_extrait['persName'] == "UNK" and (utils.similarite_ratcliff("Président",
+			if (jury_extrait['persName'] in ["UNK", ""] and (utils.similarite_ratcliff("Président",
 																				" ".join(line.prediction for line in
 																						 jure)) > .7) \
 													  or utils.similarite_ratcliff("Juges", jury_extrait['persName']) > .7):
+				logger.info(f"Ligne écartée: {' '.join(line.prediction for line in jure)}")
 				continue
+			processed_jure = extractions.extraire_nom_et_fonction(
+				" ".join(line.prediction for line in jure),
+				self.entity_spotting_pipeline)
+			processed_jure_name = utils.clean_small_string(processed_jure['persName'])
+			if processed_jure_name != "":
+				closest, distance = similarity.find_closest_word_in_list(target_word=processed_jure_name,
+																		 word_list=self.liste_jures)
 			jury_dict = {"extracted": jury_extrait}
+			jury_dict["normalized"] = closest
 			processed_jures.append(jury_dict)
 		if len(processed_jures) < 4:
-			utils.log_print("Warning: il manque un membre du jury")
+			logger.error("Warning: il manque un membre du jury")
 			processed_jures.append("Juré manquant")
-		processed_president = extractions.extraire_nom_et_fonction("[2] " + " ".join(line.prediction for line in president),
+		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
 																   self.entity_spotting_pipeline)
 		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
 			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]

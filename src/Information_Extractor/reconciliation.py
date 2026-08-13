@@ -23,8 +23,9 @@ class Reconciliator:
 		self.list_of_surnames = [name.lower() for name in pd.read_csv("src/Information_Extractor/databases/french_surnames.csv",
 																	  delimiter="\t")["NOM"].tolist()]
 		# Idem: https://www.insee.fr/fr/statistiques/8595130
-		self.list_of_names = [name.lower() if isinstance(name, str) else name for name in pd.read_csv("src/Information_Extractor/databases/french_names.csv",
-																	  delimiter=";")["prenom"].tolist()]
+		self.list_of_names = {name.lower() if isinstance(name, str) else name:gender for gender, name in
+							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
+										   delimiter=";").values.tolist()}
 		self.previous_minute  = previous_minute
 
 		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
@@ -174,6 +175,15 @@ class Reconciliator:
 
 
 	def _reconciliate_date_naissance(self):
+
+		try:
+			prediction = self.annotations_page_2["extractions"]["soldat"]["prediction"]
+		except  (KeyError, TypeError):
+			prediction = None
+		try:
+			entites = self.annotations_page_2["extractions"]["soldat"]["entites"]
+		except  (KeyError, TypeError):
+			entites = None
 		try:
 			date_page_1 = self.annotations_page_1["extractions"]["soldat"]["identite"]["date_naissance"]["extracted"]["when"]
 		except  (KeyError, TypeError):
@@ -186,6 +196,8 @@ class Reconciliator:
 			age_soldat = self.annotations_page_2["extractions"]["soldat"]["identite"]["age"]["extracted"]
 		except (IndexError, TypeError, KeyError):
 			logging.error("L'âge n'a pas été identifié en page 2.")
+			logging.error(f"Prediction: {prediction}")
+			logging.error(f"Entités: {entites}")
 			age_soldat = None
 		if self.date_proces and date_page_1:
 			try:
@@ -206,6 +218,8 @@ class Reconciliator:
 						self.age_soldat = age_theorique
 				except ValueError:
 					logging.error(f"L'âge du soldat n'a pas été correctement extrait: {age_soldat}. On prend l'âge calculé.")
+					logging.error(f"Prediction: {prediction}")
+					logging.error(f"Entités: {entites}")
 					self.age_soldat = age_theorique
 			elif not age_soldat and age_theorique:
 				logging.info(f"Âge non identifié. Âge calculé: {age_theorique}")
@@ -654,11 +668,6 @@ class Reconciliator:
 	def _reconciliate_prenom_soldat(self):
 		"""
 		Le nom du soldat est présent page 1, 2, 3.
-		Une façon de gérer la réconciliation est d'aller chercher une liste de noms français
-		Une autre façon: entraîner un petit réseau sur cette même liste
-		pour trouver la probabilité qu'une chaîne soit vraisemblable.
-		Scores: 0.9 quand il y a accord entre les deux transcriptions, 0.7 quand il y a désaccord (mais le nom est présent
-		dans la liste de noms), 0.1 dans les autres cas
 		:return: None
 		"""
 		if len(self.minute_list) == 1:
@@ -738,8 +747,6 @@ class Reconciliator:
 		"""
 		Le nom du soldat est présent page 1, 2, 3.
 		Une façon de gérer la réconciliation est d'aller chercher une liste de noms français
-		Une autre façon: entraîner un petit réseau sur cette même liste
-		pour trouver la probabilité qu'une chaîne soit vraisemblable.
 		Scores: 0.9 quand il y a accord entre les deux transcriptions, 0.7 quand il y a désaccord (mais le nom est présent
 		dans la liste de noms), 0.1 dans les autres cas
 		:return: None
@@ -776,58 +783,33 @@ class Reconciliator:
 			nom_page_4c = None
 		liste_noms = [nom_page_1, nom_page_2_a, nom_page_2_b, nom_page_3, nom_page_4a, nom_page_4b, nom_page_4c]
 		if all([item == liste_noms[0] for item in liste_noms[1:]]):
+			logging.info(f"Tous les noms du soldat correspondent: {liste_noms[0]}")
 			self.nom_du_soldat = nom_page_1
-			self.certitude_nom_du_soldat = 0.9
+			self.certitude_nom_du_soldat = 1
 		else:
 			dictionnary = {}
-			presences = [(item, item.lower() in self.list_of_surnames) for item in liste_noms if item]
-			print(presences)
-			for item, presence in presences:
-				if presence is True:
-					try:
-						dictionnary[item] += 1
-					except KeyError:
-						dictionnary[item] = 1
+			# On va vérifier pour chaque nom si on le retrouve dans la liste d'autorité
+			presences = [(item, 1 if item.lower() in self.list_of_surnames else 0.5) for item in liste_noms if item]
+			for item, coef in presences:
+				try:
+					dictionnary[item] += coef
+				except KeyError:
+					dictionnary[item] = coef
 			# https://www.geeksforgeeks.org/python/python-get-key-with-maximum-value-in-dictionary/
+			# On classe par fréquence
+			logger.info(f"Noms du soldat classés par fréquence pondérée: {dictionnary}")
 			dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-			# On va vérifier qu'on n'ait pas d'égalité des fréquences
 
 			all_values = dictionnary.values()
-			try:
-				max_value = max(all_values)
-			except ValueError:
-				dictionnary = {}
-				# Dans le cas où le dictionnaire est vide
-				for item, _ in presences:
-					try:
-						dictionnary[item] += 1
-					except KeyError:
-						dictionnary[item] = 1
-				dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-				all_values = dictionnary.values()
-				try:
-					max_value = max(all_values)
-				except ValueError:
-					self.nom_du_soldat = None
-					self.certitude_nom_du_soldat = 0
-					return
-				if all([item == liste_noms[0] for item in liste_noms[1:] if item]):
-					self.nom_du_soldat = dict_sorted_by_freq[0]
-					self.certitude_nom_du_soldat = 0.5
-				else:
-					if list(all_values).count(max_value) != 1:
-						self.nom_du_soldat = [item for item, frec in dictionnary.items() if frec == max_value]
-						self.certitude_nom_du_soldat = 0.1
-					else:
-						print(list(all_values))
-						print(list(all_values).count(max_value))
-						self.nom_du_soldat = dict_sorted_by_freq[0]
-						self.certitude_nom_du_soldat = 0.3
-				return
+			max_value = max(all_values)
+			# Dans le cas où on a 2 noms qui apparaissent autant l'un que l'autre
 			if list(all_values).count(max_value) != 1:
+				logger.warning(f"Impossible de trier le nom du soldat par fréquence: "
+							   f"{[item for item, frec in dictionnary.items() if frec == max_value]}")
 				self.nom_du_soldat = [item for item, frec in dictionnary.items() if frec == max_value]
 				self.certitude_nom_du_soldat = 0.2
 			else:
+				logger.info(f"Nom du soldat identifié: {dict_sorted_by_freq[0]}")
 				self.nom_du_soldat = dict_sorted_by_freq[0]
 				self.certitude_nom_du_soldat = 0.9
 

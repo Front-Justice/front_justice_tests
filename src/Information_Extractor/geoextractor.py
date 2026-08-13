@@ -1,9 +1,13 @@
 import copy
 import json
 import re
+import unicodedata
 
 import src.utils.utils as utils
 import src.Information_Extractor.similarity as similarity
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GeoExtractor():
 	def __init__(self):
@@ -20,43 +24,6 @@ class GeoExtractor():
 
 
 
-	def filter_geodict_by_arrondissement(self, arrondissement):
-		"""
-		Cette fonction permet de filtrer le dictionnaire par arrondissement.
-		Nous n'avons pas de base de données des arrondissements pour 1914-1918, nous allons donc tricher en utilisant
-		le département de l'arrondissement concerné.
-		:param arrondissement: l'arrondissement identifié
-		:return:
-		"""
-		self.filtered_geodict = copy.deepcopy(self.geodict)
-		if arrondissement is None:
-			return
-		match = False
-		for key, row in self.filtered_geodict.items():
-			if arrondissement == row["nom_1801"]:
-				departement_correspondant = row["nom_actuel"]
-				match = True
-			elif arrondissement == row["nom_1999"]:
-				departement_correspondant = row["nom_actuel"]
-				match = True
-		if match == False:
-			liste_des_communes_1801 = [item["nom_1801"] for key, item in self.geodict.items()]
-			liste_des_communes_1999 = [item["nom_1999"] for key, item in self.geodict.items()]
-			closest_1999, distance_1999 = utils.find_closest_word_in_list(liste_des_communes_1999, arrondissement)
-			closest_1801, distance_1801 = utils.find_closest_word_in_list(liste_des_communes_1801, arrondissement)
-			if distance_1801 < distance_1999:
-				closest_match = closest_1801
-				commune_correspondante = next((item for item in self.geodict.values() if item["nom_1801"] == closest_match))
-			else:
-				closest_match = closest_1999
-				commune_correspondante = next((item for item in self.geodict.values() if item["nom_1999"] == closest_match))
-			departement_correspondant = commune_correspondante["département"]
-		# On a identifié le département, on va maintenant filtrer.
-		# utils.log_print(f"Arrondissement prédit: {arrondissement}")
-		# utils.log_print(f"Commune correspondante dans la base: {commune_correspondante}")
-		# utils.log_print(f"Département: {departement_correspondant}")
-		actual_departement, _, is_country = self.correct_department(departement_correspondant)
-		self.filter_geodict_by_department(actual_departement)
 
 	def correct_department(self, departement):
 		"""
@@ -103,12 +70,16 @@ class GeoExtractor():
 		self.filtered_geodict = copy.deepcopy(self.geodict)
 		if clean_departement is None:
 			return
-
-		# utils.log_print(f"On filtre la base de données géographique en ne retenant que {corresponding_departments}")
+		clean_departement = [unicodedata.normalize('NFC', dpt).replace("’", "'") for dpt in clean_departement]
+		logger.info(f"On filtre la base de données géographique en ne retenant que {clean_departement}")
 		for key, value in self.geodict.items():
 			# Si la clé actuelle ne correspond pas aux départements correspondants, on supprime du dictionnaire.
-			if value["département"] and value["département"] not in clean_departement:
-				del self.filtered_geodict[key]
+			if value["département"]:
+				normalized = unicodedata.normalize('NFC', value["département"])
+				if normalized not in clean_departement:
+					del self.filtered_geodict[key]
+			else:
+				logger.info(f'On conserve {value["département"]}')
 
 	def paris(self, arrondissement):
 		arrondissement_regexp = re.compile(r"\d{1,2}")
@@ -193,6 +164,8 @@ class GeoExtractor():
 			departement = departement.replace("l'", "")
 			actual_departement, departement_corrige, is_country = self.correct_department(departement)
 		else:
+			logger.error("Le département n'a pas été identifié et l'extraction des coordonnées géographiques "
+						 "n'est pas possible.")
 			return {
 						"lat": None,
 						"lon": None,
@@ -257,7 +230,8 @@ class GeoExtractor():
 		# On va réduire la taille du dictionnaire pour rendre la recherche + efficace et plus précise
 		# On va nettoyer le département
 		self.filter_geodict_by_department(actual_departement)
-
+		if self.filtered_geodict == {}:
+			logger.error(f"Le dictionnaire géographique filtré est vide. Département actuel: {actual_departement}")
 		# On regarde la liste des villes
 		for key, row in self.filtered_geodict.items():
 			if ville == row["nom_1801"]:
@@ -285,6 +259,7 @@ class GeoExtractor():
 			if ville:
 				closest_1999, distance_1999 = similarity.find_closest_word_in_list(liste_des_communes_1999, ville)
 			else:
+				logger.error("Coordonnées non trouvées.")
 				return {
 					"lat": None,
 					"lon": None,
@@ -296,24 +271,18 @@ class GeoExtractor():
 				}
 			closest_1801, distance_1801 = similarity.find_closest_word_in_list(liste_des_communes_1801, ville)
 			closest_actuel, distance_actuel = similarity.find_closest_word_in_list(liste_des_communes_actuelles, ville)
+			# try:
+			distances = [distance_actuel, distance_1999, distance_1801]
 			try:
-				distances = [distance_actuel, distance_1999, distance_1801]
 				min_distance = min(distances)
-				if distances.index(min_distance) == 0:
-					current_feature = "nom_actuel"
-				elif distances.index(min_distance) == 1:
-					current_feature = "nom_1999"
-				else:
-					current_feature = "nom_1801"
-				closest_match = [closest_actuel, closest_1999, closest_1801][distances.index(min_distance)]
-				commune_correspondante = next((item for item in self.filtered_geodict.values() if item[current_feature] == closest_match))
-				# if distance_1801 < distance_1999:
-				# 	closest_match = closest_1801
-				# 	commune_correspondante = next((item for item in self.filtered_geodict.values() if item["nom_1801"] == closest_match))
-				# else:
-				# 	closest_match = closest_1999
-				# 	commune_correspondante = next((item for item in self.filtered_geodict.values() if item["nom_1999"] == closest_match))
-			except TypeError:
+			except TypeError as e:
+				logger.error(f"Type error: {e}")
+				logger.error(f"Ville: {ville}")
+				logger.error(f"Distance: {distance_1999}")
+				logger.error(f"Distances: {distances}")
+				logger.error(f"Closest 1999: {closest_1999}")
+				logger.error(f"Closest 1801: {closest_1801}")
+				logger.error(f"Closest actuel: {closest_actuel}")
 				return {
 					"lat": None,
 					"lon": None,
@@ -323,6 +292,16 @@ class GeoExtractor():
 					"etranger": False,
 					"hors_metropole": False
 				}
+			if distances.index(min_distance) == 0:
+				current_feature = "nom_actuel"
+			elif distances.index(min_distance) == 1:
+				current_feature = "nom_1999"
+			else:
+				current_feature = "nom_1801"
+			closest_match = [closest_actuel, closest_1999, closest_1801][distances.index(min_distance)]
+			commune_correspondante = next((item for item in self.filtered_geodict.values() if item[current_feature] == closest_match))
+
+
 			current_name = closest_match
 			longitude = commune_correspondante["longitude"]
 			latitude = commune_correspondante["latitude"]

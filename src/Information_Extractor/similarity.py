@@ -41,6 +41,7 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		word_list = list_of_words
 	distances = []
 	target_word = target_word.lower()
+	print(word_list)
 	if replacement_mapping:
 		for key, value in replacement_mapping.items():
 			word_lower = target_word.replace(key, value)

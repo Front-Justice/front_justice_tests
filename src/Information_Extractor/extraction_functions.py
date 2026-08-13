@@ -6,6 +6,9 @@ from text_to_num import text2num
 import src.date.parse_date as date
 import regex
 from src.utils.utils import OCRLine, OCRRecord
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def extraire_entite_baseline(entities_list: list,
@@ -401,11 +404,18 @@ def extraire_lieu_naissance(entity_dict, lignes, image_path, geoextractor):
 	if arrondissement and "dudit" in arrondissement:
 		lieu_naissance["arrondissement"]["extracted"] = ville
 	departement = lieu_naissance["departement"]["extracted"]
+	logger.info("Récupération des coordonnées du lieu de naissance.")
+	if departement is None:
+		logger.warning(f"Pas de lieu de naissance identifié. Texte: {lignes.join_transcription()}. Entités: {entity_dict}")
 	result = geoextractor.database_retrieval(ville=ville, arrondissement=arrondissement, departement=departement)
-	print(result)
+	logger.info(f"Lieu de naissance: {result}")
 	lieu_naissance["etranger"] = result["etranger"]
 	lieu_naissance["hors_metropole"] = result["hors_metropole"]
 	lieu_naissance["pays"] = result["pays"]
+	lieu_naissance["coordonnées"] = {
+		"lon": result["lon"],
+		"lat": result["lat"]
+	}
 	try:
 		lieu_naissance["departement"]["corrected"] = result["departement"]
 	except (KeyError, TypeError):
@@ -472,9 +482,15 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_
 
 	# On considère que les cas où le département n'est pas indiqué correspondent aux cas où il est le même que
 	# le département de naissance.
+	logger.info("Récupération des coordonnées du lieu de résidence.")
 	if departement is None:
+		logger.info("Le département de résidence n'est pas identifié. On cherche le département de naissance.")
 		departement = lieu_naissance["departement"]["extracted"]
+
+	if departement is None:
+		logger.warning(f"Pas de lieu de résidence identifié. Texte: {lignes.join_transcription()}. Entités: {entity_dict}")
 	result = geoextractor.database_retrieval(ville=ville, arrondissement=arrondissement, departement=departement)
+	logger.info(f"Lieu de résidence: {result}")
 	try:
 		lieu_residence["departement"]["corrected"] = result["departement"]
 	except (TypeError, KeyError):
