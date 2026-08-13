@@ -1195,10 +1195,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Numéro d'ordre",
 			  "Président du jury (extrait)",
 			  "Président du jury (normalisé)",
-			  "Juré 1",
-			  "Juré 2",
-			  "Juré 3",
-			  "Juré 4",
+			  "Juré 1 (extrait)",
+			  "Juré 1 (normalisé)",
+			  "Juré 2 (extrait)",
+			  "Juré 2 (normalisé)",
+			  "Juré 3 (extrait)",
+			  "Juré 3 (normalisé)",
+			  "Juré 4 (extrait)",
+			  "Juré 4 (normalisé)",
 			  "Greffier",
 			  "Commissaire",
 			  "Général nommant",
@@ -1366,8 +1370,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 					extracted_jure = jures[i]['extracted']['persName']
 				except (TypeError, IndexError):
 					extracted_jure = "UNK"
+				try:
+					normalized_jure = jures[i]['normalized']
+				except (TypeError, IndexError):
+					normalized_jure = "UNK"
 				interm.append(extracted_jure)
+				interm.append(normalized_jure)
 		except (KeyError, TypeError):
+			interm.extend(["UNK" for _ in range(4)])
 			interm.extend(["UNK" for _ in range(4)])
 
 		# Greffier (on n'extrait pas les rôles)
