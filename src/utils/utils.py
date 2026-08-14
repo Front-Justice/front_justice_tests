@@ -1516,7 +1516,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 
 		# Lieu de naissance
 		try:
-			minute['soldat']:
+			minute['soldat']
 		except KeyError:
 			interm.append("UNK")
 			extracted_data.append(interm)
