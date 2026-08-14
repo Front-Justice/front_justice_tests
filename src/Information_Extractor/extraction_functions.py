@@ -615,7 +615,6 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 
 def predire_genre(prenoms, dict_genre):
 	liste_prenoms = list(dict_genre.keys())
-	prenoms = prenoms['extracted'].split()
 	liste_genres = []
 	for prenom in prenoms:
 		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)

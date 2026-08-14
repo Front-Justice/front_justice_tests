@@ -7,6 +7,7 @@ import re
 import shutil
 
 import src.utils.utils as utils
+import src.Information_Extractor.extraction_functions as extraction_functions
 import pandas as pd
 import logging
 
@@ -23,7 +24,7 @@ class Reconciliator:
 		self.list_of_surnames = [name.lower() for name in pd.read_csv("src/Information_Extractor/databases/french_surnames.csv",
 																	  delimiter="\t")["NOM"].tolist()]
 		# Idem: https://www.insee.fr/fr/statistiques/8595130
-		self.list_of_names = {name.lower() if isinstance(name, str) else name:gender for gender, name in
+		self.list_of_names = {name:gender for gender, name in
 							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
 										   delimiter=",").values.tolist()}
 		self.previous_minute  = previous_minute
@@ -33,6 +34,7 @@ class Reconciliator:
 
 		self.certitude_prenom_du_soldat = []
 		self.prenom_du_soldat = []
+		self.genre = "UNK"
 		self.nom_du_soldat = None
 		self.certitude_nom_du_soldat = None
 		self.description_physique = None
@@ -692,10 +694,16 @@ class Reconciliator:
 			liste_prenoms_page_2 = None
 		if liste_prenoms_page_1 is None and liste_prenoms_page_2:
 			self.prenom_du_soldat = liste_prenoms_page_2
+			self.genre = extraction_functions.predire_genre(prenoms=self.prenom_du_soldat,
+															dict_genre=self.list_of_names)
 			return
 		elif liste_prenoms_page_2 is None and liste_prenoms_page_1:
 			self.prenom_du_soldat = liste_prenoms_page_1
+			self.genre = extraction_functions.predire_genre(prenoms=self.prenom_du_soldat,
+															dict_genre=self.list_of_names)
 			return
+		tous_prenoms = list(set(liste_prenoms_page_1 + liste_prenoms_page_2))
+		self.genre = extraction_functions.predire_genre(prenoms=tous_prenoms, dict_genre=self.list_of_names)
 
 
 		# On va zipper pour comparer un à un les multiples prénoms
@@ -844,6 +852,7 @@ class Reconciliator:
 							"prenom":
 								{"extracted": self.prenom_du_soldat,
 								 "certitude": self.certitude_prenom_du_soldat},
+							"genre": self.genre,
 							"age": self.age_soldat,
 							"date_naissance": self.date_naissance,
 							"lieu_residence": self.lieu_residence,

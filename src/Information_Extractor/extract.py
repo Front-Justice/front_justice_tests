@@ -491,11 +491,9 @@ class Extractor:
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
 													   image_path=image_path)
-		genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
-				"genre": genre_du_soldat,
 				"nom_1": extractions.extraire_feature(result_spotting,
 													lignes_description_du_soldat,
 													"nom_du_soldat",
@@ -1851,15 +1849,13 @@ class Extractor:
 													   "prénom_du_soldat",
 				image_path=image_path)
 
-		genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
 				"nom": extractions.extraire_feature(entities,
 													lignes_description_du_soldat,
 													"nom_du_soldat",
-				image_path=image_path),
-				"genre": genre_du_soldat,
+				image_path=image_path)
 			}
 
 		description_du_soldat["parents"] = {

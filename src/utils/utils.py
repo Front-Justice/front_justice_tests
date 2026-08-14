@@ -1209,6 +1209,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Date du crime ou du délit",
 			  "Nom",
 			  "Prénoms",
+			  "Genre prédit",
 			  "Date de naissance",
 			  "age",
 			  "Taille",
@@ -1413,20 +1414,26 @@ def convert_to_csv(extractions: dict, outpath: str):
 		# Nom et prénom du soldat
 		try:
 			prenoms_soldat = minute['soldat']['identite']['prenom']['extracted']
+		except  (KeyError, TypeError):
+			prenoms_soldat = "UNK"
+		try:
 			nom_soldat = minute['soldat']['identite']['nom']['extracted']
 		except  (KeyError, TypeError):
 			nom_soldat = "UNK"
-			prenoms_soldat = "UNK"
-			interm.append(nom_soldat)
-			interm.append(prenoms_soldat)
-			extracted_data.append(interm)
-			continue
 		if isinstance(nom_soldat, list):
 			nom_soldat = " ou ".join(nom_soldat)
 		if isinstance(prenoms_soldat, list):
 			prenoms_soldat = " ou ".join(prenoms_soldat)
 		interm.append(nom_soldat)
 		interm.append(prenoms_soldat)
+
+
+		# genre
+		try:
+			genre = minute['soldat']['identite']['genre']
+		except  (KeyError, TypeError):
+			genre = "UNK"
+		interm.append(genre)
 
 		# Date de naissance et âge du soldat
 		try:
