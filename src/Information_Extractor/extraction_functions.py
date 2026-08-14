@@ -629,6 +629,9 @@ def predire_genre(prenoms, dict_genre):
 	feminin = liste_genres.count(1)
 	if masculin > feminin:
 		return "M"
+	# Dans le doute on conserve le genre masculin
+	elif masculin == feminin:
+		return "M"
 	else:
 		logger.info(f"La personne jugée semble être une femme: {prenoms}.")
 		return "F"
