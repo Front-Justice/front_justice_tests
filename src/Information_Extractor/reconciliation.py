@@ -698,7 +698,7 @@ class Reconciliator:
 			self.genre = extraction_functions.predire_genre(prenoms=self.prenom_du_soldat,
 															dict_genre=self.list_of_names)
 			return
-		else:
+		elif liste_prenoms_page_2 is None and liste_prenoms_page_1 is None:
 			self.prenom_du_soldat = None
 			self.genre = None
 			return
