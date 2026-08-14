@@ -616,7 +616,6 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 def predire_genre(prenoms, dict_genre):
 	liste_prenoms = list(dict_genre.keys())
 	liste_genres = []
-	prenoms = ['Léonard', 'Léonarde']
 	for prenom in prenoms:
 		prenom = utils.clean_small_string(prenom)
 		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)
@@ -634,18 +633,12 @@ def predire_genre(prenoms, dict_genre):
 	print(masculin)
 	print(feminin)
 	if masculin > feminin:
-		print("Masculin")
-		exit(0)
 		return "M"
 	# Dans le doute on conserve le genre masculin
 	elif masculin == feminin:
-		print("Masculin (égalité)")
-		exit(0)
 		return "M"
 	else:
 		logger.info(f"La personne jugée semble être une femme: {prenoms}.")
-		print("Féminin")
-		exit(0)
 		return "F"
 
 def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
