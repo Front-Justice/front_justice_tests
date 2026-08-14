@@ -620,7 +620,7 @@ def predire_genre(prenoms, dict_genre):
 		prenom = utils.clean_small_string(prenom)
 		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)
 		# On ne va prendre que des prénoms qu'on est sûrs de reconnaître. Plus de rappel, mais moins de précision.
-		if distance > 2:
+		if distance > 1:
 			continue
 		else:
 			current_genre = dict_genre[matching]
