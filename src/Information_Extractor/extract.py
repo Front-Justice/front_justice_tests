@@ -73,6 +73,12 @@ class Extractor:
 		self.charge_identification_tokenizer = tokenizer
 
 
+		# Idem: https://www.insee.fr/fr/statistiques/8595130
+		self.list_of_names = {name.lower() if isinstance(name, str) else name:gender for gender, name in
+							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
+										   delimiter=";").values.tolist()}
+
+
 		# Les métiers rencontrés dans le corpus sont triés à la main par catégorie sociopro, selon
 		# la classification actuelle de l'INSEE. Des erreurs peuvent encore substister.
 		df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
@@ -1837,13 +1843,15 @@ class Extractor:
 			# bbox_nom_soldat = None
 			utils.log_print("Aucun soldat identifié par YOLO.")
 
-
-		description_du_soldat["identite"] = \
-			{
-				"prenom": extractions.extraire_feature(entities,
+		prenom_du_soldat = extractions.extraire_feature(entities,
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
-				image_path=image_path),
+				image_path=image_path)
+
+		genre_du_soldat = extractions.extraire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		description_du_soldat["identite"] = \
+			{
+				"prenom": prenom_du_soldat,
 				"nom": extractions.extraire_feature(entities,
 													lignes_description_du_soldat,
 													"nom_du_soldat",

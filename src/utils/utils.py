@@ -447,10 +447,10 @@ def nfc_normalize(input_string: str) -> str:
 	:param input_string:
 	:return:
 	"""
-	assert isinstance(input_string, str), (f"Input string should be a string. "
-										   f"Actually: {type(input_string)}."
-										   f"Current string: {input_string}")
-	return unicodedata.normalize('NFC', input_string)
+	if input_string and isinstance(input_string, str):
+		return unicodedata.normalize('NFC', input_string)
+	else:
+		return None
 
 
 def split_before_keep_delimiter(target_string: str, delimiter: str) -> list:
@@ -2492,7 +2492,7 @@ def get_baseline_from_string(line: OCRRecord | OCRLine,
 		target_string = nfc_normalize(target_string)
 		prediction = nfc_normalize(prediction)
 		if target_string not in prediction:
-			log_print(f"Attention, la ligne '{prediction}' ne contient pas la chaîne recherchée: '{target_string}'.")
+			logger.error(f"Attention, la ligne '{prediction}' ne contient pas la chaîne recherchée: '{target_string}'.")
 			return None
 		first_char_idx, last_char_idx = (prediction.find(target_string),
 										 prediction.find(target_string) + len(target_string) - 1)

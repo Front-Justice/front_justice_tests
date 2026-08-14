@@ -612,7 +612,10 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"role": role,
 			"certainty": 0}
 
-
+def extraire_genre(prenoms, dict_genre):
+	print(prenoms)
+	prenoms = prenoms.split()
+	exit()
 
 def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
 	"""
