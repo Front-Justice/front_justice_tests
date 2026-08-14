@@ -702,7 +702,7 @@ class Reconciliator:
 			self.prenom_du_soldat = None
 			self.genre = None
 			return
-		tous_prenoms = list(set(liste_prenoms_page_1 + liste_prenoms_page_2))
+		tous_prenoms = list(liste_prenoms_page_1 + liste_prenoms_page_2)
 		self.genre = extraction_functions.predire_genre(prenoms=tous_prenoms, dict_genre=self.list_of_names)
 
 

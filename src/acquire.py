@@ -945,6 +945,7 @@ def main(images_dir:str,
 		minutes = {k:v for k, v in minutes.items() if k==focus}
 	if workers != 1:
 		torch.set_num_threads(1)
+		torch.set_num_interop_threads(1)
 		with mp.Pool(processes=workers) as pool:
 			data = [({k:v}, images_dir, device, retranscribe, databases_dict) for k, v in minutes.items()]
 			for minute_n, annotations, reconciliation, log in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
