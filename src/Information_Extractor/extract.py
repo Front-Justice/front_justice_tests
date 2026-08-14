@@ -491,7 +491,8 @@ class Extractor:
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
 													   image_path=image_path)
-		genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		# genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		genre_du_soldat = None
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
@@ -1851,7 +1852,8 @@ class Extractor:
 													   "prénom_du_soldat",
 				image_path=image_path)
 
-		genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		# genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		genre_du_soldat = None
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
