@@ -27,6 +27,7 @@ class Reconciliator:
 		self.list_of_names = {name:gender for gender, name in
 							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
 										   delimiter=",").values.tolist()}
+
 		self.previous_minute  = previous_minute
 
 		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
@@ -701,6 +702,10 @@ class Reconciliator:
 			self.prenom_du_soldat = liste_prenoms_page_1
 			self.genre = extraction_functions.predire_genre(prenoms=self.prenom_du_soldat,
 															dict_genre=self.list_of_names)
+			return
+		else:
+			self.prenom_du_soldat = None
+			self.genre = None
 			return
 		tous_prenoms = list(set(liste_prenoms_page_1 + liste_prenoms_page_2))
 		self.genre = extraction_functions.predire_genre(prenoms=tous_prenoms, dict_genre=self.list_of_names)

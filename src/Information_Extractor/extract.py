@@ -73,10 +73,6 @@ class Extractor:
 		self.charge_identification_tokenizer = tokenizer
 
 
-		# Idem: https://www.insee.fr/fr/statistiques/8595130
-		self.list_of_names = {name: gender for gender, name in
-							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
-										   delimiter=",").values.tolist()}
 
 
 
