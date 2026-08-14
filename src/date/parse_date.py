@@ -168,14 +168,14 @@ def parse_ast(ast) -> str|dict:
 						date = parse_ast({key: value})
 						result.append(date)
 					elif key == "range":
-						range = parse_ast(value)
-						result.append({"range": range})
+						date_range = parse_ast(value)
+						result.append({"range": date_range})
 					elif key == "andor":
-						range = parse_ast(value)
-						result.append({"range/and": range})
+						date_range = parse_ast(value)
+						result.append({"range/and": date_range})
 					elif key == "and":
-						range = parse_ast(value)
-						result.append({"and": range})
+						date_range = parse_ast(value)
+						result.append({"and": date_range})
 				return result
 			elif isinstance(ast, list):
 				items = []

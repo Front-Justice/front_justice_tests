@@ -385,7 +385,7 @@ def correct_date(date: str) -> str:
 	for orig, reg in common_mistakes.items():
 		date = date.replace(orig, reg)
 	splits = re.compile(r"[\s+\-]")
-	splitted = re.split(splits, date)
+	splitted = [token for token in re.split(splits, date) if token != '']
 	result = []
 	for token in splitted:
 		if token in common_mistakes:
@@ -450,7 +450,7 @@ def nfc_normalize(input_string: str) -> str:
 	if input_string and isinstance(input_string, str):
 		return unicodedata.normalize('NFC', input_string)
 	else:
-		return None
+		return input_string
 
 
 def split_before_keep_delimiter(target_string: str, delimiter: str) -> list:
@@ -1996,6 +1996,16 @@ def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (b
 	return True, matching_words[max_dist]
 
 
+def find_duplicates_dict(lst):
+	# https://medium.com/@ryan_forrester_/finding-duplicates-in-python-lists-a-complete-guide-6092b34ac375
+	count_dict = {}
+	for item in lst:
+		try:
+			count_dict[item] += 1
+		except KeyError:
+			count_dict[item] = 1
+	return [item for item, count in count_dict.items() if count > 1]
+
 def check_substring_in_sentence(sentence: str,
 								target_substring: str,
 								return_subtring: bool = False,
@@ -2031,7 +2041,7 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 	"""
 	sentence = nfc_normalize(sentence)
 	split_regexp = re.compile(r'[.!?,.:;\-\s]')
-	sentence = re.split(split_regexp, sentence)
+	sentence = [item for item in re.split(split_regexp, sentence) if item != '']
 	distances = []
 	matching_word = []
 	if isinstance(target_word, str):
@@ -2044,9 +2054,6 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 			item = item.lower().strip()
 			item = nfc_normalize(item)
 			dist = similarite_ratcliff(word_lower, item)
-			# if debug is True:
-			# 	log_print(word_lower)
-			# 	log_print(dist)
 			if dist > sensibility:
 				distances.append(dist)
 				matching_word.append(word)
