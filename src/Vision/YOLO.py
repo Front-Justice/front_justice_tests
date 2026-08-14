@@ -12,7 +12,10 @@ from src.utils.utils import YOLORecord
 import src.utils.utils as utils
 import cv2
 # import src.Vision.PARTY as PARTY
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 def load(model_path):
 	"""
@@ -73,7 +76,7 @@ class YOLOSegmenter():
 		missing = utils.check_if_missing(target_classes, check_list)
 		if len(missing) > 0:
 			pass
-			# print(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
+			logger.warning(f"Certains éléments de la page n'ont pas été identifiés: {missing}")
 		else:
 			missing = []
 		return YOLORecord(results_list), missing

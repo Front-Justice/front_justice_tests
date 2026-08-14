@@ -1886,7 +1886,7 @@ def check_neant(string: str) -> bool:
 		return False
 
 
-def clean_small_string(input_string):
+def clean_small_string(input_string:str) -> str:
 	"""
 	Cette fonction supprime les ponctuations et les espaces
 	de début et de fin de chaîne de caractère.

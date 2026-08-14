@@ -22,7 +22,7 @@ class GeoExtractor():
 			self.arrondissement_dict = json.load(input_json)
 		self.filtered_geodict = {}
 
-	def correct_department(self, departement: str) -> tuple[str|None, list|None, bool]:
+	def correct_department(self, departement: str) -> tuple[list|None, list|None, bool]:
 		"""
 		Fonction qui permet de corriger le département à partir d'une base de connaissances
 		:param departement:
@@ -44,8 +44,8 @@ class GeoExtractor():
 			matching_country, distance_country = similarity.find_closest_word_in_list(self.coutries_list,
 																					  departement,
 																					  replacement_mapping={"()": ""})
-			logger.info(f"Chaîne de caractères: {departement}")
-			logger.info(f"Département identifié: {matching_department}, distance: {distance}")
+			logger.info(f"Département extrait: {departement}")
+			logger.info(f"Département normalisé le plus proche: {matching_department}, distance: {distance}")
 			logger.info(f"Pays le plus similaire: {matching_country}, distance: {distance_country}")
 			if distance_country < distance:
 				logger.info("Pays etranger identifié.")
@@ -162,6 +162,7 @@ class GeoExtractor():
 							"nom_actuel": nom_actuel_de_la_ville
 							}
 		"""
+		logger.info(f"Ville extraite: {ville}")
 		match = False
 		if departement is not None:
 			departement = departement.replace("l'", "")

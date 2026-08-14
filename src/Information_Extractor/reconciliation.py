@@ -144,20 +144,21 @@ class Reconciliator:
 		try:
 			classes = [int(item["classe"].split("_")[-1]) for item in self.minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
 		except ValueError:
-			print([item["classe"] for item in self.minute_list])
+			logger.error(f'Erreur sur la minute, vérifier la classification: {[item["classe"] for item in self.minute_list]}')
 			return False
 		try:
 			if self.minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
+				logger.info(f'Classification originale: {[item["classe"] for item in self.minute_list]}')
 				self.minute_list[-2]["classe"] == "page_3"
-				print("Minute reconstruite.")
+				logger.info(f'Classification reconstruite: {[item["classe"] for item in self.minute_list]}')
 				return True
 		except KeyError:
 			return False
 		if classes == [1, 2, 3, 4]:
-			print("Minute correctement ordonnée")
+			logger.info("Minute correctement ordonnée")
 			return True
 		else:
-			print("Quelque chose ne va pas avec la minute")
+			logger.info("Quelque chose ne va pas avec la minute")
 			[shutil.copy(image["image_path"], f"debug/") for image in self.minute_list]
 			return False
 
@@ -601,8 +602,6 @@ class Reconciliator:
 				self.lieu_residence = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]
 			except (KeyError, TypeError):
 				self.lieu_residence = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]
-		print(f'Page 1: {self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_residence"]}')
-		print(f'Page 2: {self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_residence"]}')
 
 
 
@@ -661,8 +660,6 @@ class Reconciliator:
 				self.lieu_naissance = self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]
 			except (KeyError, TypeError):
 				self.lieu_naissance = self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]
-		print(f'Page 1: {self.annotations_page_1["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
-		print(f'Page 2: {self.annotations_page_2["extractions"]["soldat"]["identite"]["lieu_naissance"]}')
 
 
 	def _reconciliate_prenom_soldat(self):

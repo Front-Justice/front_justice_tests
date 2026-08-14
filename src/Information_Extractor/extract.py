@@ -1055,12 +1055,11 @@ class Extractor:
 																			ocr_prediction=ocr_prediction,
 																			intersect_ratio=[.8],
 																			select_highest_prob_zone=True)
-		if lignes_decision is None:
-			pass
-			# print("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
+
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
 		except (TypeError, AttributeError):
+			logger.error("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
 			lignes_decision_as_string = ocr_prediction.join_transcription()
 			lignes_decision = ocr_prediction
 
@@ -1539,7 +1538,7 @@ class Extractor:
 		try:
 			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
 		except TypeError:
-			print("Error with lines.")
+			logger.error("L'inculpation n'a pas été trouvée.")
 			return None
 		lignes_inculpe, _, correct_index_inculpe = utils.match_line_by_substring(
 			corresponding_lines=corresponding_lines,

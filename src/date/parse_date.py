@@ -326,14 +326,15 @@ def test():
 	"l'an mil neuf cent dix huit le dix huit avril",
 	"onze janvier mil neuf cent dix huit",
 	"l'an mil neuf cent seize le six octobre",
-	"l'an mil neuf cent dix  huit le dix sept"]
+	"l'an mil neuf cent dix huit le dix sept juin",
+	"l'an mil neuf cent seize le deux mai"]
 	# dates_examples = [dates_examples[-1]]
 	for example in dates_examples:
 		print("---")
 		print(example)
 		example = example.lower()
 		corrected = correct_date(example)
-		date = process_date(corrected, debug=True)
+		date = process_date(corrected, debug=False)
 		print(f"Date: {date}")
 		print(f"Corrected date: {corrected}")
 		print(f"Processed date: {date}")

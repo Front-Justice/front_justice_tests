@@ -73,8 +73,13 @@ class Parser(lexer.Lexer):
     def p_jour_toutes_lettres_mois(self, p):
         '''
         jour_toutes_lettres_mois : jour_toutes_lettres mois
+                                | LE jour_toutes_lettres mois
         '''
-        p[0] = {**p[1], **p[2]}
+        print(len(p))
+        if len(p) == 3:
+            p[0] = {**p[1], **p[2]}
+        else:
+            p[0] = {**p[2], **p[3]}
 
     def p_mois_annee_range(self, p):
         '''
