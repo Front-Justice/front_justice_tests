@@ -481,7 +481,7 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_
 	if arrondissement and "dudit" in arrondissement:
 		lieu_residence["arrondissement"]["extracted"] = ville
 
-	if utils.similarite_ratcliff(ville, "y domicilié") > .8:
+	if ville and utils.similarite_ratcliff(ville, "y domicilié") > .8:
 		logger.info(f"La ville de résidence est la même que la ville de naissance ('{ville}').")
 		return lieu_naissance
 	departement = lieu_residence["departement"]["extracted"]

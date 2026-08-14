@@ -487,13 +487,15 @@ class Extractor:
 			# utils.log_print("Aucun soldat identifié par YOLO.")
 
 		description_du_soldat["prediction"] = lignes_description_soldat_raw
-
-		description_du_soldat["identite"] = \
-			{
-				"prenom": extractions.extraire_feature(result_spotting,
+		prenom_du_soldat = extractions.extraire_feature(result_spotting,
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
-													   image_path=image_path),
+													   image_path=image_path)
+		genre_du_soldat = extractions.predire_genre(prenom_du_soldat, dict_genre=self.list_of_names)
+		description_du_soldat["identite"] = \
+			{
+				"prenom": prenom_du_soldat,
+				"genre": genre_du_soldat,
 				"nom_1": extractions.extraire_feature(result_spotting,
 													lignes_description_du_soldat,
 													"nom_du_soldat",
