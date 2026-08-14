@@ -1955,6 +1955,7 @@ class Extractor:
 			if normalized in ["marié", "célibataire", "veuf", "veuve", "enfants"]:
 				description_du_soldat["profession"]["normalized"] = None
 			elif distance > (len(normalized) / 2):
+				logger.warning(f"La profession extraite n'a pas pu être normalisée: {profession['extracted']}.")
 				description_du_soldat["profession"]["normalized"] = None
 			else:
 				description_du_soldat["profession"]["normalized"] = normalized
@@ -1966,6 +1967,7 @@ class Extractor:
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = \
 			self.dictionnaire_professions_categories[normalized]
 		except (KeyError, UnboundLocalError):
+			logger.error("La catégorie socio-professionnelle n'a pas pu être extraite.")
 			description_du_soldat["profession"]["categorie_socioprofessionnelle"] = "UNK"
 
 

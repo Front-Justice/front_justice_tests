@@ -314,6 +314,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 		return {"greffier": None}
 
 	# TODO: gérer le problème avec maréchal des logis
+
 	commis, form_commis = utils.check_word_in_sentence(debut_de_chaine, target_word="commis", sensibility=0.7)
 	if commis is True:
 		nom_et_statut = debut_de_chaine.replace(form_commis, "").replace("M.", "")
@@ -325,7 +326,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 			nom_et_statut = debut_de_chaine.replace("M.", "")
 	nom_et_fonction_du_greffier = extraire_nom_et_fonction(nom_et_statut, pipeline=ner_pipeline)
 	baseline = utils.get_baseline_from_string(line=ligne_greffier,
-											  target_string=nom_et_statut,
+											  target_string=nom_et_fonction_du_greffier['persName'],
 											  image_path=image_path)
 	if commis is True:
 		nom_et_fonction_du_greffier["commis"] = True
@@ -478,6 +479,10 @@ def extraire_lieu_residence(entity_dict, lignes, geoextractor, image_path, lieu_
 	arrondissement = lieu_residence["arrondissement"]["extracted"]
 	if arrondissement and "dudit" in arrondissement:
 		lieu_residence["arrondissement"]["extracted"] = ville
+
+	if utils.similarite_ratcliff(ville, "y domicilié") > .8:
+		logger.info(f"La ville de résidence est la même que la ville de naissance ('{ville}').")
+		return lieu_naissance
 	departement = lieu_residence["departement"]["extracted"]
 
 	# On considère que les cas où le département n'est pas indiqué correspondent aux cas où il est le même que

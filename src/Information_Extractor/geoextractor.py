@@ -231,6 +231,7 @@ class GeoExtractor():
 				"hors_metropole": True
 			}
 		if ville == "Paris":
+			logger.info("La ville de Paris a été identifiée. On retourne les coordonnées par arrondissement.")
 			return self.paris(arrondissement)
 		if ville:
 			ville = utils.expand_placename_abreviations(ville)
