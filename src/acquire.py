@@ -11,6 +11,7 @@ import glob
 import PIL.Image as Image
 import json
 import time
+import pandas as pd
 
 import utils.utils as utils
 import Page_Classifier.classify as PC
@@ -52,7 +53,8 @@ class Pipeline:
 				 retranscribe=False,
 				 device="cpu",
 				 images_dir=None,
-				 current_minute = None):
+				 current_minute = None,
+				 databases_dict={}):
 		self.minutes_reconciliees = None
 		self.minutes_reconciliees_file = None
 		self.current_page_type = None
@@ -69,7 +71,7 @@ class Pipeline:
 		self.images_basedir = images_dir.replace("/", "_")
 		self.LinesDeletionsIdentifier = Deletions.LinesDeletionsIdentifier(model_lines="src/Vision/models/line_deletion.pth",
 																		   model_chars="src/Vision/models/chars_deletion_v5.pth")
-
+		self.databases_dict = databases_dict
 
 		# Les modèles de zones
 		self.yolo_models = {}
@@ -112,7 +114,8 @@ class Pipeline:
 										   use_party=use_party,
 										   device=device,
 										   minutier=self.minutes,
-										   logger=self.logger)
+										   logger=self.logger,
+										   databases_dict=databases_dict)
 
 	def reaffecter_dictionnaire(self, minute_courante):
 		"""
@@ -205,20 +208,6 @@ class Pipeline:
 																		   confidence=0.5,
 																		   model=self.yolo_models["page_2"],
 																		   show_image=False)
-		zones_nom = zones_page_2.filter_zones("Nom du soldat")
-		# if len(zones_nom) > 1:
-		# 	print(len(zones_nom))
-		# 	for zone in zones_nom:
-		# 		print(f"Zone: {zone}")
-		# 		ligne_soldat = utils.extract_lines_from_given_zone(target_zone=zone,
-		# 														   ocr_prediction=self.current_page_transcription,
-		# 														   ratio=0.05)
-		# 		print(ligne_soldat)
-		# 		chaine_soldat = utils.extract_string_from_bbox(box=zone, lines=ligne_soldat)
-		# 		print(chaine_soldat)
-		# 	exit(0)
-		# 	print("Plusieurs soldats")
-		# 	return None, None
 
 		# On va compter les mots qui entendent plusieurs soldats, pour identifier les minutes avec plusieurs soldats.
 		split_regexp = re.compile(r"[.;!?'\"\s\-:]")
@@ -657,7 +646,10 @@ class Pipeline:
 
 
 
-	def workflow(self, minute:dict, target:str|None=None, start_after:int=0):
+	def workflow(self,
+				 minute:dict,
+				 target:str|None=None,
+				 start_after:int=0):
 		"""
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
@@ -728,7 +720,9 @@ class Pipeline:
 					page["zones"] = zones
 					self.reaffecter_dictionnaire(pages)
 				if target is None:
-					reconciliator = reconciliation.Reconciliator(minute_list=pages, previous_minute=previous_pages)
+					reconciliator = reconciliation.Reconciliator(minute_list=pages,
+																 previous_minute=previous_pages,
+																 databases=self.databases_dict)
 					previous_pages = copy.copy(pages)
 					reconciliator.reconciliate_minute()
 					self.minutes_reconciliees = reconciliator.reconciliated_minute
@@ -906,6 +900,45 @@ def main(images_dir:str,
 	# utils.serialize_dict(minute_reconciliee, "results/results_reconciliated.json")
 	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
 	# exit(0)
+
+	# Trouvé dans https://www.insee.fr/fr/statistiques/3536630 (fichier de l'INSEE)
+	list_of_surnames = [name.lower() for name in
+							 pd.read_csv("src/Information_Extractor/databases/french_surnames.csv",
+										 delimiter="\t")["NOM"].tolist()]
+	# Idem: https://www.insee.fr/fr/statistiques/8595130
+	list_of_names = {name: gender for gender, name in
+						  pd.read_csv("src/Information_Extractor/databases/french_names.csv",
+									  delimiter=",").values.tolist()}
+	french_lexicon = set(
+		[utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
+		 not word.isupper()])
+
+	with open("src/resources/liste_presidents.txt", "r") as input_presidents:
+		liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
+	with open("src/resources/liste_jures.txt", "r") as input_presidents:
+		liste_jures = [item.replace("\n", "") for item in input_presidents.readlines()]
+
+	with open("src/resources/rangs_militaires.txt", "r") as rangs:
+		rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
+
+	with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
+		charge_identification_labels = json.load(output_json)
+
+	df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
+	df = df.dropna()
+	professions_et_categories_sociopro = df["Profession"].tolist()
+	dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
+
+	databases_dict = {"list_of_surnames": list_of_surnames,
+								"list_of_names": list_of_names,
+								"french_lexicon": french_lexicon,
+								"charge_identification_labels": charge_identification_labels,
+								"rangs_militaires": rangs_militaires,
+								"liste_jures": liste_jures,
+								"liste_presidents": liste_presidents,
+					  "professions_et_categories_sociopro": professions_et_categories_sociopro,
+					  "dictionnaire_professions_categories": dictionnaire_professions_categories}
+
 	minute_reconciliee = {}
 	minute_log = {}
 	if focus:
@@ -913,14 +946,18 @@ def main(images_dir:str,
 	if workers != 1:
 		torch.set_num_threads(1)
 		with mp.Pool(processes=workers) as pool:
-			data = [({k:v}, images_dir, device, retranscribe) for k, v in minutes.items()]
+			data = [({k:v}, images_dir, device, retranscribe, databases_dict) for k, v in minutes.items()]
 			for minute_n, annotations, reconciliation, log in tqdm.tqdm(pool.starmap(single_minute_workflow, data)):
 				minute_annotee = {**minute_annotee, **annotations}
 				minute_reconciliee[minute_n] = reconciliation
 				minute_log[minute_n] = log
 	else:
 		for idx, minute in minutes.items():
-			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute}, images_dir=images_dir, device=device, retranscribe=retranscribe)
+			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute},
+																				images_dir=images_dir,
+																				device=device,
+																				retranscribe=retranscribe,
+																				databases_dict=databases_dict)
 			minute_annotee = {**minute_annotee, **annotations}
 			minute_reconciliee[minute_n] = reconciliation
 			minute_log[minute_n] = log
@@ -930,7 +967,11 @@ def main(images_dir:str,
 	utils.convert_to_csv(minute_reconciliee, f"results/results_{images_basedir}.csv")
 	return images_number, minutes_number
 
-def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe:bool):
+def single_minute_workflow(minute:dict,
+						   images_dir:str,
+						   device:str,
+						   retranscribe:bool,
+						   databases_dict={}):
 	yolo_models = {
 		"page_1": "src/Vision/models/yolov12_page_1.pt",
 		"magistrats": "src/Vision/models/yolov11_table_magistrats.pt",
@@ -952,7 +993,8 @@ def single_minute_workflow(minute:dict, images_dir:str, device:str, retranscribe
 						retranscribe=retranscribe,
 						device=device,
 						images_dir=images_dir,
-						current_minute = minute)
+						current_minute = minute,
+						databases_dict=databases_dict)
 	logger = pipeline.workflow(minute)
 	minute_number = list(minute.keys())[0]
 	return minute_number, pipeline.minutes, pipeline.minutes_reconciliees, logger
