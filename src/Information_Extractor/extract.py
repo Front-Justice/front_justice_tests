@@ -42,7 +42,8 @@ class Extractor:
 				 use_party=False,
 				 device="cpu",
 				 minutier=None,
-				 logger=None):
+				 logger=None,
+				 databases_dict={}):
 		"""
 		Constructeur de la classe Extractor
 		:param party_engine: le moteur party (instance de classe PARTY.PartyPredict)
@@ -53,18 +54,9 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		# self.tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
-		# self.ner_model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner-with-dates", local_files_only=True)
 		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
 		
 		
-
-
-		# self.ner_pipeline = pipeline('ner',
-		# 							 model=self.ner_model,
-		# 							 tokenizer=self.tokenizer,
-		# 							 aggregation_strategy="simple",
-		# 							 device=-1 if device == "cpu" else device)
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
@@ -78,22 +70,12 @@ class Extractor:
 
 		# Les métiers rencontrés dans le corpus sont triés à la main par catégorie sociopro, selon
 		# la classification actuelle de l'INSEE. Des erreurs peuvent encore substister.
-		df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
-		df = df.dropna()
-		self.professions_et_categories_sociopro = df["Profession"].tolist()
-		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
-
-		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
-			self.liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
-		with open("src/resources/liste_jures.txt", "r") as input_presidents:
-			self.liste_jures = [item.replace("\n", "") for item in input_presidents.readlines()]
-
-
-		with open("src/resources/rangs_militaires.txt", "r") as rangs:
-			self.rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
-
-		with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
-			self.charge_identification_labels = json.load(output_json)
+		self.professions_et_categories_sociopro = databases_dict["professions_et_categories_sociopro"]
+		self.dictionnaire_professions_categories = databases_dict["dictionnaire_professions_categories"]
+		self.liste_presidents =  databases_dict["liste_presidents"]
+		self.liste_jures = databases_dict["liste_jures"]
+		self.rangs_militaires = databases_dict["rangs_militaires"]
+		self.charge_identification_labels = databases_dict["charge_identification_labels"]
 
 		self.kraken_model_annotations = kraken_model_annotations
 		self.kraken_model_transcription = kraken_model_transcription

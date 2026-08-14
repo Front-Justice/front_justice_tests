@@ -17,21 +17,16 @@ class Reconciliator:
 	"""
 	Classe de réconciliation des informations extraites.
 	"""
-	def __init__(self, minute_list, previous_minute):
+	def __init__(self, minute_list, previous_minute, databases:dict):
 		self.minute_list = minute_list
 		self.reconciliated_minute = {}
-		# Trouvé dans https://www.insee.fr/fr/statistiques/3536630 (fichier de l'INSEE)
-		self.list_of_surnames = [name.lower() for name in pd.read_csv("src/Information_Extractor/databases/french_surnames.csv",
-																	  delimiter="\t")["NOM"].tolist()]
-		# Idem: https://www.insee.fr/fr/statistiques/8595130
-		self.list_of_names = {name:gender for gender, name in
-							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
-										   delimiter=",").values.tolist()}
+		self.list_of_names = databases["list_of_names"]
+		self.french_lexicon = databases["french_lexicon"]
+		self.list_of_surnames = databases["list_of_surnames"]
 
 		self.previous_minute  = previous_minute
 
-		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
-				 not word.isupper()])
+
 
 		self.certitude_prenom_du_soldat = []
 		self.prenom_du_soldat = []
