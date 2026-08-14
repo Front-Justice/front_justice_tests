@@ -25,7 +25,7 @@ class Reconciliator:
 		# Idem: https://www.insee.fr/fr/statistiques/8595130
 		self.list_of_names = {name.lower() if isinstance(name, str) else name:gender for gender, name in
 							   pd.read_csv("src/Information_Extractor/databases/french_names.csv",
-										   delimiter=";").values.tolist()}
+										   delimiter=",").values.tolist()}
 		self.previous_minute  = previous_minute
 
 		self.french_lexicon =  set([utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if

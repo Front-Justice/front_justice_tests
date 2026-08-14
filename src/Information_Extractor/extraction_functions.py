@@ -6,6 +6,7 @@ from text_to_num import text2num
 import src.date.parse_date as date
 import regex
 from src.utils.utils import OCRLine, OCRRecord
+import src.Information_Extractor.similarity as similarity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -612,10 +613,25 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"role": role,
 			"certainty": 0}
 
-def extraire_genre(prenoms, dict_genre):
-	print(prenoms)
-	prenoms = prenoms.split()
-	exit()
+def predire_genre(prenoms, dict_genre):
+	liste_prenoms = list(dict_genre.keys())
+	prenoms = prenoms['extracted'].split()
+	liste_genres = []
+	for prenom in prenoms:
+		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)
+		# On ne va prendre que des prénoms qu'on est sûrs de reconnaître. Plus de rappel, mais moins de précision.
+		if distance > 1:
+			continue
+		else:
+			current_genre = dict_genre[matching]
+			liste_genres.append(current_genre)
+	masculin = liste_genres.count(2)
+	feminin = liste_genres.count(1)
+	if masculin > feminin:
+		return "M"
+	else:
+		logger.info(f"La personne jugée semble être une femme: {prenoms}.")
+		return "F"
 
 def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
 	"""

@@ -48,6 +48,9 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		if word is None:
 			distances.append(99)
 			continue
+		elif isinstance(word, float):
+			distances.append(99)
+			continue
 		word_lower = word.lower()
 		if replacement_mapping:
 			for key, value in replacement_mapping.items():
