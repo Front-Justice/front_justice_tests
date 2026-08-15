@@ -430,7 +430,7 @@ class Reconciliator:
 		self.annotations = []
 		for page in self.minute_list:
 			if "extractions" in page and "annotations_ajouts" in page["extractions"]:
-				self.annotations.append(page["extractions"]["annotations_ajouts"])
+				self.annotations.extend(page["extractions"]["annotations_ajouts"])
 
 	def _add_images_path(self):
 		self.images_path = [item["image_path"] for item in self.minute_list]

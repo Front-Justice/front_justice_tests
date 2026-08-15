@@ -1112,6 +1112,7 @@ class Extractor:
 			180: "quinze ans",
 			240: "vingt ans"
 		}
+
 		if peine and peine["extracted"] != "" and peine["extracted"] is not None:
 			# Essayer de voir si une fonction de proximité formelle ne suffirait pas
 			type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
@@ -1131,10 +1132,6 @@ class Extractor:
 				{"duree": duree_peine,
 				 "type": type_peine}
 		}
-
-
-
-
 		unanimite = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
 												  feature="unanimité",
@@ -1165,7 +1162,6 @@ class Extractor:
 					"extracted": "5"}
 		else:
 			voix = None
-
 
 		sursis = extractions.extraire_feature(entities_list=entities,
 												  lignes=lignes_decision,
@@ -1441,11 +1437,9 @@ class Extractor:
 			elif len(normalized_dates) == 0:
 				extracted_date = None
 			else:
-				date_1 = normalized_dates[0]
-				date_2 = normalized_dates[-1]
 				extracted_date = {
-					"date_1": date_1,
-					"date_2": date_2
+					f"date_{i + 1}": current_date
+					for i, current_date in enumerate(normalized_dates)
 				}
 			list_of_informations = [
 				"Remise du restant de la peine",
@@ -1473,8 +1467,8 @@ class Extractor:
 			# TODO: cas où il y a plusieurs annotations différentes
 			list_of_results.append({
 				"date": extracted_date,
-				"information": information_contenue,
-				"prediction": lignes_fusionnees,
+				"extracted": information_contenue,
+				"predicted": lignes_fusionnees,
 				"bbox": annotations[0].coordinates,
 				"baselines": [item.baseline for item in as_record]
 			})

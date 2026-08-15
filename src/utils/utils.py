@@ -1265,7 +1265,50 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Peine transcrite",
 			  "Type de peine",
 			  "Nombre de mois",
-			  "Frais du procès"]
+			  "Frais du procès",
+			  "Remise du restant de la peine",
+			  "Date Remise du restant de la peine",
+			  "Prédiction Remise du restant de la peine",
+			  "Remise partielle de peine",
+			  "Date Remise partielle de peine",
+			  "Prédiction Remise partielle de peine",
+			  "Décès du soldat",
+			  "Date Décès du soldat",
+			  "Prédiction Décès du soldat",
+			  "Détention préventive",
+			  "Date Détention préventive",
+			  "Prédiction Détention préventive",
+			  "Amnistie",
+			  "Date Amnistie",
+			  "Prédiction Amnistie",
+			  "Réhabilitation du soldat",
+			  "Date Réhabilitation du soldat",
+			  "Prédiction Réhabilitation du soldat",
+			  "Peine effectuée",
+			  "Date Peine effectuée",
+			  "Prédiction Peine effectuée",
+			  "Exécution du jugement",
+			  "Date Exécution du jugement",
+			  "Prédiction Exécution du jugement",
+			  "Exécution du jugement suspendue",
+			  "Date Exécution du jugement suspendue",
+			  "Prédiction Exécution du jugement suspendue",
+			  "Jugement suspendu",
+			  "Date Jugement suspendu",
+			  "Prédiction Jugement suspendu",
+			  "Annulation de la suspension d'exécution",
+			  "Date Annulation de la suspension d'exécution",
+			  "Prédiction Annulation de la suspension d'exécution",
+			  "Exécution de la peine suspendue",
+			  "Date Exécution de la peine suspendue",
+			  "Prédiction Exécution de la peine suspendue",
+			  "Peine commuée",
+			  "Date Peine commuée",
+			  "Prédiction Peine commuée",
+			  "Sursis révoqué",
+			  "Date Sursis révoqué",
+			  "Prédiction Sursis révoqué",
+			  ]
 	for idx_minute, minute in extractions.items():
 		interm = []
 		interm.append(f"{idx_minute}")
@@ -1812,6 +1855,49 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except  (KeyError, TypeError):
 			frais = "UNK"
 		interm.append(frais)
+		
+		
+		# Pour les actualisations on travaille déjà avec du one-hot c'est beaucoup plus simple.
+		possibles_actualisations = [
+				"Remise du restant de la peine",
+				"Remise partielle de peine",
+				"Décès du soldat",
+				"Détention préventive",
+				"Amnistie",
+				"Réhabilitation du soldat",
+				"Peine effectuée",
+				"Exécution du jugement",
+				"Exécution du jugement suspendue",
+				"Jugement suspendu",
+				"Annulation de la suspension d'exécution",
+				"Exécution de la peine suspendue",
+				"Peine commuée",
+				"Sursis révoqué"
+			]
+		try:
+			actualisations = minute['actualisations_du_jugement']
+		except KeyError:
+			actualisations = None
+		if actualisations:
+			for classe in possibles_actualisations:
+				for current in minute['actualisations_du_jugement']:
+					try:
+						actualisation_i =  current['extracted']
+					except (IndexError):
+						actualisation_i = None
+					if actualisation_i == classe:
+						interm.append(True)
+						try:
+							dates_i =  current["date"]
+							dates_i = ", ".join([str(date) for _, date in dates_i.items()])
+						except (KeyError, IndexError):
+							dates_i = None
+						interm.append(dates_i)
+						interm.append(current["predicted"])
+					else:
+						interm.extend([None, None, None])
+
+
 
 		extracted_data.append(interm)
 

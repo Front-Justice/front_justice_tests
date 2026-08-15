@@ -1,3 +1,5 @@
+import logging
+
 import torch
 import src.utils.utils as utils
 
@@ -12,11 +14,11 @@ def retrieve_most_similar_sentence(sentence:str, queries:list, embedder, mode="s
 	"""
 	if mode == "semantic":
 		try:
-			queries_embeddings = embedder.encode(queries, convert_to_tensor=True)
+			queries_embeddings = embedder.encode(queries, convert_to_tensor=True, show_progress_bar=False)
 		except IndexError:
 			return None
 		top_k = min(5, len(queries))
-		query_embedding = embedder.encode(sentence, convert_to_tensor=True)
+		query_embedding = embedder.encode(sentence, convert_to_tensor=True, show_progress_bar=False)
 		similarity_scores = embedder.similarity(query_embedding, queries_embeddings)[0]
 		scores, indices = torch.topk(similarity_scores, k=top_k)
 		return queries[indices[0]]
