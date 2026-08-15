@@ -1891,7 +1891,6 @@ def convert_to_csv(extractions: dict, outpath: str):
 				except (IndexError):
 					actualisation_i = None
 				if actualisation_i == classe:
-					logger.info(f"Classe {classe} identifiée. On ajoute les infos.")
 					try:
 						dates_i =  current["date"]
 						if dates_i:

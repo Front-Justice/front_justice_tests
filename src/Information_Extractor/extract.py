@@ -1046,7 +1046,13 @@ class Extractor:
 		except (TypeError, AttributeError):
 			logger.error("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
 			lignes_decision_as_string = ocr_prediction.join_transcription()
-			lignes_decision = ocr_prediction
+			target_string = "En conséquence, le Conseil (1)"
+			try:
+				lignes_decision =  utils.approximate_sentence_split(sentence=lignes_decision_as_string, substring=target_string, max_dist=4)[-1]
+			except TypeError:
+				lignes_decision = ocr_prediction
+
+
 
 		# On doit ajouter 0 comme une métadonnée pour le modèle.
 		lignes_decision_as_string = f"[0] {lignes_decision_as_string}"

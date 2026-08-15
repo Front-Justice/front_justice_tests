@@ -4,6 +4,9 @@ import src.date.lexer as lexer
 import src.date.utils as utils
 import json
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Date:
 	"""
@@ -82,7 +85,11 @@ class Date:
 		self.converted_date = re.sub(end_regexp, "", str(self.converted_date))
 
 	def convert_to_dd_mm_yyyy(self):
-		self.month = self.month_dict[self.month] if self.month != "" else ""
+		try:
+			self.month = self.month_dict[self.month] if self.month != "" else ""
+		except KeyError:
+			logger.error(f"Le mois {self.month} n'existe pas dans le dictionnaire, revoir le lexer.")
+			return "01/01/0001"
 		if len(str(self.day)) == 1:
 			self.day = f"0{self.day}"
 		self.converted_date = f"{self.day}/{self.month}/{self.year}"
