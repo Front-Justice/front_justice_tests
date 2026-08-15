@@ -516,11 +516,19 @@ class Reconciliator:
 		:return: la date réconciliée
 		"""
 
-		if utils.is_anterior_or_equal(date_a, "03/09/1914"):
-			logger.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
+		try:
+			if utils.is_anterior_or_equal(date_a, "03/09/1914"):
+				logger.warning(f"La date {date_a} est antérieure au début de la guerre, erreur.")
+				return date_b
+		except ValueError as e:
+			logger.error(f"Erreur: {e} pour la date {date_a}. On prend la date b")
 			return date_b
-		if utils.is_anterior_or_equal(date_b, "03/09/1914"):
-			logger.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
+		try:
+			if utils.is_anterior_or_equal(date_b, "03/09/1914"):
+				logger.warning(f"La date {date_b} est antérieure au début de la guerre, erreur.")
+				return date_a
+		except ValueError as e:
+			logger.error(f"Erreur: {e} pour la date {date_b}. On prend la date a")
 			return date_a
 		splitted_a = date_a.split("/")
 		splitted_b = date_b.split("/")

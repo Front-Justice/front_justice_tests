@@ -217,7 +217,7 @@ class Pipeline:
 		try:
 			vocabulaire = re.split(pattern=split_regexp, string=self.current_page_transcription.join_transcription())
 		except TypeError:
-			logger.error(f"La transcription de la page {self.current_image_path} est vide.")
+			logger.error(f"La transcription de la page {self.current_image_path} est vide. La minute ne sera pas traitée.")
 			return None, None
 		vocab_count = (vocabulaire.count("accusés")
 					   + vocabulaire.count("leur")
