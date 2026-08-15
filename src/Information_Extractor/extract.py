@@ -1044,13 +1044,13 @@ class Extractor:
 		try:
 			lignes_decision_as_string = lignes_decision.join_transcription()
 		except (TypeError, AttributeError):
-			logger.error("Zone de décision du tribunal non trouvée. On travaille sur le texte de la page entière")
+			logger.error("Zone de décision du tribunal non trouvée. On cible la sous-chaîne spécifique.")
 			lignes_decision_as_string = ocr_prediction.join_transcription()
 			target_string = "En conséquence, le Conseil (1)"
 			try:
-				lignes_decision =  utils.approximate_sentence_split(sentence=lignes_decision_as_string, substring=target_string, max_dist=4)[-1]
+				lignes_decision_as_string =  utils.approximate_sentence_split(sentence=lignes_decision_as_string, substring=target_string, max_dist=4)[-1]
 			except TypeError:
-				lignes_decision = ocr_prediction
+				logger.error(f"Cible non trouvée: {lignes_decision_as_string}")
 
 
 
