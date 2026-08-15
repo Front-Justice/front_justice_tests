@@ -251,9 +251,14 @@ def correct_date(date: str) -> str:
 				  "juillet": "07",
 				  "août": "08",
 				  "septembre": "09",
+				  "7^bre": "09",
 				  "octobre": "10",
+				  "8^bre": "10",
 				  "novembre": "11",
+				  "9^bre": "11",
 				  "décembre": "12",
+				  "X^bre": "12",
+				  "déc": "12",
 				  }
 	date = utils.nfc_normalize(date)
 	date = date.lower().strip()

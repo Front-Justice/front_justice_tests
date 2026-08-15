@@ -45,7 +45,7 @@ class Lexer(object):
 
 
     def t_MOIS(self, t):
-        r'''janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre'''
+        r'''janvier|février|mars|avril|mai|juin|juillet|août|septembre|7^bre|octobre|8^bre|novembre|9^bre|décembre|X^bre|déc'''
         t.value = utils.nfc_normalize(t.value)
         return t
 
