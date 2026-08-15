@@ -224,7 +224,7 @@ class Pipeline:
 					   + vocabulaire.count("leurs")
 					   + vocabulaire.count("eux"))
 		if vocab_count > 4:
-			print("Plusieurs soldats.")
+			logger.warning("Plusieurs soldats.")
 			return None, None
 
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
@@ -531,7 +531,7 @@ class Pipeline:
 																		   model=self.yolo_models["page_1"],
 																		   show_image=False)
 		if len(zones_page_1.filter_zones("Nom du soldat")) > 1:
-			print("Plusieurs soldats")
+			logger.warning("Plusieurs soldats")
 			return None, None
 
 		zone_dict = {"zones_identifiées": zones_page_1.to_json(), "zones_manquantes": zones_manquantes}
