@@ -8,6 +8,7 @@ import shutil
 
 import src.utils.utils as utils
 import src.Information_Extractor.extraction_functions as extraction_functions
+import src.Information_Extractor.similarity as similarity
 import pandas as pd
 import logging
 
@@ -124,6 +125,24 @@ class Reconciliator:
 			logger.info("La condamnation n'a pas été extraite, la peine n'est identifiée, il n'y a pas de sursis."
 						" Le soldat a probablement été acquitté.")
 			self.condamnation = "acquittement"
+		elif condamnation == "condamnation" and peine == None and sursis is False:
+			try:
+				condamnation_extraite = self.annotations_page_3["extractions"]["decision_tribunal"][
+					"decision_normalisee"]
+			except KeyError:
+				condamnation_extraite = None
+			if condamnation_extraite:
+				distance_acquittement = utils.similarite_ratcliff(string_a=condamnation_extraite, string_b="acquitte")
+				distance_condamnation = utils.similarite_ratcliff(string_a=condamnation_extraite, string_b="condamne")
+			else:
+				self.condamnation = condamnation
+				return
+			if distance_acquittement < distance_condamnation:
+				logger.info(f"Correction de la condamnation: le soldat est acquitté: {condamnation_extraite}")
+				self.condamnation = "acquittement"
+			else:
+				logger.info(f"Le soldat est bien condamné, mais les autres informations ne sont pas extraites: {condamnation_extraite}")
+				self.condamnation = condamnation
 		else:
 			self.condamnation = condamnation
 
