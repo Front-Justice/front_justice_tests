@@ -1878,11 +1878,12 @@ def convert_to_csv(extractions: dict, outpath: str):
 			actualisations = minute['actualisations_du_jugement']
 		except KeyError:
 			actualisations = None
+		actualisation_dict = {}
 		for classe in possibles_actualisations:
 			if actualisations:
 				pass
 			else:
-				interm.extend([None, None, None])
+				actualisation_dict[classe] = [None, None, None]
 				continue
 			for current in minute['actualisations_du_jugement']:
 				try:
@@ -1890,7 +1891,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 				except (IndexError):
 					actualisation_i = None
 				if actualisation_i == classe:
-					interm.append(True)
+					logger.info(f"Classe {classe} identifiée. On ajoute les infos.")
 					try:
 						dates_i =  current["date"]
 						if dates_i:
@@ -1900,15 +1901,16 @@ def convert_to_csv(extractions: dict, outpath: str):
 							dates_i = "UNK"
 					except (KeyError, IndexError):
 						dates_i = None
-					interm.append(dates_i)
-					interm.append(current["predicted"])
+					logger.info(f'Date: {dates_i}; prédiction: {current["predicted"]}')
+					actualisation_dict[classe] = [True, dates_i, current["predicted"]]
 				else:
-					interm.extend([None, None, None])
+					actualisation_dict[classe] = [None, None, None]
+		for classe, value in actualisation_dict.items():
+			interm.extend(value)
 
 
 
 		extracted_data.append(interm)
-
 	df = pd.DataFrame(extracted_data, columns=header)
 	examples_number = df.shape[1]
 	counts = []
