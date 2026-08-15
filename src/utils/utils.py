@@ -1878,28 +1878,32 @@ def convert_to_csv(extractions: dict, outpath: str):
 			actualisations = minute['actualisations_du_jugement']
 		except KeyError:
 			actualisations = None
-		if actualisations:
-			for classe in possibles_actualisations:
-				for current in minute['actualisations_du_jugement']:
+		for classe in possibles_actualisations:
+			if actualisations:
+				pass
+			else:
+				interm.extend([None, None, None])
+				continue
+			for current in minute['actualisations_du_jugement']:
+				try:
+					actualisation_i =  current['extracted']
+				except (IndexError):
+					actualisation_i = None
+				if actualisation_i == classe:
+					interm.append(True)
 					try:
-						actualisation_i =  current['extracted']
-					except (IndexError):
-						actualisation_i = None
-					if actualisation_i == classe:
-						interm.append(True)
-						try:
-							dates_i =  current["date"]
-							if dates_i:
-								dates_i = ", ".join([str(date) for _, date in dates_i.items()])
-							else:
-								logger.error(f"Erreur de récupération de la date de l'actualisation {actualisation_i}. Date: {dates_i}")
-								dates_i = "UNK"
-						except (KeyError, IndexError):
-							dates_i = None
-						interm.append(dates_i)
-						interm.append(current["predicted"])
-					else:
-						interm.extend([None, None, None])
+						dates_i =  current["date"]
+						if dates_i:
+							dates_i = ", ".join([str(date) for _, date in dates_i.items()])
+						else:
+							logger.error(f"Erreur de récupération de la date de l'actualisation {actualisation_i}. Date: {dates_i}")
+							dates_i = "UNK"
+					except (KeyError, IndexError):
+						dates_i = None
+					interm.append(dates_i)
+					interm.append(current["predicted"])
+				else:
+					interm.extend([None, None, None])
 
 
 
