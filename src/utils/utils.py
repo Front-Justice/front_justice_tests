@@ -1889,7 +1889,11 @@ def convert_to_csv(extractions: dict, outpath: str):
 						interm.append(True)
 						try:
 							dates_i =  current["date"]
-							dates_i = ", ".join([str(date) for _, date in dates_i.items()])
+							try:
+								dates_i = ", ".join([str(date) for _, date in dates_i.items()])
+							except AttributeError:
+								logger.error(f"Erreur de récupération de la date de l'actualisation {actualisation_i}. Date: {dates_i}")
+								dates_i = "UNK"
 						except (KeyError, IndexError):
 							dates_i = None
 						interm.append(dates_i)
