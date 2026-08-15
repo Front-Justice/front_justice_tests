@@ -31,6 +31,9 @@ logging.basicConfig(
 
 
 
+logger = logging.getLogger(__name__)
+
+
 class ListHandler(logging.Handler):
 
     def __init__(self):
@@ -211,7 +214,11 @@ class Pipeline:
 
 		# On va compter les mots qui entendent plusieurs soldats, pour identifier les minutes avec plusieurs soldats.
 		split_regexp = re.compile(r"[.;!?'\"\s\-:]")
-		vocabulaire = re.split(pattern=split_regexp, string=self.current_page_transcription.join_transcription())
+		try:
+			vocabulaire = re.split(pattern=split_regexp, string=self.current_page_transcription.join_transcription())
+		except TypeError:
+			logger.error(f"La transcription de la page {self.current_image_path} est vide.")
+			return None, None
 		vocab_count = (vocabulaire.count("accusés")
 					   + vocabulaire.count("leur")
 					   + vocabulaire.count("leurs")
