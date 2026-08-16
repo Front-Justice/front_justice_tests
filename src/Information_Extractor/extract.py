@@ -1119,11 +1119,12 @@ class Extractor:
 			240: "vingt ans"
 		}
 
-		if peine and peine["extracted"] != "" and peine["extracted"] is not None:
+		if peine and peine["extracted"] != "" and len(peine["extracted"].split()) > 2:
 			# Essayer de voir si une fonction de proximité formelle ne suffirait pas
 			type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
 																   embedder=self.sentence_camembert)
 		else:
+			logger.error(f"La peine extraite {peine['extracted']} est trop courte ou inexistante pour être normalisée.")
 			type_peine = None
 		if type_peine and type_peine not in ["peine de mort", "amende"] and peine["extracted"] != "":
 			duree_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=[item for item in duree_de_la_peine.values()],
