@@ -2222,7 +2222,7 @@ class Extractor:
 			else:
 				closest, distance = None, None
 			jury_dict = {"extracted": jury_extrait}
-			if distance > len(closest) / 2:
+			if closest and distance > len(closest) / 2:
 				logger.warning("La normalisation du juré a échoué.")
 				jury_dict["normalized"] = processed_jure_name
 			jury_dict["normalized"] = closest
