@@ -425,7 +425,7 @@ class Extractor:
 			return None
 		soldat: list[YOLOZone] = annotations.filter_zones("Nom du soldat")
 		for line in lignes_description_du_soldat:
-			line.prediction = line.prediction.replace("- ", " - ")
+			line.prediction = line.prediction.replace("-", " - ")
 		lignes_description_soldat_raw = lignes_description_du_soldat.join_transcription()
 		# 1 correspond à la page 1, métadonnée qu'on envoie au modèle.
 		lignes_description_soldat_raw = f"[1] {utils.nfc_normalize(lignes_description_soldat_raw)}"
