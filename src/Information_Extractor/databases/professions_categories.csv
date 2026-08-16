@@ -24,6 +24,7 @@ apprêteur	Ouvriers
 apprêteur sur étoffes	Artisans, commerçants et chefs d’entreprise
 artisan	Artisans, commerçants et chefs d’entreprise
 artiste	Cadres
+artiste dramatique	Cadres
 artiste acrobate	Cadres
 artiste lyrique	Cadres
 artiste-comédien	Cadres
@@ -165,6 +166,7 @@ crevettier	Agriculteurs
 cuisinier	Artisans, commerçants et chefs d’entreprise
 cuisinier pâtissier	Artisans, commerçants et chefs d’entreprise
 cultivateur	Agriculteurs
+cultivateur-vigneron	Agriculteurs
 débardeur	Ouvriers
 débitant	Artisans, commerçants et chefs d’entreprise
 débitant en verre	Artisans, commerçants et chefs d’entreprise
@@ -467,6 +469,7 @@ ouvrier d'usine	Ouvriers
 ouvrier de fabrique	Ouvriers
 ouvrier de filature	Ouvriers
 ouvrier électricien	Ouvriers
+ouvrier mécanicien	Ouvriers
 ouvrier en chaussures	Ouvriers
 ouvrier fondeur	Ouvriers
 ouvrier horloger	Ouvriers
@@ -626,3 +629,6 @@ volailleur	Artisans, commerçants et chefs d’entreprise
 voyageur de commerce	Professions intermédiaires
 chauffeur maritime  Ouvriers
 argenteur-doreur    Artisans, commerçants et chefs d’entreprise
+fourreur    Artisans, commerçants et chefs d’entreprise
+opérateur de cinéma Ouvriers
+fabricant de balais Artisans, commerçants et chefs d’entreprise

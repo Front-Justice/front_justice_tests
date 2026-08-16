@@ -1119,7 +1119,7 @@ class Extractor:
 			240: "vingt ans"
 		}
 
-		if peine and peine["extracted"] != "" and len(peine["extracted"].split()) > 2:
+		if peine and peine['extracted'] and peine["extracted"] != "" and len(peine["extracted"].split()) > 2:
 			# Essayer de voir si une fonction de proximité formelle ne suffirait pas
 			type_peine = similarity.retrieve_most_similar_sentence(sentence=peine["extracted"], queries=type_de_peine,
 																   embedder=self.sentence_camembert)
