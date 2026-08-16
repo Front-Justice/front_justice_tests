@@ -1050,7 +1050,7 @@ class Extractor:
 			try:
 				lignes_decision_as_string =  utils.approximate_sentence_split(sentence=lignes_decision_as_string, substring=target_string, max_dist=4)[-1]
 			except TypeError:
-				logger.error(f"Cible non trouvée: {lignes_decision_as_string}")
+				logger.error(f"Cible non trouvée: {lignes_decision_as_string}. On envoie la page entière.")
 
 
 
@@ -2221,6 +2221,9 @@ class Extractor:
 			else:
 				closest, distance = None, None
 			jury_dict = {"extracted": jury_extrait}
+			if distance > len(closest) / 2:
+				logger.warning("La normalisation du juré a échoué.")
+				jury_dict["normalized"] = processed_jure_name
 			jury_dict["normalized"] = closest
 			logger.info(f"Juré extrait: {jury_extrait['persName']}, normalisé: {closest}")
 			processed_jures.append(jury_dict)
@@ -2229,7 +2232,7 @@ class Extractor:
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
 																   self.entity_spotting_pipeline)
-		with open("src/resources/liste_presidents.txt", "r") as input_presidents:
+		with open("src/Information_Extractor/databases/liste_presidents.txt", "r") as input_presidents:
 			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
 		processed_president_name = utils.clean_small_string(processed_president['persName'])
 		if processed_president_name != "":

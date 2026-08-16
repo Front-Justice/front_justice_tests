@@ -220,11 +220,12 @@ class Pipeline:
 			logger.error(f"La transcription de la page {self.current_image_path} est vide. La minute ne sera pas traitée.")
 			return None, None
 		vocab_count = (vocabulaire.count("accusés")
+						+ vocabulaire.count("prévenus")
 					   + vocabulaire.count("leur")
 					   + vocabulaire.count("leurs")
 					   + vocabulaire.count("eux"))
 		if vocab_count > 4:
-			logger.warning("Plusieurs soldats.")
+			logger.warning("Le texte montre qu'il y a plusieurs soldats.")
 			return None, None
 
 		current_dict["soldat"] = self.extractor.extraire_description_soldat_NER_p2(
@@ -917,21 +918,21 @@ def main(images_dir:str,
 						  pd.read_csv("src/Information_Extractor/databases/french_names.csv",
 									  delimiter=",").values.tolist()}
 	french_lexicon = set(
-		[utils.remove_accents(word).lower() for word in utils.txt_to_list("src/resources/french_lexicon.txt") if
+		[utils.remove_accents(word).lower() for word in utils.txt_to_list("src/Information_Extractor/databases/french_lexicon.txt") if
 		 not word.isupper()])
 
-	with open("src/resources/liste_presidents.txt", "r") as input_presidents:
+	with open("src/Information_Extractor/databases/liste_presidents.txt", "r") as input_presidents:
 		liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
-	with open("src/resources/liste_jures.txt", "r") as input_presidents:
+	with open("src/Information_Extractor/databases/liste_jures.txt", "r") as input_presidents:
 		liste_jures = [item.replace("\n", "") for item in input_presidents.readlines()]
 
-	with open("src/resources/rangs_militaires.txt", "r") as rangs:
+	with open("src/Information_Extractor/databases/rangs_militaires.txt", "r") as rangs:
 		rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
 
 	with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
 		charge_identification_labels = json.load(output_json)
 
-	df = pd.read_csv("src/resources/professions_categories.csv", delimiter="\t")
+	df = pd.read_csv("src/Information_Extractor/databases/professions_categories.csv", delimiter="\t")
 	df = df.dropna()
 	professions_et_categories_sociopro = df["Profession"].tolist()
 	dictionnaire_professions_categories = dict(sorted(df.values.tolist()))

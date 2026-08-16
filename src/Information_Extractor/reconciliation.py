@@ -294,27 +294,27 @@ class Reconciliator:
 				return
 			# Cas le plus simple, toutes les trois dates s'accordent
 			if all([item == filtered_dates[0] for item in filtered_dates[1:]]):
-				logging.info(f"Toutes les dates s'accordent: {filtered_dates[0]}")
+				logging.info(f"Toutes les dates du procès s'accordent: {filtered_dates[0]}")
 				self.date_proces = filtered_dates[0]
 			else:
-				logging.info(f"Il y a désaccord dans les dates retenues: {filtered_dates}")
+				logging.info(f"Il y a désaccord dans les dates du procès retenues: {filtered_dates}")
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
-					logging.info(f"Deux dates retenues: {filtered_dates[0], filtered_dates[1]}")
+					logging.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
 					self.date_proces = self.reconciliate_date(filtered_dates[0], filtered_dates[1])
-					logging.info(f"Date conservées: {self.date_proces}")
+					logging.info(f"Date du procès conservées: {self.date_proces}")
 
 				# Si la taille est de 3
 				else:
 					# On regarde la précision des dates récupérées
 					full_precision_date = [item for item in filtered_dates if len(item.split("/")) == 3]
 					if len(full_precision_date) == 1:
-						logging.info(f"Une date précise: {full_precision_date[0]}")
+						logging.info(f"Une date du procès précise: {full_precision_date[0]}")
 						self.date_proces = full_precision_date[0]
 					elif len(full_precision_date) == 2:
-						logging.info(f"Deux dates retenues: {filtered_dates[0], filtered_dates[1]}")
+						logging.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
 						self.date_proces = self.reconciliate_date(full_precision_date[0], full_precision_date[1])
-						logging.info(f"Date conservées: {self.date_proces}")
+						logging.info(f"Date du procès conservées: {self.date_proces}")
 					else:
 						dictionnary = {}
 						for date in filtered_dates:
@@ -323,11 +323,11 @@ class Reconciliator:
 							except KeyError:
 								dictionnary[date] = 1
 						dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-						logging.info(f"La date la plus fréquente est: {dict_sorted_by_freq[0]} parmi {filtered_dates}")
+						logging.info(f"La date du procès la plus fréquente est: {dict_sorted_by_freq[0]} parmi {filtered_dates}")
 						self.date_proces = dict_sorted_by_freq[0]
 		if self.date_proces:
-			# On va compter les jours, mois, trimestre et année de guerre.
 			debut_guerre = "1914-09-03"
+			# On va compter les jours, mois, trimestre et année de guerre.
 			precision_date = len(self.date_proces.split("/"))
 			if len(self.date_proces.split("/")) == 2:
 				self.date_proces = self.date_proces.split("/")[0] + "/" + self.date_proces.split("/")[1] + "/19" + self.date_proces.split("/")[2]
@@ -335,7 +335,15 @@ class Reconciliator:
 				# https://stackoverflow.com/a/8419655
 				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
 				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
-				self.jours_guerre = abs((d2 - d1).days)
+				self.jours_guerre = (d2 - d1).days
+				if self.jours_guerre < 0:
+					logger.warning("Erreur: la date du procès est antérieure au début de la guerre.")
+					self.date_proces = None
+					self.jours_guerre = None
+					self.annee_guerre = None
+					self.mois_guerre = None
+					self.trimestre_guerre = None
+					return
 				self.annee_guerre = math.ceil(self.jours_guerre / 365)
 				self.mois_guerre = math.ceil(self.jours_guerre / 30)
 				self.trimestre_guerre = math.ceil(self.jours_guerre / 90)
@@ -345,7 +353,15 @@ class Reconciliator:
 				self.date_proces = f"01/{self.date_proces}"
 				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
 				d2 = datetime.strptime(self.date_proces, "%d/%m/%Y")
-				jours_guerre = abs((d2 - d1).days)
+				jours_guerre = (d2 - d1).days
+				if jours_guerre < 0:
+					logger.warning("Erreur: la date du procès est antérieure au début de la guerre.")
+					self.date_proces = None
+					self.jours_guerre = None
+					self.annee_guerre = None
+					self.mois_guerre = None
+					self.trimestre_guerre = None
+					return
 				self.jours_guerre = None
 				self.annee_guerre = math.ceil(jours_guerre / 365)
 				self.mois_guerre = math.ceil(jours_guerre / 30)
@@ -363,8 +379,16 @@ class Reconciliator:
 					self.mois_guerre = None
 					self.trimestre_guerre = None
 					return
-				jours_guerre = abs((d2 - d1).days)
 				self.jours_guerre = None
+				jours_guerre = (d2 - d1).days
+				if jours_guerre < 0:
+					logger.warning("Erreur: la date du procès est antérieure au début de la guerre.")
+					self.date_proces = None
+					self.jours_guerre = None
+					self.annee_guerre = None
+					self.mois_guerre = None
+					self.trimestre_guerre = None
+					return
 				self.annee_guerre = math.ceil(jours_guerre / 365)
 				self.mois_guerre = None
 				self.trimestre_guerre = None

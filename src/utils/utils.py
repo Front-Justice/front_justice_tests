@@ -737,7 +737,7 @@ def find_best_transcription(lines: OCRRecord,
 	log_print(f"Before shift: {lines.join_transcription()}")
 	log_print(f"La glose fait {len(lines)} lignes.")
 	orig_transcription = lines.join_transcription()
-	words = set([remove_accents(word).lower() for word in txt_to_list("src/resources/french_lexicon.txt") if
+	words = set([remove_accents(word).lower() for word in txt_to_list("src/Information_Extractor/databases/french_lexicon.txt") if
 				 not word.isupper()])
 	lexicality = compute_lexicality(orig_transcription, words)
 	all_records.append(lines)

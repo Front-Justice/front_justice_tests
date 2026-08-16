@@ -16,7 +16,7 @@ class GeoExtractor():
 			self.geodict = json.load(input_json)
 		with open("src/Information_Extractor/databases/correspondance_departements.json", "r") as input_json:
 			self.departments_dict = json.load(input_json)
-		with open("src/resources/liste_pays_2026.txt", "r") as input_file:
+		with open("src/Information_Extractor/databases/liste_pays_2026.txt", "r") as input_file:
 			self.coutries_list = [item.replace("\n", "") for item in input_file.readlines()]
 		with open("src/Information_Extractor/databases/arrondissements_paris.json", "r") as input_json:
 			self.arrondissement_dict = json.load(input_json)
