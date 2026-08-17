@@ -643,7 +643,7 @@ def predire_genre(prenoms, dict_genre):
 	elif masculin == feminin:
 		return "M"
 	else:
-		logger.info(f"La personne jugée semble être une femme: {prenoms}.")
+		logger.info(f"La personne jugée semble être une femme: {prenoms}, {liste_genres}.")
 		return "F"
 
 def extraire_commissaire(lignes_zone_magistrat: list, image_path:str, ner_pipeline):
