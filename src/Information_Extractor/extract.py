@@ -1826,7 +1826,8 @@ class Extractor:
 		prenom_du_soldat = extractions.extraire_feature(entities,
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
-				image_path=image_path)
+				image_path=image_path,
+														return_multiple_entities=True)
 
 		description_du_soldat["identite"] = \
 			{
