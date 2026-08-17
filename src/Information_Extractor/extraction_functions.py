@@ -246,7 +246,8 @@ def extraire_cheveux(lignes_description_physique,
 def extraire_feature(entities_list,
 					 lignes: OCRRecord,
 					 feature: str,
-					 image_path: str) -> dict:
+					 image_path: str,
+					 return_multiple_entities: bool = False) -> dict:
 	"""
 	Cette fonction extrait une feature précise d'un résultat de NER, et retrouve la ligne de base
 	qui contient
@@ -283,8 +284,12 @@ def extraire_feature(entities_list,
 		certainty = None
 
 	if entite_et_baseline:
-		extracted_feature, target_baseline_extracted_feature = (entite_et_baseline[0]["extracted"],
-																entite_et_baseline[0]["baseline"])
+		if return_multiple_entities is True:
+			extracted_feature, target_baseline_extracted_feature = (" ".join([item["extracted"] for item in entite_et_baseline]),
+			 [item["baseline"] for item in  entite_et_baseline])
+		else:
+			extracted_feature, target_baseline_extracted_feature = (entite_et_baseline[0]["extracted"],
+																	entite_et_baseline[0]["baseline"])
 	else:
 		extracted_feature, target_baseline_extracted_feature = None, None
 	return {
