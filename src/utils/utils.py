@@ -137,7 +137,7 @@ class OCRRecord():
 		self.record: list = []
 		for line in record:
 			Line: OCRLine = OCRLine(baseline=line['baseline'],
-									prediction=line['prediction'],
+									prediction=line['prediction'].replace("-", " - "),
 									prediction_with_deletion=None,
 									cuts=line['cuts'],
 									polygon=line['polygon'],
