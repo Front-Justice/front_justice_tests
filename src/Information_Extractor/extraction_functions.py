@@ -620,23 +620,31 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 
 def predire_genre(prenoms, dict_genre):
 	prenoms = list(set([utils.clean_small_string(prenom) for prenom in prenoms]))
-	liste_prenoms = list(dict_genre.keys())
+	liste_prenoms = [utils.strip_accent(prenom) for prenom in list(dict_genre.keys())]
 	liste_genres = []
+	prenoms_normalises = []
 	for prenom in prenoms:
-		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)
+		if len(prenom) < 4:
+			continue
+		prenom = utils.strip_accent(prenom).lower()
+		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms,
+																  target_word=prenom,
+																  load_file=False,
+																  weights=(2, 2, 1))
 		# On ne va prendre que des prénoms qu'on est sûrs de reconnaître. Plus de rappel, mais moins de précision.
 		if distance > 1:
 			continue
 		else:
-			current_genre = dict_genre[matching]
-			if current_genre == 1:
-				logger.info(f"Le prénom {prenom} (normalisé {matching}) est prédit comme féminin.")
-			liste_genres.append(current_genre)
+			prenoms_normalises.append(matching)
+	# On travaille sur la liste réduite.
+	prenoms_no_duplicates = list(set(prenoms_normalises))
+	for prenom in prenoms_no_duplicates:
+		current_genre = dict_genre[prenom]
+		if current_genre == 1:
+			logger.info(f"Le prénom (normalisé {matching}) est prédit comme féminin.")
+		liste_genres.append(current_genre)
 	masculin = liste_genres.count(2)
 	feminin = liste_genres.count(1)
-	print(liste_genres)
-	print(masculin)
-	print(feminin)
 	if masculin > feminin:
 		logger.info(f"La personne jugée semble être un homme: {prenoms}, {liste_genres}.")
 		return "M"

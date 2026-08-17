@@ -2080,7 +2080,14 @@ def delete_key(k, dic):
 	return dic
 
 
-
+def strip_accent(string):
+	replacements = {
+		"é": "e",
+		"è": "e",
+	}
+	for orig, reg in replacements.items():
+		string = string.replace(orig, reg)
+	return string
 
 def check_word_in_list(word_list: list, target_word: str, sensibility=0.7) -> (bool, str | None):
 	"""
@@ -2248,7 +2255,7 @@ def match_line_by_substring(corresponding_lines: OCRRecord,
 def levensthein_distance(string_a, string_b):
 	return distance(string_a, string_b)
 
-def weighted_levenshtein_distance(string_a, string_b):
+def weighted_levenshtein_distance(string_a, string_b, weights=(1.5, 1.5, 1)):
 	"""
 	Distance de levensthein pondérée adaptée à l'HTR: il doit être plus coûteux d'ajouter ou de supprimer
 	un caractère que d'effectuer une substitution
@@ -2256,7 +2263,7 @@ def weighted_levenshtein_distance(string_a, string_b):
 	:param string_b: la chaîne b
 	:return: la distance pondérée.
 	"""
-	return rapidfuzz.distance.Levenshtein.distance(s1=string_a, s2=string_b, weights=(1.5, 1.5, 1))
+	return rapidfuzz.distance.Levenshtein.distance(s1=string_a, s2=string_b, weights=weights)
 
 def rectangle_to_baseline(rectangle):
 	return [[rectangle.xmin, rectangle.ymin], [rectangle.xmax, rectangle.ymax]]

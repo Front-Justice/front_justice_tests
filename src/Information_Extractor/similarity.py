@@ -29,7 +29,11 @@ def retrieve_most_similar_sentence(sentence:str, queries:list, embedder, mode="s
 		return queries[distances.index(min(distances))]
 
 
-def find_closest_word_in_list(word_list: list, target_word: str, replacement_mapping: dict = None, load_file=False) -> list:
+def find_closest_word_in_list(word_list: list,
+							  target_word: str,
+							  replacement_mapping: dict = None,
+							  load_file=False,
+							  weights=(1.5, 1.5, 1)) -> list:
 	"""
 	Cette fonction cherche le mot le plus proche dans une liste de mots
 	:param sentence: la phrase cible
@@ -37,12 +41,12 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 	:param replacement_mapping: un mapping des caractères à modifier {"orig": "reg"}
 	:return: le mot le plus proche et les distances
 	"""
+	target_word = utils.nfc_normalize(target_word).lower()
 	if load_file:
 		with open(word_list, "r") as input_file:
 			list_of_words = [item.replace("\n", "") for item in input_file.readlines()]
 		word_list = list_of_words
 	distances = []
-	target_word = target_word.lower()
 	if replacement_mapping:
 		for key, value in replacement_mapping.items():
 			word_lower = target_word.replace(key, value)
@@ -53,11 +57,12 @@ def find_closest_word_in_list(word_list: list, target_word: str, replacement_map
 		elif isinstance(word, float):
 			distances.append(99)
 			continue
+		word = utils.nfc_normalize(word)
 		word_lower = word.lower()
 		if replacement_mapping:
 			for key, value in replacement_mapping.items():
 				word_lower = word_lower.replace(key, value)
-		dist = utils.weighted_levenshtein_distance(word_lower, target_word)
+		dist = utils.weighted_levenshtein_distance(word_lower, target_word, weights)
 		distances.append(dist)
 	try:
 		min_dist_index = distances.index(min(distances))
