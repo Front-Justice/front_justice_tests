@@ -647,7 +647,7 @@ def predire_genre(prenoms: list, dict_genre: dict):
 	for prenom in prenoms_no_duplicates:
 		current_genre = dict_genre[prenom]
 		if current_genre == 1:
-			logger.info(f"Le prénom (normalisé {matching}) est prédit comme féminin.")
+			logger.info(f"Le prénom normalisé {prenom} est prédit comme féminin.")
 		liste_genres.append(current_genre)
 	masculin = liste_genres.count(2)
 	feminin = liste_genres.count(1)
