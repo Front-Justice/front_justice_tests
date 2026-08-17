@@ -618,7 +618,13 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"role": role,
 			"certainty": 0}
 
-def predire_genre(prenoms, dict_genre):
+def predire_genre(prenoms: list, dict_genre: dict):
+	"""
+	Fonction qui prédit le genre d'une liste de prénoms à partir d'une liste d'autorité.
+	:param prenoms:
+	:param dict_genre:
+	:return:
+	"""
 	prenoms = list(set([utils.clean_small_string(prenom) for prenom in prenoms]))
 	liste_prenoms = [utils.strip_accent(prenom) for prenom in list(dict_genre.keys())]
 	liste_genres = []
