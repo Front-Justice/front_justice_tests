@@ -619,11 +619,10 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"certainty": 0}
 
 def predire_genre(prenoms, dict_genre):
-	prenoms = list(set(prenoms))
+	prenoms = list(set([utils.clean_small_string(prenom) for prenom in prenoms]))
 	liste_prenoms = list(dict_genre.keys())
 	liste_genres = []
 	for prenom in prenoms:
-		prenom = utils.clean_small_string(prenom)
 		matching, distance = similarity.find_closest_word_in_list(word_list=liste_prenoms, target_word=prenom, load_file=False)
 		# On ne va prendre que des prénoms qu'on est sûrs de reconnaître. Plus de rappel, mais moins de précision.
 		if distance > 1:
