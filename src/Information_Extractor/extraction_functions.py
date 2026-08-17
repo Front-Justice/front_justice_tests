@@ -619,7 +619,7 @@ def extraire_nom_et_fonction(prediction: str, pipeline, debug: bool = False):
 			"certainty": 0}
 
 def predire_genre(prenoms, dict_genre):
-	liste_prenoms = list(dict_genre.keys())
+	liste_prenoms = list(set(dict_genre.keys()))
 	liste_genres = []
 	for prenom in prenoms:
 		prenom = utils.clean_small_string(prenom)
