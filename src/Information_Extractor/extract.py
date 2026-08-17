@@ -1772,7 +1772,7 @@ class Extractor:
 
 
 		description_du_soldat["prediction"] = target_lines
-		target_lines = f"[1] {target_lines}"
+		target_lines = f"[1] {target_lines.replace('-', ' - ')}"
 		try:
 			entities = self.entity_spotting_pipeline(target_lines)
 		except IndexError:
