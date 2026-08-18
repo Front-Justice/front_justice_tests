@@ -521,7 +521,6 @@ class Pipeline:
 		current_dict = {}
 		loaded_image = Image.open(page["image_path"])
 		width, height = loaded_image.size
-		print(self.databases_dict["correspondance_minutiers"])
 		armee_normalisee = self.databases_dict["correspondance_minutiers"][page["image_path"].split("/")[-2]]
 		current_dict["armee"] = armee_normalisee
 
