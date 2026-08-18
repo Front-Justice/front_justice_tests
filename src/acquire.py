@@ -521,7 +521,8 @@ class Pipeline:
 		current_dict = {}
 		loaded_image = Image.open(page["image_path"])
 		width, height = loaded_image.size
-		armee_normalisee = self.databases_dict["correspondance_minutiers"][page["image_path"].split("/")[-1]]
+		print(self.databases_dict["correspondance_minutiers"])
+		armee_normalisee = self.databases_dict["correspondance_minutiers"][page["image_path"].split("/")[-2]]
 		current_dict["armee"] = armee_normalisee
 
 		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
@@ -935,8 +936,8 @@ def main(images_dir:str,
 	with open("src/Information_Extractor/databases/rangs_militaires.txt", "r") as rangs:
 		rangs_militaires = [item.replace("\n", "") for item in rangs.readlines()]
 
-	with open("src/Information_Extractor/databases/correspondance_armees_minute.json", "r") as rangs:
-		correspondance_minutiers = [item.replace("\n", "") for item in rangs.readlines()]
+	with open("src/Information_Extractor/databases/correspondance_armees_minute.json", "r") as correspondance:
+		correspondance_minutiers = json.load(correspondance)
 
 	with open("src/Information_Extractor/models/charge_identification/labels_dict.json", "r") as output_json:
 		charge_identification_labels = json.load(output_json)
