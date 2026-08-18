@@ -521,7 +521,10 @@ class Pipeline:
 		current_dict = {}
 		loaded_image = Image.open(page["image_path"])
 		width, height = loaded_image.size
-		armee_normalisee = self.databases_dict["correspondance_minutiers"][page["image_path"].split("/")[-2]]
+		try:
+			armee_normalisee = self.databases_dict["correspondance_minutiers"][page["image_path"].split("/")[-2]]
+		except (KeyError, IndexError):
+			armee_normalisee = "UNK"
 		current_dict["armee"] = armee_normalisee
 
 		# Tests de redimensionnement des images pour accélérer l'inférence avec Party, pas convainquant:
