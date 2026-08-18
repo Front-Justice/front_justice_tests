@@ -2244,8 +2244,8 @@ class Extractor:
 				closest, distance = None, None
 			jury_dict = {"extracted": jury_extrait}
 			if closest and distance > len(closest) / 2:
-				logger.warning("La normalisation du juré a échoué.")
-				jury_dict["normalized"] = processed_jure_name
+				logger.warning(f"La normalisation du juré a échoué: {processed_jure_name}.")
+				jury_dict["normalized"] = "UNK"
 			jury_dict["normalized"] = closest
 			logger.info(f"Juré extrait: {jury_extrait['persName']}, normalisé: {closest}")
 			processed_jures.append(jury_dict)
@@ -2259,7 +2259,9 @@ class Extractor:
 		processed_president_name = utils.clean_small_string(processed_president['persName'])
 		if processed_president_name != "":
 			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name, word_list=liste_presidents)
-		# TODO: ajouter les noms de jury au modèle de NER
+			if distance > len(closest) / 2:
+				logger.error(f"Le président du jury n'est pas identifié et ne semble pas être dans la base de données: {processed_president_name}.")
+				closest = "UNK"
 		else:
 			closest = "UNK"
 		normalized_president = closest
