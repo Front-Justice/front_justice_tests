@@ -2229,7 +2229,7 @@ class Extractor:
 						except KeyError:
 							table_dict[idx] = [
 								OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
-
+							]
 			except TypeError:
 				logger.error("Erreur dans la transcription pour la récupération des magistrats")
 				return {"president": {"extracted": None,
