@@ -2205,30 +2205,42 @@ class Extractor:
 				continue
 
 			# On itère sur les lignes identifiées par Kraken
-			for idx, predicted_line in enumerate(ocr_prediction):
-				prediction = predicted_line.prediction
-				image_path = predicted_line.image_path
-				baseline = predicted_line.baseline
-				# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
-				converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
-				is_in_box = utils.check_if_line_in_box(box_coord=box_as_rectangle, baseline=converted_baseline, intersect_ratio=0.7)
-				# On veut éviter que la ligne au dessus du tableau ne soit incluse.
-				test_string = utils.nfc_normalize("Code de justice militaire, de MM")
-				if test_string in prediction:
-					continue
-				# On vérifie que la ligne est bien dans la colonne 1
-				is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column_as_rectangle,
-																  baseline=converted_baseline)
-				if is_in_box is True:
-					try:
-						table_dict[idx].append(
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
-						)
+			try:
+				for idx, predicted_line in enumerate(ocr_prediction):
+					prediction = predicted_line.prediction
+					image_path = predicted_line.image_path
+					baseline = predicted_line.baseline
+					# Dans les cas où il y aurait plus de 2 points, on prend le premier et le dernier point
+					converted_baseline = [baseline[0][0], baseline[0][1], baseline[-1][0], baseline[-1][1]]
+					is_in_box = utils.check_if_line_in_box(box_coord=box_as_rectangle, baseline=converted_baseline, intersect_ratio=0.7)
+					# On veut éviter que la ligne au dessus du tableau ne soit incluse.
+					test_string = utils.nfc_normalize("Code de justice militaire, de MM")
+					if test_string in prediction:
+						continue
+					# On vérifie que la ligne est bien dans la colonne 1
+					is_in_correct_column = utils.check_if_line_in_box(box_coord=first_column_as_rectangle,
+																	  baseline=converted_baseline)
+					if is_in_box is True:
+						try:
+							table_dict[idx].append(
+								OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
+							)
 
-					except KeyError:
-						table_dict[idx] = [
-							OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
-						]
+						except KeyError:
+							table_dict[idx] = [
+								OCRLine(prediction=prediction, baseline=baseline, cuts=None, polygon=None, image_path=image_path)
+
+			except TypeError:
+				logger.error("Erreur dans la transcription pour la récupération des magistrats")
+				return {"president": {"extracted": None,
+									  "baseline": None,
+									  "predictions": None,
+									  "normalized": None},
+						"jures": None,
+						"greffier": None,
+						"commissaire": None,
+						"general": None}
+
 		table_des_magistrats = [item for item in table_dict.values()]
 		# On récupère les informations, en sachant que le premier est toujours le président
 		# TODO: on peut vérifier la présence du mot `président` dans la ligne transcrite
