@@ -330,7 +330,12 @@ class Reconciliator:
 			# On va compter les jours, mois, trimestre et année de guerre.
 			precision_date = len(self.date_proces.split("/"))
 			if len(self.date_proces.split("/")) == 2:
-				self.date_proces = self.date_proces.split("/")[0] + "/" + self.date_proces.split("/")[1] + "/19" + self.date_proces.split("/")[2]
+				try:
+					self.date_proces = self.date_proces.split("/")[0] + "/" + self.date_proces.split("/")[1] + "/19" + self.date_proces.split("/")[2]
+				except IndexError:
+					logger.error(f"La date du procès n'a pas pu être traitée: {self.date_proces}")
+					self.date_proces = None
+					return
 			if precision_date == 3:
 				# https://stackoverflow.com/a/8419655
 				d1 = datetime.strptime(debut_guerre, "%Y-%m-%d")
