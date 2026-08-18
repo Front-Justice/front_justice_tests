@@ -2040,6 +2040,9 @@ class Extractor:
 																				  ocr_prediction=ocr_prediction,
 																				  intersect_ratio=0.1)
 
+		if not corresponding_lines:
+			logger.error("La zone contenant les magistrats n'a pas été identifiée. On travaille sur l'ensemble de la page.")
+			corresponding_lines = ocr_prediction
 		# La date peut être sur 2 lignes, on vérifie qu'elles n'en sont qu'une
 		cejourdui_date, _ = utils.match_line_by_substring(corresponding_lines=corresponding_lines,
 														  string_to_match="CEJOURD'HUI")
