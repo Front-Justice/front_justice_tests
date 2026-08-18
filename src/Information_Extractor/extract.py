@@ -2241,12 +2241,12 @@ class Extractor:
 			if processed_jure_name != "":
 				closest, distance = similarity.find_closest_word_in_list(target_word=processed_jure_name,
 																		 word_list=self.liste_jures)
+				if distance > len(closest) / 2:
+					logger.warning(f"La normalisation du juré a échoué: {processed_jure_name}.")
+					closest = "UNK"
 			else:
 				closest, distance = None, None
 			jury_dict = {"extracted": jury_extrait}
-			if closest and distance > len(closest) / 2:
-				logger.warning(f"La normalisation du juré a échoué: {processed_jure_name}.")
-				jury_dict["normalized"] = "UNK"
 			jury_dict["normalized"] = closest
 			logger.info(f"Juré extrait: {jury_extrait['persName']}, normalisé: {closest}")
 			processed_jures.append(jury_dict)
