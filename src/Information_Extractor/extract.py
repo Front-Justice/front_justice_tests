@@ -1161,10 +1161,14 @@ class Extractor:
 																		 queries=[item for item in
 																				  types_majorite.values()],
 																		 embedder=self.sentence_camembert)
-			vote = {
-				"predicted": majorite['extracted'],
-				"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
-			}
+			try:
+				vote = {
+					"predicted": majorite['extracted'],
+					"extracted": {val: key for key, val in types_majorite.items()}[type_de_majorite]
+				}
+			except KeyError:
+				logger.error(r"Problème d'extraction du vote: {majorite['extracted']}")
+				vote = None
 			voix = vote
 		elif unanimite['extracted'] not in ['', None]:
 			voix = {"predicted": unanimite["extracted"],
