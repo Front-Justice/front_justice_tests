@@ -2,13 +2,126 @@ De Cavernette
 Devanlay
 Houët
 Lafarge
+Alloncle
+Poirée
 Micolon
 Néant
+Pasquet
 Frileux
+Angelaud
+Commère
+Rinieri
+Py
+Lecointe
+de Bataillors
+de Beauchêne
+de Bouet
+Bard
+Pacton
+Prat
+Pernot du Breuil
+de Dampierre
+de Laprade
+de Neverlée
+de Vanssay
+de Verdun
+Delvaux
+Dreyfus
+Drieu la Rochelle
+Dufourcq
+Duhamel
+de Mauduit
+de Dampierre
+Dutilleul
+Facquet
+Facton
+Fallain
+Renon
+Favre
+Frugier
+Haublin
+Jacquet
+Jung
+Jullien
+Kirsch
+Bertaux
+Lacroix
+Lalande
+Lambert
+Laprade
+Leclercq
+Lefèvre
+Leng
+Morizon
+Montcocol
+Avril
+Charton
+Muraton
+Mabit
+Méquin
+Chenaille
+Convreux
+Loubens
+Lenglet
+Leturque
+Painvin
+Clerc
+Le Tallec
+Leclercq
+Lalande
+Laplace
+Lamiral
+Le Cordener
+Ly
+Chosson
+Poisson
+Lambert
+Robert
+Schammel
+Thamin
+Gohier
+Genez
+Viraud
+Cartier
+Pallain
+Cornilleau
+Dutilleul
+Brac
+Fauveau
+Banier
+Frugier
+Massemin
+Vignol
+Lian
+Vinchon
+Vuillaume
+Duhem
+Coste
+Rivière
+Arnould
+Lacroix
+Renou
+Charbonnier
+Drevet
+Plourin
+Bernard
+Bauny
+Pelat
+Bourzat
+Quintin
 Roland
+Bienaymé
+Piketty
+Boileau
+Blanda
+Bloch
 Mons
+Dupat
+Nizery
 Meur
 Bigotte
+Blancheur
+Vattet
 Ruel
 Eudine
 Golvin
@@ -20,7 +133,9 @@ Andre
 Anquetil
 Arnoux
 Arvers
+Vallet
 Audet
+Boucher
 Aymer de la Chevalerie
 Barbancey
 Barberot
@@ -55,6 +170,9 @@ Cathiot
 Cellier
 Chaubet
 Choquet
+Chassel
+Charlier
+Cibert
 Clamens
 Clermonte
 Colas
@@ -71,9 +189,11 @@ de Falvelly
 de la Baume
 de la Chaise
 de La Fayette
+Villain
 de la Jonquière
 de Magnières
 de Maistre
+Voruz
 de Morcourt
 de Virieu
 Deletraz

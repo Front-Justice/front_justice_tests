@@ -1,6 +1,8 @@
 Bergeron
 Bonnet 
 Bralet
+Jouanne
+Lévy
 Brody
 Hoff
 Niman
@@ -22,6 +24,15 @@ Fabre
 Fayard
 Grimard
 Grouselles
+Crétin
+de Mecquenem
+Rossert
+Compagnon
+Le Clerc
+Gumard
+Lombard
+Henry
+Naulin
 Hayot
 Loubet
 Mac Mahon
