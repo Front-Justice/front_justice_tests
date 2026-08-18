@@ -2779,9 +2779,13 @@ def extract_lines_from_named_zone(annotations,
 			cropped.show()
 
 		# On cherche la ligne qui entre dans la zone zonée
-		corresponding_lines = match_lines_in_zones(ocr_prediction=ocr_prediction,
-														 zone_as_rectangle=zones_filtrees_as_rectangle,
-														 intersect_ratio=ratio)
+		try:
+			corresponding_lines = match_lines_in_zones(ocr_prediction=ocr_prediction,
+															 zone_as_rectangle=zones_filtrees_as_rectangle,
+															 intersect_ratio=ratio)
+		except TypeError:
+			logger.error(f"Impossible de récupérer les lignes correspondant à {target_zone}")
+			return None, None
 		corresponding_lines = vertical_order_lines(lines=corresponding_lines)
 		all_lines.append([ocr_prediction.index(item) for item in corresponding_lines])
 

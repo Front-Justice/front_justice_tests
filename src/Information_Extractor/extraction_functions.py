@@ -585,7 +585,7 @@ def extraire_sit_maritale(entity_dict, image_path, lignes):
 
 	if not situation_courante["extracted"]:
 		return situation_courante
-	situations = ["marié", "veuf", "célibataire"]
+	situations = ["marié", "veuf", "célibataire", "divorcé"]
 	situations_as_dict = {}
 	for situation in situations:
 		situations_as_dict[situation] = utils.similarite_ratcliff(situation_courante["extracted"].lower(), situation)

@@ -2038,8 +2038,6 @@ class Extractor:
 				]
 			  }
 		"""
-		if ocr_prediction is None:
-			print(f"Error with page {self.image_path}")
 		corresponding_lines, zone_magistrats = utils.extract_lines_from_named_zone(annotations=annotations,
 																				  target_zone="Magistrats",
 																				  show_images=False,
