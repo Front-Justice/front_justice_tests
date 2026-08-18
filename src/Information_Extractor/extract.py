@@ -54,13 +54,13 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=False)
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
 		
 		
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=False)
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
 		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
 		self.charge_identification_tokenizer = tokenizer
 
@@ -81,9 +81,9 @@ class Extractor:
 		self.kraken_model_transcription = kraken_model_transcription
 
 		entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting_large/")
-		entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-large", local_files_only=False)
+		entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-large", local_files_only=True)
 		# entity_spotting_model = AutoModelForTokenClassification.from_pretrained("src/Information_Extractor/models/entity_spotting/")
-		# entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=False)
+		# entity_spotting_tokenize = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
 		self.entity_spotting_pipeline = pipeline('ner',
 										model=entity_spotting_model,
 										tokenizer=entity_spotting_tokenize,
