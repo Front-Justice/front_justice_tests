@@ -2175,7 +2175,7 @@ def check_word_in_sentence(sentence: str, target_word: str | list, sensibility=0
 	if len(distances) == 0:
 		return False, False
 	elif len(distances) > 1:
-		log_print(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
+		logger.warning(f"Plus d'un mot trouvé, une erreur est possiblement survenue: {matching_word}."
 			  f"On prend le dernier mot identifié.")
 		# Dans ce cas on considère le dernier mot identifié, étant imprimé en fin de ligne.
 		return True, matching_word[1]

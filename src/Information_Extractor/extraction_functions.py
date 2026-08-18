@@ -312,7 +312,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 	ligne_greffier, _ = utils.match_line_by_substring(lignes_zone_magistrat, "pres ledit conseil")
 	baseline = ligne_greffier.baseline
 	prediction = ligne_greffier.prediction
-	greffier, form_greffier = utils.check_word_in_sentence(prediction, "Greffier")
+	greffier, form_greffier = utils.check_word_in_sentence(prediction, "Greffier", sensibility=.75)
 	if greffier is True:
 		debut_de_chaine = prediction.split(form_greffier)[0]
 	else:
