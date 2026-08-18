@@ -2152,7 +2152,18 @@ class Extractor:
 		column_annotation = utils.filter_zones(zones_magistrats, "Colonne")
 		lines_annotation = utils.filter_zones(zones_magistrats, "ligne")
 		lignes_table_triees = utils.vertical_order_zones(lines_annotation)
-		first_column, *_ = utils.horizontal_order_zones(column_annotation)
+		try:
+			first_column, *_ = utils.horizontal_order_zones(column_annotation)
+		except ValueError:
+			logger.error(f"Une erreur de zonage empêche de traiter les magistrats: {column_annotation}")
+			return {"president": {"extracted": None,
+						   "baseline": None,
+						   "predictions": None,
+						   "normalized": None},
+			 "jures": None,
+			 "greffier": None,
+			 "commissaire": None,
+			 "general": None}
 		first_column = first_column.coordinates
 		first_column_as_rectangle = self.rectangle(first_column[0][0],
 												   first_column[0][1],
