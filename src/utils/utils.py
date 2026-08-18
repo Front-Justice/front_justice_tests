@@ -2221,36 +2221,39 @@ def match_line_by_substring(corresponding_lines: OCRRecord,
 								n_gram=1)
 	else:
 		distances = []
-		for idx, ligne in enumerate(corresponding_lines):
-			prediction = ligne.prediction
-			prediction = prediction.lower()
-			prediction = nfc_normalize(prediction)
-			# On identifie la ligne pouvant contenir à l'effet de juger
-			if isinstance(string_to_match, list):
-				pass
-			else:
-				string_to_match = [string_to_match]
-			interm_distances = []
-			for item in string_to_match:
-				item = item.lower()
-				item = nfc_normalize(item)
-				if item in prediction:
-					interm_distances.append(9999)
-				elif len(prediction) < 10:
-					interm_distances.append(0)
+		try:
+			for idx, ligne in enumerate(corresponding_lines):
+				prediction = ligne.prediction
+				prediction = prediction.lower()
+				prediction = nfc_normalize(prediction)
+				# On identifie la ligne pouvant contenir à l'effet de juger
+				if isinstance(string_to_match, list):
+					pass
 				else:
-					# dist = similarite_ratcliff(prediction, string_to_match)
-					dist = fuzz.partial_ratio(prediction, item)
-					interm_distances.append(dist)
-			distances.append(max(interm_distances))
-		correct_line_index = distances.index(max(distances))
-		name_line = corresponding_lines[correct_line_index]
-		debug_zip = list(zip([item.prediction for item in corresponding_lines], distances))
-		if return_index is True:
-			return name_line, debug_zip, correct_line_index
-		else:
-			return name_line, debug_zip
-
+					string_to_match = [string_to_match]
+				interm_distances = []
+				for item in string_to_match:
+					item = item.lower()
+					item = nfc_normalize(item)
+					if item in prediction:
+						interm_distances.append(9999)
+					elif len(prediction) < 10:
+						interm_distances.append(0)
+					else:
+						# dist = similarite_ratcliff(prediction, string_to_match)
+						dist = fuzz.partial_ratio(prediction, item)
+						interm_distances.append(dist)
+				distances.append(max(interm_distances))
+			correct_line_index = distances.index(max(distances))
+			name_line = corresponding_lines[correct_line_index]
+			debug_zip = list(zip([item.prediction for item in corresponding_lines], distances))
+			if return_index is True:
+				return name_line, debug_zip, correct_line_index
+			else:
+				return name_line, debug_zip
+		except TypeError:
+			logger.error("La transcription semble être vide. On passe")
+			return None, None
 
 def levensthein_distance(string_a, string_b):
 	return distance(string_a, string_b)
