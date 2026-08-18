@@ -2290,7 +2290,10 @@ class Extractor:
 		greffier = extractions.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat,
 												 image_path=image_path,
 												 ner_pipeline=self.entity_spotting_pipeline)
-		processed_greffier_name = utils.clean_small_string(greffier['extracted']['persName'])
+		try:
+			processed_greffier_name = utils.clean_small_string(greffier['extracted']['persName'])
+		except KeyError:
+			processed_greffier_name = ""
 		if processed_greffier_name != "":
 			closest, distance = similarity.find_closest_word_in_list(target_word=processed_greffier_name,
 																	 word_list=self.liste_greffiers)
