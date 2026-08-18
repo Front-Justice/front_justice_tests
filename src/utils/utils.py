@@ -1190,6 +1190,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Trimestres de guerre",
 			  "Années de guerre",
 			  "Institution engagée",
+			  "Armée normalisée",
 			  "Lieu du procès",
 			  "Numéro du jugement",
 			  "Numéro d'ordre",
@@ -1374,6 +1375,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except (TypeError, KeyError):
 			institution = "UNK"
 		interm.append(institution)
+
+
+		# Lieu du procès
+		try:
+			armee = minute['informations_proces']['armee']
+		except (TypeError, KeyError):
+			armee = "UNK"
+		interm.append(armee)
 
 		try:
 			lieu_proces = minute['informations_proces']['lieu_jugement']['siège']

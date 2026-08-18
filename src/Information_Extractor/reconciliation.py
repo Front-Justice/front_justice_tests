@@ -52,6 +52,7 @@ class Reconciliator:
 		self.chef_accusation_normalise = None
 		self.images_path = None
 		self.annotations = None
+		self.armee = None
 		self.profession_normalisee = None
 		self.date_proces_orig = None
 		self.date_naissance = None
@@ -474,6 +475,11 @@ class Reconciliator:
 		Cette fonction récupèrer l'information qui ne se répète pas.
 		:return:
 		"""
+
+		try:
+			self.armee = self.annotations_page_1["armee"]
+		except KeyError:
+			self.armee = "UNK"
 		try:
 			self.decision_tribunal = self.annotations_page_3["extractions"]["decision_tribunal"]
 			self.decision_tribunal["decision_normalisee"] = self.condamnation
@@ -885,6 +891,7 @@ class Reconciliator:
 					"plusieurs_soldats": self.plusieurs_soldats
 				},
 				"informations_proces": {"numero_ordre": self.numero_ordre,
+										"armee": self.armee,
 										"numero_jugement": self.numero_jugement,
 										"lieu_jugement": self.lieu_jugement,
 										"date_du_proces": {"date_reconciliee": self.date_proces,
@@ -947,6 +954,7 @@ class Reconciliator:
 				"informations_proces": {"numero_ordre": self.numero_ordre,
 										"numero_jugement": self.numero_jugement,
 										"lieu_jugement": self.lieu_jugement,
+										"armee": self.armee,
 										"date_du_proces": {"date_reconciliee": self.date_proces,
 														   "date_originelle": self.date_proces_orig,
 									   "jours_de_guerre": self.jours_guerre,
