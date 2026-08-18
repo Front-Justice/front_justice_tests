@@ -54,13 +54,13 @@ class Extractor:
 
 		# On initialise une pipeline de NER avec un modèle camembert adapté
 		self.date_proces = ""
-		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=True)
+		self.sentence_camembert = SentenceTransformer("dangvantuan/sentence-camembert-large", device=device, local_files_only=False)
 		
 		
 
 		self.GeoExtractor = geoextractor.GeoExtractor()
 		self.minute_courante = minutier
-		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=True)
+		tokenizer = AutoTokenizer.from_pretrained("almanach/camembert-base", local_files_only=False)
 		self.charge_identification_model = CamembertForSequenceClassification.from_pretrained("src/Information_Extractor/models/charge_identification")
 		self.charge_identification_tokenizer = tokenizer
 
