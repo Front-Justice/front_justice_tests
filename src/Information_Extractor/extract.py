@@ -73,6 +73,7 @@ class Extractor:
 		self.professions_et_categories_sociopro = databases_dict["professions_et_categories_sociopro"]
 		self.dictionnaire_professions_categories = databases_dict["dictionnaire_professions_categories"]
 		self.liste_presidents =  databases_dict["liste_presidents"]
+		self.liste_greffiers =  databases_dict["liste_greffiers"]
 		self.liste_jures = databases_dict["liste_jures"]
 		self.rangs_militaires = databases_dict["rangs_militaires"]
 		self.charge_identification_labels = databases_dict["charge_identification_labels"]
@@ -2254,11 +2255,11 @@ class Extractor:
 			processed_jures.append("Juré manquant")
 		processed_president = extractions.extraire_nom_et_fonction(" ".join(line.prediction for line in president),
 																   self.entity_spotting_pipeline)
-		with open("src/Information_Extractor/databases/liste_presidents.txt", "r") as input_presidents:
-			liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
+
 		processed_president_name = utils.clean_small_string(processed_president['persName'])
 		if processed_president_name != "":
-			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name, word_list=liste_presidents)
+			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name,
+																	 word_list=self.liste_presidents)
 			if distance > len(closest) / 2:
 				logger.error(f"Le président du jury n'est pas identifié et ne semble pas être dans la base de données: {processed_president_name}.")
 				closest = "UNK"
@@ -2287,6 +2288,17 @@ class Extractor:
 		greffier = extractions.extraire_greffier(lignes_zone_magistrat=lignes_zone_magistrat,
 												 image_path=image_path,
 												 ner_pipeline=self.entity_spotting_pipeline)
+		processed_greffier_name = utils.clean_small_string(greffier['extracted']['persName'])
+		if processed_greffier_name != "":
+			closest, distance = similarity.find_closest_word_in_list(target_word=processed_greffier_name,
+																	 word_list=self.liste_greffiers)
+			if distance > len(closest) / 2:
+				logger.error(
+					f"Le greffier n'est pas identifié et ne semble pas être dans la base de données: {processed_greffier_name}.")
+				closest = "UNK"
+		else:
+			closest = "UNK"
+		greffier["normalized"] = closest
 		commissaire = extractions.extraire_commissaire(lignes_zone_magistrat=lignes_zone_magistrat,
 													   ner_pipeline=self.entity_spotting_pipeline,
 													   image_path=image_path)

@@ -1204,6 +1204,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			  "Juré 4 (extrait)",
 			  "Juré 4 (normalisé)",
 			  "Greffier",
+			  "Greffier (normalisé)",
 			  "Commissaire",
 			  "Général nommant",
 			  "Date du crime ou du délit",
@@ -1430,6 +1431,14 @@ def convert_to_csv(extractions: dict, outpath: str):
 		except  (KeyError, TypeError):
 			greffier = "UNK"
 		interm.append(greffier)
+
+
+		# Greffier normalise (on n'extrait pas les rôles)
+		try:
+			greffier_normalise = minute['informations_proces']['magistrats']['greffier']['normalized']
+		except  (KeyError, TypeError):
+			greffier_normalise = "UNK"
+		interm.append(greffier_normalise)
 
 		# Commissaire du gouvernement (on n'extrait pas les rôles)
 		try:

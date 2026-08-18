@@ -923,6 +923,10 @@ def main(images_dir:str,
 
 	with open("src/Information_Extractor/databases/liste_presidents.txt", "r") as input_presidents:
 		liste_presidents = [item.replace("\n", "") for item in input_presidents.readlines()]
+
+	with open("src/Information_Extractor/databases/liste_greffiers.txt", "r") as input_presidents:
+		liste_greffiers = [item.replace("\n", "") for item in input_presidents.readlines()]
+
 	with open("src/Information_Extractor/databases/liste_jures.txt", "r") as input_presidents:
 		liste_jures = [item.replace("\n", "") for item in input_presidents.readlines()]
 
@@ -944,6 +948,7 @@ def main(images_dir:str,
 								"rangs_militaires": rangs_militaires,
 								"liste_jures": liste_jures,
 								"liste_presidents": liste_presidents,
+					  "liste_greffiers": liste_greffiers,
 					  "professions_et_categories_sociopro": professions_et_categories_sociopro,
 					  "dictionnaire_professions_categories": dictionnaire_professions_categories}
 
