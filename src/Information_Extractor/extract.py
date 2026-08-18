@@ -175,8 +175,17 @@ class Extractor:
 																					 loaded_image=loaded_image,
 																					 ocr_prediction=ocr_prediction,
 																					 intersect_ratio=0.7)
-
-		kraken_prediction = " ".join([line.prediction for line in corresponding_lines]).strip()
+		try:
+			kraken_prediction = " ".join([line.prediction for line in corresponding_lines]).strip()
+		except TypeError:
+			logger.error("L'extraction du lieu du jugement a échoué.")
+			return {"institution": None,
+				"siège": None,
+				"bbox": None,
+				"baseline": None,
+				"certitude": None,
+				"predictions": {"party": None,
+								"kraken": None}}
 		corresponding_baselines = [line.baseline for line in corresponding_lines]
 
 		# On transcrit avec party
