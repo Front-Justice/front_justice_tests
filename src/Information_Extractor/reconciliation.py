@@ -134,6 +134,7 @@ class Reconciliator:
 				condamnation_extraite = None
 			if condamnation_extraite:
 				distance_acquittement = utils.similarite_ratcliff(string_a=condamnation_extraite, string_b="acquitte")
+
 				distance_condamnation = utils.similarite_ratcliff(string_a=condamnation_extraite, string_b="condamne")
 			else:
 				self.condamnation = condamnation
