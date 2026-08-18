@@ -1334,7 +1334,7 @@ class Extractor:
 		# sauf quand elle n'est pas renseignée
 		try:
 			target_line = [corresponding_lines[1]]
-		except IndexError:
+		except (IndexError, TypeError):
 			logger.error(f"La date du crime ou délit n'a pas été identifiée. "
 						 f"Pas de ligne identifiée dans la zone de date du crime.")
 			return {"bbox": date_zone,
