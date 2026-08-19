@@ -1540,7 +1540,7 @@ class Extractor:
 			corresponding_lines = utils.vertical_order_lines(corresponding_lines)
 		except TypeError:
 			logger.error("Erreur d'ordonnement des lignes. On utilise toute la page")
-			corresponding_lines = ocr_prediction
+			corresponding_lines = utils.vertical_order_lines(ocr_prediction)
 		if not corresponding_lines:
 			logger.error("L'inculpation n'a pas été trouvée par YOLO. On utilise toute la page.")
 			corresponding_lines = ocr_prediction
