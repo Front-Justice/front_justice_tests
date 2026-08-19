@@ -148,6 +148,10 @@ class Reconciliator:
 		else:
 			self.condamnation = condamnation
 
+		if self.condamnation == "acquittement" and peine:
+			logger.info("L'acquittement est prédit mais il y a une peine identifiée: le soldat a été condamné.")
+			self.condamnation = "condamnation"
+
 	def _check_multiple_soldiers(self):
 		try:
 			if any(page["extractions"] == {"commentaire": "Plusieurs soldats"} for page in self.minute_list):
@@ -215,53 +219,58 @@ class Reconciliator:
 		try:
 			age_soldat = self.annotations_page_2["extractions"]["soldat"]["identite"]["age"]["extracted"]
 		except (IndexError, TypeError, KeyError):
-			logging.error("L'âge n'a pas été identifié en page 2.")
-			logging.error(f"Prediction: {prediction}")
-			logging.error(f"Entités: {entites}")
+			logger.error("L'âge n'a pas été identifié en page 2.")
+			logger.error(f"Prediction: {prediction}")
+			logger.error(f"Entités: {entites}")
 			age_soldat = None
 		if self.date_proces and date_page_1:
 			try:
 				age_theorique = utils.calcule_age(date_naissance=date_page_1, date_proces=self.date_proces)
 			except (AttributeError, TypeError, KeyError):
-				logging.error(f"Le calcul de l'âge a échoué: date de naissance: {date_page_1}; date du procès: {self.date_proces}")
+				logger.error(f"Le calcul de l'âge a échoué: date de naissance: {date_page_1}; date du procès: {self.date_proces}")
 				age_theorique = None
 			if age_theorique == age_soldat:
-				logging.info(f"L'âge théorique concorde avec l'âge du soldat: {age_soldat} ans. Les informations sont correctes.")
+				logger.info(f"L'âge théorique concorde avec l'âge du soldat: {age_soldat} ans. Les informations sont correctes.")
 				self.age_soldat = age_soldat
 			elif age_theorique != age_soldat and age_soldat:
 				try:
 					if 18 < int(age_soldat) < 80:
-						logging.info(f"L'âge extrait du soldat est vraisemblable: {age_soldat}.")
+						logger.info(f"L'âge extrait du soldat est vraisemblable: {age_soldat}.")
 						self.age_soldat = age_soldat
 					else:
-						logging.error(f"L'âge extrait du soldat est invraisemblable. On prend l'âge théorique: {age_theorique}")
+						logger.error(f"L'âge extrait du soldat est invraisemblable. On prend l'âge théorique: {age_theorique}")
 						self.age_soldat = age_theorique
 				except ValueError:
-					logging.error(f"L'âge du soldat n'a pas été correctement extrait: {age_soldat}. On prend l'âge calculé.")
-					logging.error(f"Prediction: {prediction}")
-					logging.error(f"Entités: {entites}")
+					logger.error(f"L'âge du soldat n'a pas été correctement extrait: {age_soldat}. On prend l'âge calculé.")
+					logger.error(f"Prediction: {prediction}")
+					logger.error(f"Entités: {entites}")
 					self.age_soldat = age_theorique
 			elif not age_soldat and age_theorique:
-				logging.info(f"Âge non identifié. Âge calculé: {age_theorique}")
+				logger.info(f"Âge non identifié. Âge calculé: {age_theorique}")
 				self.age_soldat = age_theorique
 			else:
 				self.age_soldat = None
 		else:
-			logging.info(f"L'âge du soldat ne peut être recalculé. On garde l'âge identifié: {age_soldat}.")
+			logger.info(f"L'âge du soldat ne peut être recalculé. On garde l'âge identifié: {age_soldat}.")
 			self.age_soldat = age_soldat
 		try:
 			self.age_soldat = int(self.age_soldat)
 		except (ValueError, TypeError):
-			logging.error(f"L'âge du soldat n'a pas été correctement extrait: {self.age_soldat}.")
+			logger.error(f"L'âge du soldat n'a pas été correctement extrait: {self.age_soldat}.")
 			self.age_soldat = None
 		if self.age_soldat and date_page_1:
 			annee_naissance = date_page_1.split("/")[-1]
 			verif_age = 1912 < int(self.age_soldat) + int(annee_naissance) < 1921
 			if verif_age is True:
-				logging.info("Âge du soldat correspondant avec les dates de la guerre.")
+				logger.info("Âge du soldat correspondant avec les dates de la guerre.")
 			else:
-				logging.error(f"Âge du soldat discordant avec les années de guerre: {self.age_soldat} et {annee_naissance}.")
+				logger.error(f"Âge du soldat discordant avec les années de guerre: {self.age_soldat} et {annee_naissance}.")
 				self.age_soldat = None
+		
+		if self.date_naissance is None and self.age_soldat and self.date_proces:
+			annee_proces = self.date_proces.split("/")[-1]
+			self.date_naissance = int(annee_proces) - self.age_soldat
+			logger.info(f"On prédit l'année de naissance à partir de l'âge du soldat et de la date du procès: {self.date_naissance}")
 
 
 	def _reconciliate_trial_date(self):
@@ -296,27 +305,27 @@ class Reconciliator:
 				return
 			# Cas le plus simple, toutes les trois dates s'accordent
 			if all([item == filtered_dates[0] for item in filtered_dates[1:]]):
-				logging.info(f"Toutes les dates du procès s'accordent: {filtered_dates[0]}")
+				logger.info(f"Toutes les dates du procès s'accordent: {filtered_dates[0]}")
 				self.date_proces = filtered_dates[0]
 			else:
-				logging.info(f"Il y a désaccord dans les dates du procès retenues: {filtered_dates}")
+				logger.info(f"Il y a désaccord dans les dates du procès retenues: {filtered_dates}")
 				# Si la taille est de 2, on a 2 options possibles distinctes, on peut pas trancher sur les fréquences
 				if len(filtered_dates) == 2:
-					logging.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
+					logger.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
 					self.date_proces = self.reconciliate_date(filtered_dates[0], filtered_dates[1])
-					logging.info(f"Date du procès conservées: {self.date_proces}")
+					logger.info(f"Date du procès conservées: {self.date_proces}")
 
 				# Si la taille est de 3
 				else:
 					# On regarde la précision des dates récupérées
 					full_precision_date = [item for item in filtered_dates if len(item.split("/")) == 3]
 					if len(full_precision_date) == 1:
-						logging.info(f"Une date du procès précise: {full_precision_date[0]}")
+						logger.info(f"Une date du procès précise: {full_precision_date[0]}")
 						self.date_proces = full_precision_date[0]
 					elif len(full_precision_date) == 2:
-						logging.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
+						logger.info(f"Deux dates du procès retenues: {filtered_dates[0], filtered_dates[1]}")
 						self.date_proces = self.reconciliate_date(full_precision_date[0], full_precision_date[1])
-						logging.info(f"Date du procès conservées: {self.date_proces}")
+						logger.info(f"Date du procès conservées: {self.date_proces}")
 					else:
 						dictionnary = {}
 						for date in filtered_dates:
@@ -325,7 +334,7 @@ class Reconciliator:
 							except KeyError:
 								dictionnary[date] = 1
 						dict_sorted_by_freq = sorted(dictionnary, key=dictionnary.get, reverse=True)
-						logging.info(f"La date du procès la plus fréquente est: {dict_sorted_by_freq[0]} parmi {filtered_dates}")
+						logger.info(f"La date du procès la plus fréquente est: {dict_sorted_by_freq[0]} parmi {filtered_dates}")
 						self.date_proces = dict_sorted_by_freq[0]
 		if self.date_proces:
 			debut_guerre = "1914-09-03"
@@ -478,7 +487,7 @@ class Reconciliator:
 		"""
 
 		try:
-			self.armee = self.annotations_page_1["armee"]
+			self.armee = self.annotations_page_1["extractions"]["armee"]
 		except KeyError:
 			self.armee = "UNK"
 		try:
@@ -845,7 +854,7 @@ class Reconciliator:
 			nom_page_4c = None
 		liste_noms = [nom_page_1, nom_page_2_a, nom_page_2_b, nom_page_3, nom_page_4a, nom_page_4b, nom_page_4c]
 		if all([item == liste_noms[0] for item in liste_noms[1:]]):
-			logging.info(f"Tous les noms du soldat correspondent: {liste_noms[0]}")
+			logger.info(f"Tous les noms du soldat correspondent: {liste_noms[0]}")
 			self.nom_du_soldat = nom_page_1
 			self.certitude_nom_du_soldat = 1
 		else:

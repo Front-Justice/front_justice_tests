@@ -1,7 +1,5 @@
-###############
-import json
+
 ## Script d'extraction à partir des segmentations. À lier avec le script "segmentation_kraken_yolo.
-import pandas as pd
 ###############
 import unicodedata
 
@@ -9,7 +7,6 @@ import torch
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline, CamembertForSequenceClassification
 from sentence_transformers import SentenceTransformer
 import src.Information_Extractor.similarity as similarity
-import glob
 import re
 from src.utils.utils import OCRRecord, YOLOZone
 from src.utils.utils import OCRLine
@@ -481,6 +478,8 @@ class Extractor:
 													   lignes_description_du_soldat,
 													   "prénom_du_soldat",
 													   image_path=image_path)
+		if prenom_du_soldat['extracted'] is None:
+			logger.error("Le prénom du soldat n'a pas été identifié.")
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
@@ -1845,6 +1844,8 @@ class Extractor:
 				image_path=image_path,
 														return_multiple_entities=True)
 
+		if prenom_du_soldat['extracted'] is None:
+			logger.error("Le prénom du soldat n'a pas été identifié.")
 		description_du_soldat["identite"] = \
 			{
 				"prenom": prenom_du_soldat,
