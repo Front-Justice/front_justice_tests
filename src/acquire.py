@@ -559,19 +559,20 @@ class Pipeline:
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
 			current_dict['soldat'] = None
-			return zone_dict, current_dict
 		else:
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
 				annotations=zones_page_1,
 			image_path=page["image_path"])
 
-
-		accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			show_images=False,
-			loaded_image=loaded_image)
+		if "Inculpation_antecedents" in zones_manquantes:
+			accusation_antecedents = None
+		else:
+			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				show_images=False,
+				loaded_image=loaded_image)
 		try:
 			current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
 			current_dict["antécédents"] = accusation_antecedents["antécédents"]
@@ -1030,7 +1031,10 @@ if __name__ == '__main__':
 	arguments.add_argument("-up", "--use_party", help="Use party to confirm key OCR predictions", default=True)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
-	target = int(arguments.target)
+	if arguments.target:
+		target = int(arguments.target)
+	else:
+		target = None
 	focus = int(arguments.focus) if arguments.focus is not None else None
 	workers = int(arguments.workers)
 	device = arguments.device
