@@ -559,6 +559,7 @@ class Pipeline:
 		# On extrait le nom et prénom du soldat
 		if "Description du Soldat" in zones_manquantes:
 			current_dict['soldat'] = None
+			return zone_dict, current_dict
 		else:
 			current_dict['soldat'] = self.extractor.extraire_description_soldat_NER_p1(
 				ocr_prediction=self.current_page_transcription,
