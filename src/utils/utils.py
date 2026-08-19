@@ -1319,7 +1319,7 @@ def convert_to_csv(extractions: dict, outpath: str):
 			try:
 				interm.append(f'{minute["metadata"]["images"][0].split("/")[-1].split(".")[0]}-{minute["metadata"]["images"][-1].split("/")[-1].split(".")[0]}')
 			except TypeError:
-				logger.log(f"Error with minute {idx_minute} metadata.")
+				logger.error(f"Error with minute {idx_minute} metadata.")
 				interm.append("ERR")
 		else:
 			interm.append("UNK")
