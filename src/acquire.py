@@ -567,16 +567,19 @@ class Pipeline:
 			image_path=page["image_path"])
 
 
-		accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
-			ocr_prediction=self.current_page_transcription,
-			annotations=zones_page_1,
-			show_images=False,
-			loaded_image=loaded_image)
-		try:
-			current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
-			current_dict["antécédents"] = accusation_antecedents["antécédents"]
-		except TypeError:
-			pass
+		if "Inculpation_antecedents" in zones_manquantes:
+			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
+		else:
+			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
+				ocr_prediction=self.current_page_transcription,
+				annotations=zones_page_1,
+				show_images=False,
+				loaded_image=loaded_image)
+			try:
+				current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
+				current_dict["antécédents"] = accusation_antecedents["antécédents"]
+			except TypeError:
+				pass
 
 
 
@@ -663,12 +666,13 @@ class Pipeline:
 
 	def workflow(self,
 				 minute:dict,
+				 target:str|None=None,
 				 start_after:int=0):
 		"""
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
 		:param minute: le minutier complet, organisé en minutes
-		:param target: [DEBUG] la minute à traiter dans le corpus
+		:param target: [DEBUG] l'image à traiter dans le corpus
 		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
 		"""
@@ -697,6 +701,9 @@ class Pipeline:
 						continue
 					else:
 						image_index += 1
+					if target:
+						if page['image_path'] != target:
+							continue
 					# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 					if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
 						utils.log_print("---", print_message=True)
@@ -730,6 +737,7 @@ class Pipeline:
 					page["extractions"] = {**annotations, **ajouts}
 					page["zones"] = zones
 					self.reaffecter_dictionnaire(pages)
+				if target is None:
 					reconciliator = reconciliation.Reconciliator(minute_list=pages,
 																 previous_minute=previous_pages,
 																 databases=self.databases_dict)
@@ -860,6 +868,13 @@ def main(images_dir:str,
 		 workers:int=1,
 		 focus=None):
 	images = glob.glob(f"{images_dir}/*.jpg")
+	if target:
+		images = [item for item in images if item == target]
+	if start_after:
+		images = [item for item in images  if int(item.split("/")[-1].replace(".jpg", "")) > start_after]
+		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0]))
+	else:
+		target = None
 	try:
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
@@ -955,7 +970,7 @@ def main(images_dir:str,
 	minute_log = {}
 	if focus:
 		minutes = {k:v for k, v in minutes.items() if k==focus}
-	if workers != 1 and not target:
+	if workers != 1:
 		torch.set_num_threads(1)
 		torch.set_num_interop_threads(1)
 		with mp.Pool(processes=workers) as pool:
@@ -966,10 +981,6 @@ def main(images_dir:str,
 				minute_log[minute_n] = log
 	else:
 		for idx, minute in minutes.items():
-			if int(target) != idx:
-				continue
-			else:
-				logger.info(f"On cible la minute {idx}")
 			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute},
 																				images_dir=images_dir,
 																				device=device,
@@ -1030,10 +1041,7 @@ if __name__ == '__main__':
 	arguments.add_argument("-up", "--use_party", help="Use party to confirm key OCR predictions", default=True)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
-	if arguments.target:
-		target = int(arguments.target)
-	else:
-		target = None
+	target = arguments.target
 	focus = int(arguments.focus) if arguments.focus is not None else None
 	workers = int(arguments.workers)
 	device = arguments.device
