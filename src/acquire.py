@@ -410,6 +410,7 @@ class Pipeline:
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
 			print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			logger.info(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+			logger.info(f"Is file: {os.path.isfile(target_transcription)} | Resegment: {self.resegment} | Retranscribe: {self.retranscribe} | Force resegment: {force_resegment}")
 			self.current_page_transcription = self.transcription_kraken(
 				image=page["image_path"],
 				transcription_only=self.resegment is False
