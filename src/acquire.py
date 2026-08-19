@@ -408,7 +408,8 @@ class Pipeline:
 		"""
 		target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.json')}"
 		if not os.path.isfile(target_transcription) or self.resegment or self.retranscribe or force_resegment:
-			utils.log_print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+			print(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+			logger.info(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = self.transcription_kraken(
 				image=page["image_path"],
 				transcription_only=self.resegment is False
@@ -428,13 +429,14 @@ class Pipeline:
 			# utils.log_print(f"Fait en {elapsed} secondes")
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
-			utils.log_print("Found existing kraken transcription: " + target_transcription)
+			print("Found existing kraken transcription: " + target_transcription)
+			logger.info(f"Segmentation/Transcription with kraken of page {page['image_path']}")
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
 			t1 = time.time()
 			image = PIL.Image.open(page["image_path"])
 			if self.current_page_transcription is None:
-				utils.log_print(f"Error with page {page['image_path']}")
+				logger.error(f"Error with page {page['image_path']}")
 			# try:
 			# 	for line in self.current_page_transcription:
 			# 		line.prediction_with_deletion = None
@@ -471,6 +473,7 @@ class Pipeline:
 		if len(zones_manquantes) == 0:
 			target_transcription = f"results/ocr_predictions/{page['image_path'].replace('/', '_').replace('.jpg', '.ajouts.json')}"
 			if not os.path.isfile(target_transcription) or self.retranscribe is True:
+				logger.info(f"Transcribing glosses for page {page['image_path']}")
 				lignes_glosees = self.transcription_kraken(
 					image=page["image_path"],
 					transcription_only=False,
