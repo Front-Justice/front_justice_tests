@@ -567,19 +567,16 @@ class Pipeline:
 			image_path=page["image_path"])
 
 
-		if "Inculpation_antecedents" in zones_manquantes:
-			current_dict["Inculpation"], current_dict["Antécédents"] = None, None
-		else:
-			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
-				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1,
-				show_images=False,
-				loaded_image=loaded_image)
-			try:
-				current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
-				current_dict["antécédents"] = accusation_antecedents["antécédents"]
-			except TypeError:
-				pass
+		accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			show_images=False,
+			loaded_image=loaded_image)
+		try:
+			current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
+			current_dict["antécédents"] = accusation_antecedents["antécédents"]
+		except TypeError:
+			pass
 
 
 
@@ -672,7 +669,7 @@ class Pipeline:
 		La fonction qui classe les pages, produit les minutes
 		et distribue les tâches en fonction de la classe de la page
 		:param minute: le minutier complet, organisé en minutes
-		:param target: [DEBUG] l'image à traiter dans le corpus
+		:param target: [DEBUG] la minute à traiter dans le corpus
 		:param start_after: [DEBUG] commencer le traitement avec l'image X
 		:return:
 		"""
@@ -702,7 +699,7 @@ class Pipeline:
 					else:
 						image_index += 1
 					if target:
-						if page['image_path'] != target:
+						if minute_id != target:
 							continue
 					# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 					if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
