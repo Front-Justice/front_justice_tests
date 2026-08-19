@@ -967,8 +967,9 @@ def main(images_dir:str,
 	else:
 		for idx, minute in minutes.items():
 			if int(target) != idx:
-				logger.info(f"On passe la minute {idx}")
 				continue
+			else:
+				logger.info(f"On cible la minute {idx}")
 			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute},
 																				images_dir=images_dir,
 																				device=device,
