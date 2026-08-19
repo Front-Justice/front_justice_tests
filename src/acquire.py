@@ -431,7 +431,7 @@ class Pipeline:
 			utils.serialize_dict(self.current_page_transcription.to_json(), target_transcription)
 		else:
 			print("Found existing kraken transcription: " + target_transcription)
-			logger.info(f"Segmentation/Transcription with kraken of page {page['image_path']}")
+			logger.info("Found existing kraken transcription: " + target_transcription)
 			self.current_page_transcription = OCRRecord()
 			self.current_page_transcription.from_json(path=target_transcription)
 			t1 = time.time()
@@ -484,7 +484,8 @@ class Pipeline:
 				)
 				utils.serialize_dict(lignes_glosees.to_json(), target_transcription)
 			else:
-				utils.log_print("Found existing kraken transcription: " + target_transcription)
+				print("Found existing kraken transcription: " + target_transcription)
+				logger.info("Found existing kraken transcription of glosses: " + target_transcription)
 				lignes_glosees = OCRRecord()
 				lignes_glosees.from_json(path=target_transcription)
 
