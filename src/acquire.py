@@ -699,7 +699,7 @@ class Pipeline:
 					else:
 						image_index += 1
 					if target:
-						if minute_id != target:
+						if minute_id != int(target):
 							continue
 					# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 					if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
@@ -734,7 +734,6 @@ class Pipeline:
 					page["extractions"] = {**annotations, **ajouts}
 					page["zones"] = zones
 					self.reaffecter_dictionnaire(pages)
-				if target is None:
 					reconciliator = reconciliation.Reconciliator(minute_list=pages,
 																 previous_minute=previous_pages,
 																 databases=self.databases_dict)
