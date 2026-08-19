@@ -566,14 +566,12 @@ class Pipeline:
 				annotations=zones_page_1,
 			image_path=page["image_path"])
 
-		if "Inculpation_antecedents" in zones_manquantes:
-			accusation_antecedents = None
-		else:
-			accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
-				ocr_prediction=self.current_page_transcription,
-				annotations=zones_page_1,
-				show_images=False,
-				loaded_image=loaded_image)
+
+		accusation_antecedents =  self.extractor.extraire_inculpation_et_antecedents(
+			ocr_prediction=self.current_page_transcription,
+			annotations=zones_page_1,
+			show_images=False,
+			loaded_image=loaded_image)
 		try:
 			current_dict["chef_accusation"] = accusation_antecedents["inculpation"]
 			current_dict["antécédents"] = accusation_antecedents["antécédents"]
