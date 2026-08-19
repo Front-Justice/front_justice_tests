@@ -663,7 +663,6 @@ class Pipeline:
 
 	def workflow(self,
 				 minute:dict,
-				 target:str|None=None,
 				 start_after:int=0):
 		"""
 		La fonction qui classe les pages, produit les minutes
@@ -698,9 +697,6 @@ class Pipeline:
 						continue
 					else:
 						image_index += 1
-					if target:
-						if minute_id != int(target):
-							continue
 					# Attention, cause un bug si la page n'est pas présente dans la liste. Effets non prévus.
 					if page['classe'] in ["page_2", "page_1", "page_3", "page_4"]:
 						utils.log_print("---", print_message=True)
@@ -864,13 +860,6 @@ def main(images_dir:str,
 		 workers:int=1,
 		 focus=None):
 	images = glob.glob(f"{images_dir}/*.jpg")
-	if target:
-		images = [item for item in images if item == target]
-	if start_after:
-		images = [item for item in images  if int(item.split("/")[-1].replace(".jpg", "")) > start_after]
-		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0]))
-	else:
-		target = None
 	try:
 		images.sort(key=lambda x: int(x.split("/")[-1].split(".jpg")[0].split("_")[-1]))
 	except:
@@ -966,7 +955,7 @@ def main(images_dir:str,
 	minute_log = {}
 	if focus:
 		minutes = {k:v for k, v in minutes.items() if k==focus}
-	if workers != 1:
+	if workers != 1 and not target:
 		torch.set_num_threads(1)
 		torch.set_num_interop_threads(1)
 		with mp.Pool(processes=workers) as pool:
@@ -977,6 +966,9 @@ def main(images_dir:str,
 				minute_log[minute_n] = log
 	else:
 		for idx, minute in minutes.items():
+			if int(target) != idx:
+				logger.info(f"On passe la minute {idx}")
+				continue
 			minute_n, annotations, reconciliation, log = single_minute_workflow({idx:minute},
 																				images_dir=images_dir,
 																				device=device,
@@ -1037,7 +1029,7 @@ if __name__ == '__main__':
 	arguments.add_argument("-up", "--use_party", help="Use party to confirm key OCR predictions", default=True)
 	arguments = arguments.parse_args()
 	images_dir = arguments.images
-	target = arguments.target
+	target = int(arguments.target)
 	focus = int(arguments.focus) if arguments.focus is not None else None
 	workers = int(arguments.workers)
 	device = arguments.device
