@@ -2310,7 +2310,18 @@ class Extractor:
 
 
 		# On travaille sur les trois derniers noms: le gradé qui nomme le jury, le commissaire, le greffier.
-		coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates
+		try:
+			coords_zone_englobante_magistrats = zone_englobante_magistrats[0].coordinates
+		except IndexError:
+			logger.error("Erreur inattendue avec l'extraction des magistrats. Vérifier les images.")
+			return {"president": {"extracted": None,
+									  "baseline": None,
+									  "predictions": None,
+									  "normalized": None},
+						"jures": None,
+						"greffier": None,
+						"commissaire": None,
+						"general": None}
 		zone_magistrat_as_rectangle = self.rectangle(coords_zone_englobante_magistrats[0][0],
 													 coords_zone_englobante_magistrats[0][1],
 													 coords_zone_englobante_magistrats[1][0],
