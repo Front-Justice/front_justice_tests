@@ -81,6 +81,9 @@ class Reconciliator:
 		self.annotations_page_4 = utils.filter_pages(self.minute_list, "page_4")
 
 	def reconciliate_minute(self):
+		if self._check_minute_consistency() is False:
+			self.reconciliated_minute = {}
+			return
 		self._check_multiple_soldiers()
 		self._filter_pages()
 		self._count_number_appendices()
