@@ -837,8 +837,19 @@ def check_minute_consistency(minute_list):
 	if classes == [1, 2, 3, 4]:
 		print("Minute correctement ordonnée")
 		return True, minute_list
+	elif minute_list[0]["classe"] == "page_1" and minute_list[-2]["classe"] == "page_4":
+		minute_list[0]["classe"] = "page_1"
+		minute_list[1]["classe"] = "page_2"
+		minute_list[-2]["classe"] = "page_3"
+		minute_list[-1]["classe"] = "page_4"
+		if len(minute_list) > 7:
+			logger.warning("Un problème est possible avec la minute: à vérifier.")
+			return False, {}
+		else:
+			logger.warning("La minute a été reclassifiée automatiquement.")
+			return True, minute_list
 	else:
-		print("Quelque chose ne va pas avec la minute")
+		logger.error("Quelque chose ne va pas avec la minute")
 		[shutil.copy(image["image_path"], f"debug/") for image in minute_list]
 		return False, {}
 
