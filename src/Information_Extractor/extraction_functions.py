@@ -316,7 +316,7 @@ def extraire_greffier(lignes_zone_magistrat: list, image_path, ner_pipeline):
 	if greffier is True:
 		debut_de_chaine = prediction.split(form_greffier)[0]
 	else:
-		utils.log_print("Ligne mal reconnue")
+		logger.error("Le greffier n'a pas été reconnu.")
 		return {"greffier": None}
 
 	# TODO: gérer le problème avec maréchal des logis
