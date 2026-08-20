@@ -2277,7 +2277,7 @@ class Extractor:
 					closest, distance = similarity.find_closest_word_in_list(target_word=processed_jure_name,
 																	word_list=self.liste_jures,
 																   method="longest_match")
-					if distance < 0.5:
+					if distance > 0.2:
 						closest = "UNK"
 			else:
 				closest, distance = None, None
