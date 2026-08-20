@@ -903,11 +903,12 @@ def main(images_dir:str,
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 	for ident, minute in minutes.items():
 		conformant, updated_minute = check_minute_consistency(minute)
-		utils.serialize_dict(minutes, updated_minute)
 		if conformant is True:
 			minutes[ident] = updated_minute
 		else:
 			minutes[ident] = {}
+
+	utils.serialize_dict(minutes, minutes_dir)
 	minutes_number = len(minutes)
 	utils.log_print("Starting.")
 	minute_annotee = {}
