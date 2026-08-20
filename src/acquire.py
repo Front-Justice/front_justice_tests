@@ -605,7 +605,6 @@ class Pipeline:
 															  confidence=0.5,
 															  model=self.yolo_models["magistrats"],
 															  show_image=False)
-			test_lignes = utils.test_number_of_zones(magistrats, label="ligne", number=6)
 			# if test_lignes is False:
 				# utils.log_print("Warning: une des lignes du jury n'a pas été identifiée.")
 			current_dict["magistrats"] = self.extractor.extraire_magistrats(
@@ -832,7 +831,8 @@ def check_minute_consistency(minute_list):
 		if minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
 			minute_list[-2]["classe"] = "page_3"
 			return True, minute_list
-	except IndexError:
+	except (IndexError, KeyError):
+		logger.error("La minute est trop courte.")
 		return False, {}
 	if classes == [1, 2, 3, 4]:
 		print("Minute correctement ordonnée")
