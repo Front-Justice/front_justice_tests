@@ -2273,11 +2273,11 @@ class Extractor:
 				closest, distance = similarity.find_closest_word_in_list(target_word=processed_jure_name,
 																		 word_list=self.liste_jures)
 				if distance > len(closest) / 2:
-					logger.warning(f"La normalisation du juré a échoué: {processed_jure_name}.")
 					closest, distance = similarity.find_closest_word_in_list(target_word=processed_jure_name,
 																	word_list=self.liste_jures,
 																   method="longest_match")
 					if distance > 0.2:
+						logger.warning(f"La normalisation du juré a échoué: {processed_jure_name}.")
 						closest = "UNK"
 			else:
 				closest, distance = None, None
@@ -2296,8 +2296,13 @@ class Extractor:
 			closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name,
 																	 word_list=self.liste_presidents)
 			if distance > len(closest) / 2:
-				logger.error(f"Le président du jury n'est pas identifié et ne semble pas être dans la base de données: {processed_president_name}.")
-				closest = "UNK"
+				closest, distance = similarity.find_closest_word_in_list(target_word=processed_president_name,
+																		 word_list=self.liste_presidents,
+																		 method="longest_match")
+				if distance > 0.2:
+					logger.error(
+						f"Le président du jury n'est pas identifié et ne semble pas être dans la base de données: {processed_president_name}.")
+					closest = "UNK"
 		else:
 			closest = "UNK"
 		normalized_president = closest
