@@ -901,9 +901,9 @@ def main(images_dir:str,
 							  page_classifier_vocab="src/Page_Classifier/models/vocab_RF_2.joblib",
 											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
-		utils.serialize_dict(minutes, minutes_dir)
 	for ident, minute in minutes.items():
 		conformant, updated_minute = check_minute_consistency(minute)
+		utils.serialize_dict(minutes, updated_minute)
 		if conformant is True:
 			minutes[ident] = updated_minute
 		else:
