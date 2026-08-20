@@ -1,5 +1,5 @@
 import logging
-
+from thefuzz import fuzz
 import torch
 import src.utils.utils as utils
 
@@ -33,7 +33,8 @@ def find_closest_word_in_list(word_list: list,
 							  target_word: str,
 							  replacement_mapping: dict = None,
 							  load_file=False,
-							  weights=(1.5, 1.5, 1)) -> list:
+							  weights=(1.5, 1.5, 1),
+							  method="levensthein-weighted") -> list:
 	"""
 	Cette fonction cherche le mot le plus proche dans une liste de mots
 	:param sentence: la phrase cible
@@ -62,7 +63,10 @@ def find_closest_word_in_list(word_list: list,
 		if replacement_mapping:
 			for key, value in replacement_mapping.items():
 				word_lower = word_lower.replace(key, value)
-		dist = utils.weighted_levenshtein_distance(word_lower, target_word, weights)
+		if method == "levensthein-weighted":
+			dist = utils.weighted_levenshtein_distance(word_lower, target_word, weights)
+		elif method == "longest_match":
+			dist = 1 - (fuzz.partial_ratio(word_lower, target_word)/100)
 		distances.append(dist)
 	try:
 		min_dist_index = distances.index(min(distances))
