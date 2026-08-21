@@ -844,6 +844,8 @@ def check_minute_consistency(minute_list, ident):
 		minute_list[1]["classe"] = "page_2"
 		minute_list[-2]["classe"] = "page_3"
 		minute_list[-1]["classe"] = "page_4"
+		if len(minute_list) > 4:
+			minute_list = [{**minute, "classe": "page_autre"} for minute in minute_list[2:-2]]
 		if len(minute_list) > 7:
 			logger.warning(f"Un problème est possible avec la minute {ident}: à vérifier.")
 			return False, {}
@@ -855,6 +857,8 @@ def check_minute_consistency(minute_list, ident):
 		minute_list[1]["classe"] = "page_2"
 		minute_list[-2]["classe"] = "page_3"
 		minute_list[-1]["classe"] = "page_4"
+		if len(minute_list) > 4:
+			minute_list = [{**minute, "classe": "page_autre"} for minute in minute_list[2:-2]]
 		logger.warning(f"La minute {ident} n'est pas correctement classée mais fait moins de 8 pages. On la re-classe.")
 		return True, minute_list
 	else:
