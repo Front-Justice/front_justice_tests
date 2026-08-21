@@ -101,4 +101,5 @@ Védrines
 Verdier
 Versaux
 Vial
+Vialatel
 Vincent
