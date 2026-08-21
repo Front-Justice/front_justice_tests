@@ -924,6 +924,7 @@ def main(images_dir:str,
 			minutes[ident] = {}
 
 	utils.serialize_dict(minutes, minutes_dir)
+	exit(0)
 	minutes_number = len(minutes)
 	utils.log_print("Starting.")
 	minute_annotee = {}
