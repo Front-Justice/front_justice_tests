@@ -442,10 +442,10 @@ class Reconciliator:
 		elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
 			logger.info("La catégorie socioprofessionnelle n'a pas été trouvée.")
 			self.categorie_sociopro = "UNK"
-		elif categorie_sociopro_p1 in ["", None] and categorie_sociopro_p2 not in ["", None]:
+		elif categorie_sociopro_p1 in ["", None, "UNK"] and categorie_sociopro_p2 not in ["", None, "UNK"]:
 			logger.info("On garde la catégorie socioprofessionnelle de la page 2.")
 			self.categorie_sociopro = categorie_sociopro_p2
-		elif categorie_sociopro_p2 in ["", None] and categorie_sociopro_p1 not in ["", None]:
+		elif categorie_sociopro_p2 in ["", None, "UNK"] and categorie_sociopro_p1 not in ["", None, "UNK"]:
 			logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
 			self.categorie_sociopro = categorie_sociopro_p1
 		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None != "":
