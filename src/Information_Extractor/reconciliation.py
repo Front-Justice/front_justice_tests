@@ -455,7 +455,10 @@ class Reconciliator:
 					all_categorie_sociopro.append(self.dictionnaire_professions_categories[profession])
 				except KeyError:
 					continue
-			if all([categorie == all_categorie_sociopro[0] for categorie in all_categorie_sociopro]):
+			if all_categorie_sociopro == []:
+				logger.info("Catégorie socioprofessionnelle non identifiée.")
+				self.categorie_sociopro = "UNK"
+			elif all([categorie == all_categorie_sociopro[0] for categorie in all_categorie_sociopro]):
 				self.categorie_sociopro = all_categorie_sociopro[0]
 				logger.info(f"Catégorie socioprofessionnelle identifiée: {self.categorie_sociopro}")
 			else:
