@@ -428,12 +428,15 @@ class Reconciliator:
 			self.profession_extraite = profession_page_1_extraite
 		else:
 			self.profession_extraite = [item for item in [profession_page_1_extraite, profession_page_2_extraite] if item]
-
+		logger.info(f"Profession extraite et normalisée: {self.profession_extraite}")
 
 	def _retrieve_categorie_sociopro(self):
-		if self.profession_extraite and len(self.profession_extraite) == 1:
+		if isinstance(self.profession_extraite, list) and len(self.profession_extraite) == 1:
 			logger.info("Une seule profession extraite, on extrait la catégorie professionnelle.")
-			self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite]
+			try:
+				self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite[0]]
+			except KeyError:
+				self.categorie_sociopro = "UNK"
 		else:
 			try:
 				categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
