@@ -25,6 +25,10 @@ class Reconciliator:
 		self.french_lexicon = databases["french_lexicon"]
 		self.list_of_surnames = databases["list_of_surnames"]
 
+		df = pd.read_csv("src/Information_Extractor/databases/professions_categories.csv", delimiter="\t")
+		df = df.dropna()
+		self.dictionnaire_professions_categories = dict(sorted(df.values.tolist()))
+
 		self.previous_minute  = previous_minute
 
 
@@ -427,33 +431,36 @@ class Reconciliator:
 
 
 	def _retrieve_categorie_sociopro(self):
-		try:
-			categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-		except (KeyError, TypeError):
-			categorie_sociopro_p1 = None
-
-		try:
-			categorie_sociopro_p2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-		except (KeyError, TypeError):
-			categorie_sociopro_p2 = None
-
-		if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
-			self.categorie_sociopro = categorie_sociopro_p1
-		elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
-			logger.info("La catégorie socioprofessionnelle n'a pas été trouvée.")
-			self.categorie_sociopro = "UNK"
-		elif categorie_sociopro_p1 in ["", None, "UNK"] and categorie_sociopro_p2 not in ["", None, "UNK"]:
-			logger.info("On garde la catégorie socioprofessionnelle de la page 2.")
-			self.categorie_sociopro = categorie_sociopro_p2
-		elif categorie_sociopro_p2 in ["", None, "UNK"] and categorie_sociopro_p1 not in ["", None, "UNK"]:
-			logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
-			self.categorie_sociopro = categorie_sociopro_p1
-		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None != "":
-			logger.info(f"La catégorie socioprofessionnelle diverge entre la page 1 et 2: {categorie_sociopro_p1} et {categorie_sociopro_p2}")
-			self.categorie_sociopro = "UNK"
+		if len(self.profession_extraite) == 1:
+			self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite]
 		else:
-			logger.info("Une erreur est survenue.")
-			self.categorie_sociopro = "ERROR"
+			try:
+				categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
+			except (KeyError, TypeError):
+				categorie_sociopro_p1 = None
+
+			try:
+				categorie_sociopro_p2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
+			except (KeyError, TypeError):
+				categorie_sociopro_p2 = None
+
+			if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
+				self.categorie_sociopro = categorie_sociopro_p1
+			elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
+				logger.info("La catégorie socioprofessionnelle n'a pas été trouvée.")
+				self.categorie_sociopro = "UNK"
+			elif categorie_sociopro_p1 in ["", None, "UNK"] and categorie_sociopro_p2 not in ["", None, "UNK"]:
+				logger.info("On garde la catégorie socioprofessionnelle de la page 2.")
+				self.categorie_sociopro = categorie_sociopro_p2
+			elif categorie_sociopro_p2 in ["", None, "UNK"] and categorie_sociopro_p1 not in ["", None, "UNK"]:
+				logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
+				self.categorie_sociopro = categorie_sociopro_p1
+			elif categorie_sociopro_p1 != categorie_sociopro_p2 != None != "":
+				logger.info(f"La catégorie socioprofessionnelle diverge entre la page 1 et 2: {categorie_sociopro_p1} et {categorie_sociopro_p2}")
+				self.categorie_sociopro = "UNK"
+			else:
+				logger.info("Une erreur est survenue.")
+				self.categorie_sociopro = "ERROR"
 
 	def _retrieve_annotations(self):
 		self.annotations = []
