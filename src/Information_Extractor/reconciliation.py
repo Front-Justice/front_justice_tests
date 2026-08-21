@@ -448,8 +448,8 @@ class Reconciliator:
 		elif categorie_sociopro_p2 in ["", None] and categorie_sociopro_p1 not in ["", None]:
 			logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
 			self.categorie_sociopro = categorie_sociopro_p1
-		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None:
-			logger.info("La catégorie socioprofessionnelle diverge entre la page 1 et 2.")
+		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None != "":
+			logger.info(f"La catégorie socioprofessionnelle diverge entre la page 1 et 2: {categorie_sociopro_p1} et {categorie_sociopro_p2}")
 			self.categorie_sociopro = "UNK"
 		else:
 			logger.info("Une erreur est survenue.")
