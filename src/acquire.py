@@ -921,7 +921,6 @@ def main(images_dir:str,
 											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 
-	utils.serialize_dict(minutes, minutes_dir.replace(".json", ".before.json"))
 	for ident, minute in minutes.items():
 		conformant, updated_minute = check_minute_consistency(minute, ident)
 		if conformant is True:
@@ -930,28 +929,9 @@ def main(images_dir:str,
 			minutes[ident] = {}
 
 	utils.serialize_dict(minutes, minutes_dir)
-	exit(0)
 	minutes_number = len(minutes)
 	utils.log_print("Starting.")
 	minute_annotee = {}
-	minute_reconciliee = {}
-	# minute_annotee = utils.load_json_to_dict("results/results.json")
-	# minute_reconciliee = utils.load_json_to_dict("results/results_reconciliated.json")
-	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
-	# exit(0)
-	# exit(0)
-	# # exit(0)
-	# previous_pages = None
-	# import src.Information_Extractor.reconciliation as reconciliation
-	# for idx, minute in minute_annotee.items():
-	# 	reconciliator = reconciliation.Reconciliator(minute_list=minute, previous_minute=previous_pages)
-	# 	reconciliator.reconciliate_minute()
-	# 	reconc = reconciliator.reconciliated_minute
-	# 	minute_reconciliee[idx] = reconc
-	# #
-	# utils.serialize_dict(minute_reconciliee, "results/results_reconciliated.json")
-	# utils.convert_to_csv(minute_reconciliee, "results/results.csv")
-	# exit(0)
 
 	# Trouvé dans https://www.insee.fr/fr/statistiques/3536630 (fichier de l'INSEE)
 	list_of_surnames = [name.lower() for name in
