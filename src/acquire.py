@@ -822,6 +822,9 @@ def predict(dossier, ident, image, page_classifier):
 	return (dossier, ident, image), page_classifier.predict(image=image)
 
 def check_minute_consistency(minute_list, ident):
+	if len(minute_list) < 4:
+		logger.error(f"Erreur avec la minute: {ident}, {minute_list}")
+		return False, {}
 	try:
 		classes = [int(item["classe"].split("_")[-1]) for item in minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
 	except ValueError:
@@ -846,7 +849,7 @@ def check_minute_consistency(minute_list, ident):
 		minute_list[-1]["classe"] = "page_4"
 		if len(minute_list) > 4:
 			for minute in minute_list[2:-2]:
-				minute_list[minute] = {**minute, "classe": "page_autre"}
+				minute_list[minute]["classe"] = "page_autre"
 		if len(minute_list) > 7:
 			logger.warning(f"Un problème est possible avec la minute {ident}: à vérifier.")
 			return False, {}
@@ -860,7 +863,7 @@ def check_minute_consistency(minute_list, ident):
 		minute_list[-1]["classe"] = "page_4"
 		if len(minute_list) > 4:
 			for minute in minute_list[2:-2]:
-				minute_list[minute] = {**minute, "classe": "page_autre"}
+				minute_list[minute]["classe"] = "page_autre"
 		logger.warning(f"La minute {ident} n'est pas correctement classée mais fait moins de 8 pages. On la re-classe.")
 		return True, minute_list
 	else:
