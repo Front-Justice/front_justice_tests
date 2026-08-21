@@ -2709,7 +2709,7 @@ def filter_pages(pages: list, page_class: str):
 	try:
 		filtered = next(item for item in pages if item["classe"] == page_class)
 	except StopIteration:
-		log_print(f"Stop iteration. Pages: {pages}")
+		logger.warning(f"Stop iteration. Pages: {pages}")
 	return filtered
 
 def log_print(message, print_message=True, filepath="logs/log.txt"):

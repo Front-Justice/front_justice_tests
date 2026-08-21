@@ -164,7 +164,7 @@ class Reconciliator:
 
 
 	def _check_minute_consistency(self):
-		if self.minute == {}:
+		if self.minute_list == {}:
 			return False
 		else:
 			return True
