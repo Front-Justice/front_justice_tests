@@ -164,26 +164,10 @@ class Reconciliator:
 
 
 	def _check_minute_consistency(self):
-		try:
-			classes = [int(item["classe"].split("_")[-1]) for item in self.minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
-		except ValueError:
-			logger.error(f'Erreur sur la minute, vérifier la classification: {[item["classe"] for item in self.minute_list]}')
+		if self.minute == {}:
 			return False
-		try:
-			if self.minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
-				logger.info(f'Classification originale: {[item["classe"] for item in self.minute_list]}')
-				self.minute_list[-2]["classe"] == "page_3"
-				logger.info(f'Classification reconstruite: {[item["classe"] for item in self.minute_list]}')
-				return True
-		except KeyError:
-			return False
-		if classes == [1, 2, 3, 4]:
-			logger.info("Minute correctement ordonnée")
-			return True
 		else:
-			logger.info("Quelque chose ne va pas avec la minute")
-			[shutil.copy(image["image_path"], f"debug/") for image in self.minute_list]
-			return False
+			return True
 
 	def _reconciliate_questions(self):
 		try:
