@@ -164,9 +164,11 @@ class GeoExtractor():
 		"""
 		logger.info(f"Ville extraite: {ville}")
 		match = False
-		if departement is not None:
+		if departement is not None and ville not in ["Constantine", "Oran", "Alger"]:
 			departement = departement.replace("l'", "")
 			actual_departement, departement_corrige, is_country = self.correct_department(departement)
+		elif ville in ["Constantine", "Oran", "Alger"]:
+			actual_departement, departement_corrige, is_country = ville, ville, False
 		else:
 			logger.error("Le département n'a pas été identifié et l'extraction des coordonnées géographiques "
 						 "n'est pas possible.")
@@ -193,7 +195,7 @@ class GeoExtractor():
 		if ville in ["Constantine", "Oran", "Alger"] or departement_corrige in ["Constantine", "Oran", "Alger", "Maroc",
 																				"Madagascar", "Tonkin", "Cochinchine",
 																				"Cochinchine française",
-																				"Sénégal-Niger", "Soudan français"]:
+																				"Sénégal-Niger", "Soudan français", "Tunisie"]:
 			if ville == "Constantine" or departement_corrige == "Constantine":
 				latitude = 36.35
 				longitude = 6.60
@@ -212,6 +214,9 @@ class GeoExtractor():
 			elif departement_corrige == "Maroc":
 				latitude = 33.97
 				longitude = -6.85
+			elif departement_corrige == "Tunisie":
+				latitude = 33.89
+				longitude = 9.56
 			elif departement_corrige == "Soudan français":
 				latitude = 12.65
 				longitude = -8.00
