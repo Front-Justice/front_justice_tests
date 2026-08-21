@@ -834,6 +834,7 @@ def check_minute_consistency(minute_list, ident):
 	except (IndexError, KeyError) as e:
 		logger.error(f"La minute {ident} est trop courte.")
 		logger.error([image['classe'] for image in minute_list])
+		logger.error(minute_list)
 		return False, {}
 	if classes == [1, 2, 3, 4]:
 		print(f"Minute {ident} correctement ordonnée")
