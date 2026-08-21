@@ -431,7 +431,8 @@ class Reconciliator:
 
 
 	def _retrieve_categorie_sociopro(self):
-		if len(self.profession_extraite) == 1:
+		if self.profession_extraite and len(self.profession_extraite) == 1:
+			logger.info("Une seule profession extraite, on extrait la catégorie professionnelle.")
 			self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite]
 		else:
 			try:
