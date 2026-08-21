@@ -853,6 +853,7 @@ def check_minute_consistency(minute_list):
 		minute_list[1]["classe"] = "page_2"
 		minute_list[-2]["classe"] = "page_3"
 		minute_list[-1]["classe"] = "page_4"
+		logger.warning("La minute n'est pas correctement classée mais fait moins de 8 pages. On la re-classe.")
 		return True, minute_list
 	else:
 		logger.error("Quelque chose ne va pas avec la minute")
