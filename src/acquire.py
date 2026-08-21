@@ -771,7 +771,7 @@ def regroupement_minutes(pages_classees):
 	current_minute_number = 0
 	minutes = {}
 	# Puis on rassemble les minutes
-	print([item[2] for item in pages_classees])
+	print([item[0][2].split("/")[-1].replace(".jpg", "") for item in pages_classees])
 	for idx, ((dossier, ident, image), classe) in enumerate(pages_classees):
 		current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 		current_minute.append(current_image)
