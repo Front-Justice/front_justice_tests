@@ -440,14 +440,19 @@ class Reconciliator:
 		if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
 			self.categorie_sociopro = categorie_sociopro_p1
 		elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
+			logger.info("La catégorie socioprofessionnelle n'a pas été trouvée.")
 			self.categorie_sociopro = "UNK"
-		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None:
-			self.categorie_sociopro = "UNK"
-		elif categorie_sociopro_p1 == None and categorie_sociopro_p2 != None:
+		elif categorie_sociopro_p1 in ["", None] and categorie_sociopro_p2 not in ["", None]:
+			logger.info("On garde la catégorie socioprofessionnelle de la page 2.")
 			self.categorie_sociopro = categorie_sociopro_p2
-		elif categorie_sociopro_p1 != None and categorie_sociopro_p2 == None:
+		elif categorie_sociopro_p2 in ["", None] and categorie_sociopro_p1 not in ["", None]:
+			logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
 			self.categorie_sociopro = categorie_sociopro_p1
+		elif categorie_sociopro_p1 != categorie_sociopro_p2 != None:
+			logger.info("La catégorie socioprofessionnelle diverge entre la page 1 et 2.")
+			self.categorie_sociopro = "UNK"
 		else:
+			logger.info("Une erreur est survenue.")
 			self.categorie_sociopro = "ERROR"
 
 	def _retrieve_annotations(self):
