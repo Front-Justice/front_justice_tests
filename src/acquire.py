@@ -821,7 +821,7 @@ def classification_images(images, page_classifier_model, page_classifier_vocab, 
 def predict(dossier, ident, image, page_classifier):
 	return (dossier, ident, image), page_classifier.predict(image=image)
 
-def check_minute_consistency(minute_list):
+def check_minute_consistency(minute_list, ident):
 	try:
 		classes = [int(item["classe"].split("_")[-1]) for item in minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
 	except ValueError:
@@ -832,10 +832,10 @@ def check_minute_consistency(minute_list):
 			minute_list[-2]["classe"] = "page_3"
 			return True, minute_list
 	except (IndexError, KeyError):
-		logger.error("La minute est trop courte.")
+		logger.error(f"La minute {ident} est trop courte.")
 		return False, {}
 	if classes == [1, 2, 3, 4]:
-		print("Minute correctement ordonnée")
+		print(f"Minute {ident} correctement ordonnée")
 		return True, minute_list
 	elif minute_list[0]["classe"] == "page_1" and minute_list[-2]["classe"] == "page_4":
 		minute_list[0]["classe"] = "page_1"
@@ -843,20 +843,20 @@ def check_minute_consistency(minute_list):
 		minute_list[-2]["classe"] = "page_3"
 		minute_list[-1]["classe"] = "page_4"
 		if len(minute_list) > 7:
-			logger.warning("Un problème est possible avec la minute: à vérifier.")
+			logger.warning(f"Un problème est possible avec la minute {ident}: à vérifier.")
 			return False, {}
 		else:
-			logger.warning("La minute a été reclassifiée automatiquement.")
+			logger.warning(f"La minute {ident} a été reclassifiée automatiquement.")
 			return True, minute_list
 	elif len(minute_list) < 8:
 		minute_list[0]["classe"] = "page_1"
 		minute_list[1]["classe"] = "page_2"
 		minute_list[-2]["classe"] = "page_3"
 		minute_list[-1]["classe"] = "page_4"
-		logger.warning("La minute n'est pas correctement classée mais fait moins de 8 pages. On la re-classe.")
+		logger.warning(f"La minute {ident} n'est pas correctement classée mais fait moins de 8 pages. On la re-classe.")
 		return True, minute_list
 	else:
-		logger.error("Quelque chose ne va pas avec la minute")
+		logger.error(f"Quelque chose ne va pas avec la minute {ident}")
 		[shutil.copy(image["image_path"], f"debug/") for image in minute_list]
 		return False, {}
 
@@ -909,7 +909,7 @@ def main(images_dir:str,
 											   workers=workers)
 		minutes = regroupement_minutes(pages_classees=pages_classees)
 	for ident, minute in minutes.items():
-		conformant, updated_minute = check_minute_consistency(minute)
+		conformant, updated_minute = check_minute_consistency(minute, ident)
 		if conformant is True:
 			minutes[ident] = updated_minute
 		else:
