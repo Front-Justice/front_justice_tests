@@ -167,7 +167,7 @@ class GeoExtractor():
 		if departement is not None and ville not in ["Constantine", "Oran", "Alger"]:
 			departement = departement.replace("l'", "")
 			actual_departement, departement_corrige, is_country = self.correct_department(departement)
-		elif ville in ["Constantine", "Oran", "Alger"]:
+		elif ville in ["Constantine", "Oran", "Alger", "Paris"]:
 			actual_departement, departement_corrige, is_country = ville, ville, False
 		else:
 			logger.error("Le département n'a pas été identifié et l'extraction des coordonnées géographiques "
