@@ -522,7 +522,8 @@ class Extractor:
 			extractions.extraire_feature(entities_list=result_spotting,
 										 lignes=lignes_description_du_soldat,
 										 feature="assignation_soldat",
-													   image_path=image_path)
+										 image_path=image_path,
+										 return_multiple_entities=True)
 		)
 
 		description_du_soldat["identite"]["rang"] = (
@@ -1924,7 +1925,8 @@ class Extractor:
 			extractions.extraire_feature(entities_list=entities,
 										 lignes=lignes_description_du_soldat,
 										 feature="assignation_soldat",
-				image_path=image_path)
+				image_path=image_path,
+										 return_multiple_entities=True)
 		)
 
 		rang_extrait = (
