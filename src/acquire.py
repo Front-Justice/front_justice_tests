@@ -771,6 +771,7 @@ def regroupement_minutes(pages_classees):
 	current_minute_number = 0
 	minutes = {}
 	# Puis on rassemble les minutes
+	print([item[1] for item in pages_classees])
 	for idx, ((dossier, ident, image), classe) in enumerate(pages_classees):
 		current_image = {"répertoire": dossier, "id": ident, "image_path": image, "classe": classe}
 		current_minute.append(current_image)
@@ -823,7 +824,7 @@ def predict(dossier, ident, image, page_classifier):
 
 def check_minute_consistency(minute_list, ident):
 	if len(minute_list) < 4:
-		logger.error(f"Erreur avec la minute: {ident}, {minute_list}")
+		logger.error(f"Erreur de longueur de la minute: {ident}, {minute_list}")
 		return False, {}
 	try:
 		classes = [int(item["classe"].split("_")[-1]) for item in minute_list if item["classe"] not in ["page_autre", "page_manuscrite_suivie"]]
