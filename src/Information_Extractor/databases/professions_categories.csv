@@ -1,283 +1,364 @@
-Profession	Catégorie
-abbé	Professions intermédiaires
-accessoiriste	Professions intermédiaires
-acrobate	Cadres
-acteur	Cadres
-acteur dramatique	Cadres
-actuaire	Cadres
-aérostier	Artisans, commerçants et chefs d’entreprise
-afféterie	Ouvriers
-agent	Professions intermédiaires
-agent de police	Professions intermédiaires
-agent militarisé	Employés
 agriculteur	Agriculteurs
-aide-chaudronnier	Ouvriers
-aide-comptable	Professions intermédiaires
-aide-cuisinier	Ouvriers
-aide-infirmier	Professions intermédiaires
-ajusteur	Ouvriers
-ajusteur mécanicien	Ouvriers
-ambulancier	Professions intermédiaires
 ânier	Agriculteurs
 apiculteur	Agriculteurs
-apprêteur	Ouvriers
-apprêteur sur étoffes	Artisans, commerçants et chefs d’entreprise
-artisan	Artisans, commerçants et chefs d’entreprise
-artiste	Cadres
-artiste dramatique	Cadres
-artiste acrobate	Cadres
-artiste lyrique	Cadres
-artiste-comédien	Cadres
-astronome	Cadres
-audiencier	Cadres
-aumônier	Professions intermédiaires
-aurier bijoutier	Artisans, commerçants et chefs d’entreprise
-automobiliste	Professions intermédiaires
-auxiliaire	Employés
-avocat	Cadres
-avocat-conseil	Cadres
-bachelier	Cadres
-bailleur	Artisans, commerçants et chefs d’entreprise
-banquier	Cadres
-barbier	Artisans, commerçants et chefs d’entreprise
-bardeur	Ouvriers
-batelier	Ouvriers
-bâtonnier	Cadres
-baumier	Ouvriers
 berger	Agriculteurs
 betteravier	Agriculteurs
+bouvier	Agriculteurs
+cacaotier	Agriculteurs
+champignonniste	Agriculteurs
+charretier de labours	Agriculteurs
+charruer	Agriculteurs
+chef de culture	Agriculteurs
+chevrier	Agriculteurs
+crevettier	Agriculteurs
+cultivateur	Agriculteurs
+cultivateur-vigneron	Agriculteurs
+domestique de culture	Agriculteurs
+fermier	Agriculteurs
+gommier	Agriculteurs
+grainetier	Agriculteurs
+homardier	Agriculteurs
+huîtrier	Agriculteurs
+huîtrière	Agriculteurs
+kolatier	Agriculteurs
+laboureur	Agriculteurs
+mancenillier	Agriculteurs
+maraîcher	Agriculteurs
+marin	Agriculteurs
+marin-pêcheur	Agriculteurs
+mécanicien en dirigeable	Agriculteurs
+meneau	Agriculteurs
+moutier	Agriculteurs
+muletier	Agriculteurs
+paysager	Agriculteurs
+paysan	Agriculteurs
+planteur cultivateur	Agriculteurs
+plantier	Agriculteurs
+vigneron	Agriculteurs
+viticulteur	Agriculteurs
+aérostier	Artisans, commerçants et chefs d’entreprise
+apprêteur sur étoffes	Artisans, commerçants et chefs d’entreprise
+argenteur-doreur	Artisans, commerçants et chefs d’entreprise
+armurier	Artisans, commerçants et chefs d’entreprise
+artisan	Artisans, commerçants et chefs d’entreprise
+aurier bijoutier	Artisans, commerçants et chefs d’entreprise
+barbier	Artisans, commerçants et chefs d’entreprise
 bijoutier	Artisans, commerçants et chefs d’entreprise
-biographe	Cadres
 blanchisseur	Artisans, commerçants et chefs d’entreprise
 bonnetier	Artisans, commerçants et chefs d’entreprise
 bottier	Artisans, commerçants et chefs d’entreprise
 boucher	Artisans, commerçants et chefs d’entreprise
 boucher-charcutier	Artisans, commerçants et chefs d’entreprise
 boulanger	Artisans, commerçants et chefs d’entreprise
-boulevardier	Ouvriers
 bouquetier	Artisans, commerçants et chefs d’entreprise
 bourrelier	Artisans, commerçants et chefs d’entreprise
-bourrier	
+bourrelier sellier  	Artisans, commerçants et chefs d’entreprise
 boutiquier	Artisans, commerçants et chefs d’entreprise
-bouvier	Agriculteurs
-brancardier	Professions intermédiaires
-bretteur	Cadres
 briquetier	Artisans, commerçants et chefs d’entreprise
+brocanteur	Artisans, commerçants et chefs d’entreprise
 brocheur-relieur	Artisans, commerçants et chefs d’entreprise
-bronzier	Ouvriers
 brossier	Artisans, commerçants et chefs d’entreprise
-bûcheron	Ouvriers
-businessman	Cadres
-câblier	Ouvriers
-cacaotier	Agriculteurs
-cahoutchoutier	Ouvriers
-caissier	Employés
-camelot	Professions intermédiaires
-camionneur	Ouvriers
-canonnier	Ouvriers
-canotier	Ouvriers
-cantinier	Employés
-cantonnier	Ouvriers
-carrier	Ouvriers
-carrier ardoisier	Ouvriers
 carrossier	Artisans, commerçants et chefs d’entreprise
 caviste	Artisans, commerçants et chefs d’entreprise
-célibataire	None
 cellérier	Artisans, commerçants et chefs d’entreprise
 chamelier	Artisans, commerçants et chefs d’entreprise
-champignonniste	Agriculteurs
 chapelier	Artisans, commerçants et chefs d’entreprise
-charbonnier	Ouvriers
 charcutier	Artisans, commerçants et chefs d’entreprise
 charpentier	Artisans, commerçants et chefs d’entreprise
 charpentier en bateaux	Artisans, commerçants et chefs d’entreprise
 charpentier en bois	Artisans, commerçants et chefs d’entreprise
 charpentier en fer	Artisans, commerçants et chefs d’entreprise
-charretier	Ouvriers
-charretier de labours	Agriculteurs
-charron	Ouvriers
-charruer	Agriculteurs
-chartiste	Cadres
-chasseur cycliste	Ouvriers
-chaudronnier	Ouvriers
-chaudronnier en fer	Ouvriers
-chauffeur	Ouvriers
-chauffeur d'automobiles	Ouvriers
-chauffeur d'usine	Employés
-chauffeur de locomotive	Ouvriers
-chauffeur de machines	Ouvriers
-chauffeur mécanicien	Ouvriers
-chef	Professions intermédiaires
-chef de culture	Agriculteurs
-chef mécanicien	Professions intermédiaires
-chef vigneron	Cadres
-chef-adjoint	Professions intermédiaires
-cheminot	Employés
-chevrier	Agriculteurs
-chiffonnier	Ouvriers
-chirurgien	Cadres
-chirurgien-dentiste	Cadres
-chômeur	autre
-cimentier	Ouvriers
-clerc	Professions intermédiaires
-clerc de notaire	Professions intermédiaires
-clinicien	Cadres
-cloutier	Ouvriers
-cocher	Ouvriers
-cocher de louage	Ouvriers
-cocher de paire	Ouvriers
-cocher-livreur	Ouvriers
 coiffeur	Artisans, commerçants et chefs d’entreprise
-collaborateur	Cadres
-coltineur	Ouvriers
 commerçant	Artisans, commerçants et chefs d’entreprise
-commis de marchand de vins	Employés
-commis des douanes	Employés
-commis-pharmacien	Professions intermédiaires
-commis-voyageur	Employés
-commissionnaire	Cadres
 compotier	Artisans, commerçants et chefs d’entreprise
-comptable	Professions intermédiaires
-conducteur de bestiaux	Ouvriers
-conducteur de voitures	Ouvriers
 conducteur imprimeur	Artisans, commerçants et chefs d’entreprise
 confectionneur	Artisans, commerçants et chefs d’entreprise
-conseil	Cadres
-conseiller	Cadres
-consultant	Cadres
-conteur	Cadres
-contremaître	Professions intermédiaires
-contremaîtresse	Ouvriers
 cordonnier	Artisans, commerçants et chefs d’entreprise
 corsetier	Artisans, commerçants et chefs d’entreprise
 costumier	Artisans, commerçants et chefs d’entreprise
-courrier-postal	Employés
-coursier	Employés
-courtier	Cadres
-courtilière	
 coutelier	Artisans, commerçants et chefs d’entreprise
 couturier	Artisans, commerçants et chefs d’entreprise
 couvreur	Artisans, commerçants et chefs d’entreprise
 couvreur zingueur	Artisans, commerçants et chefs d’entreprise
 cravatier	Artisans, commerçants et chefs d’entreprise
-créancier	Cadres
-crémier	Employés
-crevettier	Agriculteurs
 cuisinier	Artisans, commerçants et chefs d’entreprise
 cuisinier pâtissier	Artisans, commerçants et chefs d’entreprise
-cultivateur	Agriculteurs
-cultivateur-vigneron	Agriculteurs
-débardeur	Ouvriers
 débitant	Artisans, commerçants et chefs d’entreprise
 débitant en verre	Artisans, commerçants et chefs d’entreprise
-débitante	Employés
 débiteur	Artisans, commerçants et chefs d’entreprise
-décolleteur	Ouvriers
-déménageur	Employés
-démineur	Professions intermédiaires
 dentellier	Artisans, commerçants et chefs d’entreprise
+diamantaire	Artisans, commerçants et chefs d’entreprise
+doreur	Artisans, commerçants et chefs d’entreprise
+doreur sur bois	Artisans, commerçants et chefs d’entreprise
+drapier	Artisans, commerçants et chefs d’entreprise
+ébéniste	Artisans, commerçants et chefs d’entreprise
+électricien	Artisans, commerçants et chefs d’entreprise
+entrepreneur de maçonnerie	Artisans, commerçants et chefs d’entreprise
+entrepreneur de plomberie	Artisans, commerçants et chefs d’entreprise
+entrepreneur en bâtiments	Artisans, commerçants et chefs d’entreprise
+fabricant	Artisans, commerçants et chefs d’entreprise
+fabricant de balais	Artisans, commerçants et chefs d’entreprise
+fabricant de chapellerie	Artisans, commerçants et chefs d’entreprise
+façonnier	Artisans, commerçants et chefs d’entreprise
+faïencier	Artisans, commerçants et chefs d’entreprise
+ferblantier	Artisans, commerçants et chefs d’entreprise
+ferronnier	Artisans, commerçants et chefs d’entreprise
+fleuriste	Artisans, commerçants et chefs d’entreprise
+fondeur	Artisans, commerçants et chefs d’entreprise
+fontainier	Artisans, commerçants et chefs d’entreprise
+forain	Artisans, commerçants et chefs d’entreprise
+forgeron	Artisans, commerçants et chefs d’entreprise
+frappeur sur feux	Artisans, commerçants et chefs d’entreprise
+fripier	Artisans, commerçants et chefs d’entreprise
+gantier	Artisans, commerçants et chefs d’entreprise
+garagiste d'automobile	Artisans, commerçants et chefs d’entreprise
+gargotier	Artisans, commerçants et chefs d’entreprise
+glacier	Artisans, commerçants et chefs d’entreprise
+graveur	Artisans, commerçants et chefs d’entreprise
+horloger	Artisans, commerçants et chefs d’entreprise
+hôtelier	Artisans, commerçants et chefs d’entreprise
+huilier	Artisans, commerçants et chefs d’entreprise
+humoriste	Artisans, commerçants et chefs d’entreprise
+imprimeur	Artisans, commerçants et chefs d’entreprise
+industriel	Artisans, commerçants et chefs d’entreprise
+joaillier	Artisans, commerçants et chefs d’entreprise
+liquoriste	Artisans, commerçants et chefs d’entreprise
+lithographe	Artisans, commerçants et chefs d’entreprise
+lunetier	Artisans, commerçants et chefs d’entreprise
+luthier	Artisans, commerçants et chefs d’entreprise
+maçon	Artisans, commerçants et chefs d’entreprise
+maçon-cimentier	Artisans, commerçants et chefs d’entreprise
+maître queux	Artisans, commerçants et chefs d’entreprise
+maître-coq	Artisans, commerçants et chefs d’entreprise
+manufacturier	Artisans, commerçants et chefs d’entreprise
+maquettiste	Artisans, commerçants et chefs d’entreprise
+maquignon	Artisans, commerçants et chefs d’entreprise
+marbrier	Artisans, commerçants et chefs d’entreprise
+marchand	Artisans, commerçants et chefs d’entreprise
+marchand d'abats	Artisans, commerçants et chefs d’entreprise
+marchand de bestiaux	Artisans, commerçants et chefs d’entreprise
+marchand de chiffons	Artisans, commerçants et chefs d’entreprise
+marchand de faïences	Artisans, commerçants et chefs d’entreprise
+marchand de métaine	Artisans, commerçants et chefs d’entreprise
+marchand de quatre saisons	Artisans, commerçants et chefs d’entreprise
+marchand de vins	Artisans, commerçants et chefs d’entreprise
+marchand de volailles	Artisans, commerçants et chefs d’entreprise
+marchand-forain	Artisans, commerçants et chefs d’entreprise
+maréchal-ferrant	Artisans, commerçants et chefs d’entreprise
+matelassier	Artisans, commerçants et chefs d’entreprise
+mentonnier	Artisans, commerçants et chefs d’entreprise
+menuisier	Artisans, commerçants et chefs d’entreprise
+menuisier ébéniste	Artisans, commerçants et chefs d’entreprise
+mercier	Artisans, commerçants et chefs d’entreprise
+meunier	Artisans, commerçants et chefs d’entreprise
+minotier	Artisans, commerçants et chefs d’entreprise
+modeleur	Artisans, commerçants et chefs d’entreprise
+négociant	Artisans, commerçants et chefs d’entreprise
+négociant en tissus	Artisans, commerçants et chefs d’entreprise
+opticien	Artisans, commerçants et chefs d’entreprise
+orfèvre	Artisans, commerçants et chefs d’entreprise
+papetier	Artisans, commerçants et chefs d’entreprise
+parqueteur	Artisans, commerçants et chefs d’entreprise
+pâtissier	Artisans, commerçants et chefs d’entreprise
+peintre	Artisans, commerçants et chefs d’entreprise
+peintre décorateur	Artisans, commerçants et chefs d’entreprise
+peintre sur porcelaine	Artisans, commerçants et chefs d’entreprise
+perruquier	Artisans, commerçants et chefs d’entreprise
+platière	Artisans, commerçants et chefs d’entreprise
+platrier	Artisans, commerçants et chefs d’entreprise
+plâtrier-peintre	Artisans, commerçants et chefs d’entreprise
+plombier	Artisans, commerçants et chefs d’entreprise
+plombier-zingueur	Artisans, commerçants et chefs d’entreprise
+plumier	Artisans, commerçants et chefs d’entreprise
+poissonnier	Artisans, commerçants et chefs d’entreprise
+porcelainier	Artisans, commerçants et chefs d’entreprise
+poseur	Artisans, commerçants et chefs d’entreprise
+potier	Artisans, commerçants et chefs d’entreprise
+potier d'étain	Artisans, commerçants et chefs d’entreprise
+promoteur	Artisans, commerçants et chefs d’entreprise
+propriétaire	Artisans, commerçants et chefs d’entreprise
+prospecteur	Artisans, commerçants et chefs d’entreprise
+relieur	Artisans, commerçants et chefs d’entreprise
+rempailleur	Artisans, commerçants et chefs d’entreprise
+rentier	Artisans, commerçants et chefs d’entreprise
+réparateur d'objets d'art	Artisans, commerçants et chefs d’entreprise
+restaurateur	Artisans, commerçants et chefs d’entreprise
+roulottier	Artisans, commerçants et chefs d’entreprise
+sabotier	Artisans, commerçants et chefs d’entreprise
+sculpteur	Artisans, commerçants et chefs d’entreprise
+sellier	Artisans, commerçants et chefs d’entreprise
+serrurier	Artisans, commerçants et chefs d’entreprise
+serrurier ajusteur	Artisans, commerçants et chefs d’entreprise
+sertisseur	Artisans, commerçants et chefs d’entreprise
+tailleur	Artisans, commerçants et chefs d’entreprise
+tailleur d'habits	Artisans, commerçants et chefs d’entreprise
+tailleur de pierre	Artisans, commerçants et chefs d’entreprise
+tailleuse	Artisans, commerçants et chefs d’entreprise
+tanneur	Artisans, commerçants et chefs d’entreprise
+tapissier	Artisans, commerçants et chefs d’entreprise
+tapissier en meubles	Artisans, commerçants et chefs d’entreprise
+teinturier	Artisans, commerçants et chefs d’entreprise
+tenancier	Artisans, commerçants et chefs d’entreprise
+tissutier	Artisans, commerçants et chefs d’entreprise
+vannier	Artisans, commerçants et chefs d’entreprise
+vannière	Artisans, commerçants et chefs d’entreprise
+verrier	Artisans, commerçants et chefs d’entreprise
+volailleur	Artisans, commerçants et chefs d’entreprise
+carreleur	Artisans, commerçants et chefs d’entreprise
+loueur de voitures	Artisans, commerçants et chefs d’entreprise
+quincailler	Artisans, commerçants et chefs d’entreprise
+sculpteur sur bois	Artisans, commerçants et chefs d’entreprise
+chômeur	autre
+enfant de troupe	autre
+voyageur	Autre
+acrobate	Cadres
+acteur	Cadres
+acteur dramatique	Cadres
+actuaire	Cadres
+artiste	Cadres
+artiste acrobate	Cadres
+artiste dramatique	Cadres
+artiste forain	Cadres
+artiste lyrique	Cadres
+artiste-comédien	Cadres
+astronome	Cadres
+audiencier	Cadres
+avocat	Cadres
+avocat-conseil	Cadres
+bachelier	Cadres
+banquier	Cadres
+bâtonnier	Cadres
+biographe	Cadres
+bretteur	Cadres
+businessman	Cadres
+chartiste	Cadres
+chef vigneron	Cadres
+chirurgien	Cadres
+chirurgien-dentiste	Cadres
+clinicien	Cadres
+collaborateur	Cadres
+commissionnaire	Cadres
+conseil	Cadres
+conseiller	Cadres
+consultant	Cadres
+conteur	Cadres
+courtier	Cadres
+créancier	Cadres
 dentiste	Cadres
 dessinateur	Cadres
 dessinateur architecte	Cadres
-détective privé	Professions intermédiaires
-diamantaire	Artisans, commerçants et chefs d’entreprise
 directeur	Cadres
 docteur	Cadres
 docteur en médecine	Cadres
-doigtier	Ouvriers
-domestique	Employés
-domestique de culture	Agriculteurs
-domestique de ferme	Ouvriers
-doreur	Artisans, commerçants et chefs d’entreprise
-doreur sur bois	Artisans, commerçants et chefs d’entreprise
-douanier	Professions intermédiaires
-dragueur de sable	Ouvriers
 dramaturge	Cadres
-drapier	Artisans, commerçants et chefs d’entreprise
-ébarbeur	Ouvriers
-ébéniste	Artisans, commerçants et chefs d’entreprise
-éboueur	Ouvriers
-échotier	Employés
-éclusier	Ouvriers
-écuyer	Employés
-éducateur	Professions intermédiaires
-électricien	Artisans, commerçants et chefs d’entreprise
 élève à l'école préparatoire	Cadres
 élève de l'école centrale	Cadres
 élève en pharmacie	Cadres
-emballeur	Ouvriers
-emboutisseur	Ouvriers
+entrepreneur	Cadres
+étudiant	Cadres
+étudiant écclésiastique	Cadres
+étudiant en médecine	Cadres
+ex-artiste	Cadres
+ex-génie	Cadres
+ex-journaliste	Cadres
+ex-mercenaire	Cadres
+ex-officier	Cadres
+ex-sergent	Cadres
+expert-comptable	Cadres
+géographe	Cadres
+géographe coloniste	Cadres
+graphiste	Cadres
+gynécologue	Cadres
+historien	Cadres
+homéopathe	Cadres
+imprésario	Cadres
+ingénieur	Cadres
+ingénieur-chimiste	Cadres
+ingénieur-conseil	Cadres
+inspecteur d'assurances	Cadres
+interprète	Cadres
+investisseur	Cadres
+journaliste	Cadres
+magistrat	Cadres
+mandataire	Cadres
+mathématicien	Cadres
+mécanicien dentiste	Cadres
+médecin	Cadres
+médecin-chef	Cadres
+médecin-conseil	Cadres
+médecin-major	Cadres
+météorologiste	Cadres
+musicien	Cadres
+musicographe	Cadres
+notaire	Cadres
+odontologiste	Cadres
+odontologue	Cadres
+officier	Cadres
+officier d'administration	Cadres
+ophtalmologiste	Cadres
+ophtalmologue	Cadres
+pharmacien	Cadres
+photographe	Cadres
+photojournaliste	Cadres
+praticien	Cadres
+précepteur	Cadres
+prêteur	Cadres
+principal	Cadres
+professeur	Cadres
+prospecteur colonial	Cadres
+psychiatre	Cadres
+publiciste	Cadres
+questeur	Cadres
+réalisateur	Cadres
+recruteur	Cadres
+rédacteur	Cadres
+régisseur de vignoble	Cadres
+reporter	Cadres
+savant	Cadres
+sous-officier rengagé	Cadres
+courtier en vins	Cadres
+agent d'affaires	Cadres
+jockey	Cadres
+commisaire de marine marchande	Cadres
+conducteur de travaux	Cadres
+dessinateur industriel	Cadres
+dessinateur charpentier	Cadres
+Profession	Catégorie
+fourreur    Artisans,	commerçants et chefs d’entreprise
+agent militarisé	Employés
+auxiliaire	Employés
+caissier	Employés
+cantinier	Employés
+chauffeur d'usine	Employés
+cheminot	Employés
+commis de marchand de vins	Employés
+commis des douanes	Employés
+commis-voyageur	Employés
+courrier-postal	Employés
+coursier	Employés
+crémier	Employés
+débitante	Employés
+déménageur	Employés
+domestique	Employés
+échotier	Employés
+écuyer	Employés
 employé	Employés
 employé aux chemins de fer	Employés
 employé aux écritures	Employés
 employé comptable	Employés
 employé d'hôtel	Employés
-employé de banque	Professions intermédiaires
 employé de bureau	Employés
 employé de cinéma	Employés
 employé de commerce	Employés
 employé de tramway	Employés
 employé des postes	Employés
-enfant de troupe	autre
-enfants	None
-enseignant	Professions intermédiaires
-entrepreneur	Cadres
-entrepreneur de maçonnerie	Artisans, commerçants et chefs d’entreprise
-entrepreneur de plomberie	Artisans, commerçants et chefs d’entreprise
-entrepreneur en bâtiments	Artisans, commerçants et chefs d’entreprise
 épicier	Employés
-étameur	Ouvriers
-étudiant	Cadres
-étudiant écclésiastique	Cadres
-étudiant en médecine	Cadres
-ex-apprenti	Professions intermédiaires
-ex-artiste	Cadres
 ex-concierge	Employés
-ex-génie	Cadres
-ex-journaliste	Cadres
-ex-maître	Professions intermédiaires
-ex-mercenaire	Cadres
-ex-monteur	Professions intermédiaires
-ex-officier	Cadres
-ex-pharmacien	Professions intermédiaires
-ex-plâtrier	Ouvriers
-ex-sergent	Cadres
-expert-comptable	Cadres
-fabricant	Artisans, commerçants et chefs d’entreprise
-fabricant de chapellerie	Artisans, commerçants et chefs d’entreprise
-façonnier	Artisans, commerçants et chefs d’entreprise
 facteur	Employés
 facteur de ville	Employés
 facteur des postes	Employés
-facturier	Professions intermédiaires
-fagotier	Ouvriers
-faïencier	Artisans, commerçants et chefs d’entreprise
-faiseur	Professions intermédiaires
-faîtier	Ouvriers
-faîtière	Ouvriers
-ferblantier	Artisans, commerçants et chefs d’entreprise
-fermier	Agriculteurs
-ferronnier	Artisans, commerçants et chefs d’entreprise
-fileur	Ouvriers
-fleuriste	Artisans, commerçants et chefs d’entreprise
 fonctionnaire	Employés
-fondeur	Artisans, commerçants et chefs d’entreprise
-fondeur en cuivre	Ouvriers
-fontainier	Artisans, commerçants et chefs d’entreprise
-footballeur	Professions intermédiaires
-forain	Artisans, commerçants et chefs d’entreprise
-forgeron	Artisans, commerçants et chefs d’entreprise
-forgeron serrurier	Ouvriers
-formateur	Professions intermédiaires
-frappeur sur feux	Artisans, commerçants et chefs d’entreprise
-fripier	Artisans, commerçants et chefs d’entreprise
-gabier	Professions intermédiaires
-gantier	Artisans, commerçants et chefs d’entreprise
-garagiste d'automobile	Artisans, commerçants et chefs d’entreprise
 garçon	Employés
-garçon boucher	Ouvriers
-garçon charcutier	Ouvriers
-garçon coiffeur	Ouvriers
 garçon d'hôtel	Employés
 garçon de café	Employés
 garçon de courses	Employés
@@ -291,177 +372,146 @@ garçon-laitier	Employés
 garde-barrière	Employés
 garde-champêtre	Employés
 gardien	Employés
-gargotier	Artisans, commerçants et chefs d’entreprise
-géographe	Cadres
-géographe coloniste	Cadres
-glacier	Artisans, commerçants et chefs d’entreprise
-gommier	Agriculteurs
-grainetier	Agriculteurs
-graphiste	Cadres
-graveur	Artisans, commerçants et chefs d’entreprise
-greffier	Professions intermédiaires
-greffier de justice	Professions intermédiaires
+guichetier	Employés
+îlotier	Employés
+limonadier	Employés
+livreur	Employés
+maître d'hôtel	Employés
+majordome	Employés
+nourrisseur	Employés
+placeur	Employés
+pompiste	Employés
+portier	Employés
+réceptionnaire	Employés
+salarié	Employés
+servant	Employés
+surveillant de travaux	Employés
+télégraphiste	Employés
+valet de chambre	Employés
+veilleur	Employés
+vendeur aux halles	Employés
+vendeur d'automobiles	Employés
+vendeuse	Employés
+commis de la marine	Employés
+employé en pharmacie	Employés
+employé d'usine	Employés
+employé d'octroi	Employés
+employé de mairie	Employés
+célibataire	None
+enfants	None
+marié	None
+veuf	None
+veuve	None
+afféterie	Ouvriers
+aide-chaudronnier	Ouvriers
+aide-cuisinier	Ouvriers
+Aide-jardinier	Ouvriers
+ajusteur	Ouvriers
+ajusteur mécanicien	Ouvriers
+apprêteur	Ouvriers
+bardeur	Ouvriers
+batelier	Ouvriers
+baumier	Ouvriers
+boulevardier	Ouvriers
+bronzier	Ouvriers
+bûcheron	Ouvriers
+câblier	Ouvriers
+cahoutchoutier	Ouvriers
+camionneur	Ouvriers
+canonnier	Ouvriers
+canotier	Ouvriers
+cantonnier	Ouvriers
+carrier	Ouvriers
+carrier ardoisier	Ouvriers
+charbonnier	Ouvriers
+charretier	Ouvriers
+charron	Ouvriers
+chasseur cycliste	Ouvriers
+chaudronnier	Ouvriers
+chaudronnier en fer	Ouvriers
+chauffeur	Ouvriers
+chauffeur d'automobiles	Ouvriers
+chauffeur de locomotive	Ouvriers
+chauffeur de machines	Ouvriers
+chauffeur maritime	Ouvriers
+chauffeur mécanicien	Ouvriers
+chiffonnier	Ouvriers
+cimentier	Ouvriers
+cloutier	Ouvriers
+cocher	Ouvriers
+cocher de louage	Ouvriers
+cocher de paire	Ouvriers
+cocher-livreur	Ouvriers
+coltineur	Ouvriers
+conducteur de bestiaux	Ouvriers
+conducteur de voitures	Ouvriers
+contremaîtresse	Ouvriers
+débardeur	Ouvriers
+décolleteur	Ouvriers
+doigtier	Ouvriers
+domestique de ferme	Ouvriers
+dragueur de sable	Ouvriers
+ébarbeur	Ouvriers
+éboueur	Ouvriers
+éclusier	Ouvriers
+emballeur	Ouvriers
+emboutisseur	Ouvriers
+étameur	Ouvriers
+ex-plâtrier	Ouvriers
+fagotier	Ouvriers
+faîtier	Ouvriers
+faîtière	Ouvriers
+fileur	Ouvriers
+fondeur en cuivre	Ouvriers
+forgeron serrurier	Ouvriers
+garçon boucher	Ouvriers
+garçon charcutier	Ouvriers
+garçon coiffeur	Ouvriers
 grumier	Ouvriers
 grutier	Ouvriers
-guérisseur	Professions intermédiaires
-guichetier	Employés
-gynécologue	Cadres
-historien	Cadres
-homardier	Agriculteurs
-homéopathe	Cadres
-horloger	Artisans, commerçants et chefs d’entreprise
-hôtelier	Artisans, commerçants et chefs d’entreprise
 houilleur	Ouvriers
-huilier	Artisans, commerçants et chefs d’entreprise
-huissier	Professions intermédiaires
-huîtrier	Agriculteurs
-huîtrière	Agriculteurs
-humoriste	Artisans, commerçants et chefs d’entreprise
-îlotier	Employés
-imprésario	Cadres
-imprimeur	Artisans, commerçants et chefs d’entreprise
 indienneur	Ouvriers
-industriel	Artisans, commerçants et chefs d’entreprise
-infirmier	Professions intermédiaires
-infirmière-major	Professions intermédiaires
-ingénieur	Cadres
-ingénieur-chimiste	Cadres
-ingénieur-conseil	Cadres
-inspecteur d'assurances	Cadres
-instituteur	Professions intermédiaires
-instructeur	Professions intermédiaires
-interprète	Cadres
-investisseur	Cadres
 jardinier	Ouvriers
 jardinier fleuriste	Ouvriers
 jardinière	Ouvriers
-jésuitière	Professions intermédiaires
-joaillier	Artisans, commerçants et chefs d’entreprise
 journalier	Ouvriers
 journalier coiffeur	Ouvriers
 journalière	Ouvriers
-journaliste	Cadres
-kinésithérapeute	Professions intermédiaires
-kolatier	Agriculteurs
-laboureur	Agriculteurs
 lamineur	Ouvriers
 liftier	Ouvriers
-limonadier	Employés
-liquoriste	Artisans, commerçants et chefs d’entreprise
-lithographe	Artisans, commerçants et chefs d’entreprise
-livreur	Employés
-louvetier	Professions intermédiaires
-lunetier	Artisans, commerçants et chefs d’entreprise
-luthier	Artisans, commerçants et chefs d’entreprise
 machiniste	Ouvriers
 machino	Ouvriers
-maçon	Artisans, commerçants et chefs d’entreprise
-maçon-cimentier	Artisans, commerçants et chefs d’entreprise
-magistrat	Cadres
 main-d'oeuvre	Ouvriers
-mainteneur	Professions intermédiaires
-maître	Professions intermédiaires
-maître d'hôtel	Employés
-maître queux	Artisans, commerçants et chefs d’entreprise
-maître-chien	Professions intermédiaires
-maître-coq	Artisans, commerçants et chefs d’entreprise
-maîtresse	Professions intermédiaires
-majordome	Employés
-mancenillier	Agriculteurs
-mandataire	Cadres
-manoeuvre	Ouvriers
 manoeuvre d'équipe télégraphique	Ouvriers
 manoeuvre d'usine	Ouvriers
 manoeuvre en couleurs	Ouvriers
-manufacturier	Artisans, commerçants et chefs d’entreprise
+manouvrier	Ouvriers
 manutentionnaire	Ouvriers
-maquettiste	Artisans, commerçants et chefs d’entreprise
-maquignon	Artisans, commerçants et chefs d’entreprise
-maraîcher	Agriculteurs
-marbrier	Artisans, commerçants et chefs d’entreprise
-marchand	Artisans, commerçants et chefs d’entreprise
-marchand d'abats	Artisans, commerçants et chefs d’entreprise
-marchand de bestiaux	Artisans, commerçants et chefs d’entreprise
-marchand de chiffons	Artisans, commerçants et chefs d’entreprise
-marchand de faïences	Artisans, commerçants et chefs d’entreprise
-marchand de métaine	Artisans, commerçants et chefs d’entreprise
-marchand de quatre saisons	Artisans, commerçants et chefs d’entreprise
-marchand de vins	Artisans, commerçants et chefs d’entreprise
-marchand de volailles	Artisans, commerçants et chefs d’entreprise
-marchand-forain	Artisans, commerçants et chefs d’entreprise
-maréchal-ferrant	Artisans, commerçants et chefs d’entreprise
-marié	None
-marin-pêcheur	Agriculteurs
-marin	Agriculteurs
-marinier	Professions intermédiaires
-marinier pilote	Professions intermédiaires
-masseur	Professions intermédiaires
-matelassier	Artisans, commerçants et chefs d’entreprise
 matelot	Ouvriers
-mathématicien	Cadres
 mécanicien	Ouvriers
-tôlier	Ouvriers
-bourrelier sellier  Artisans, commerçants et chefs d’entreprise
 mécanicien ajusteur	Ouvriers
-mécanicien dentiste	Cadres
-mécanicien en dirigeable	Agriculteurs
+mécanicien électricien	Ouvriers
 mécaniste	Ouvriers
 mécano	Ouvriers
-médecin	Cadres
-médecin-chef	Cadres
-médecin-conseil	Cadres
-médecin-général	Professions intermédiaires
-médecin-major	Cadres
 méger	Ouvriers
 mégissier	Ouvriers
 méhariste	Ouvriers
-meneau	Agriculteurs
-mentonnier	Artisans, commerçants et chefs d’entreprise
-menuisier	Artisans, commerçants et chefs d’entreprise
-menuisier ébéniste	Artisans, commerçants et chefs d’entreprise
-mercier	Artisans, commerçants et chefs d’entreprise
 messer	Ouvriers
 métallo	Ouvriers
 métallurgiste	Ouvriers
 métayer	Ouvriers
-météorologiste	Cadres
 mêtreur	Ouvriers
 meulier	Ouvriers
-meunier	Artisans, commerçants et chefs d’entreprise
-militaire	Professions intermédiaires
-minéralier	Professions intermédiaires
 mineur	Ouvriers
 minier	Ouvriers
-minotier	Artisans, commerçants et chefs d’entreprise
 miroitier	Ouvriers
-modeleur	Artisans, commerçants et chefs d’entreprise
-moine	Professions intermédiaires
 monteur fumiste	Ouvriers
 monteur-ajusteur	Ouvriers
 mouleur	Ouvriers
 mouleur en bronze	Ouvriers
 mouleur sur cuivre	Ouvriers
-moutier	Agriculteurs
-muletier	Agriculteurs
-musicien	Cadres
-musicographe	Cadres
-négociant	Artisans, commerçants et chefs d’entreprise
-négociant en tissus	Artisans, commerçants et chefs d’entreprise
-notaire	Cadres
-nourrisseur	Employés
-odontologiste	Cadres
-odontologue	Cadres
-officiant	Professions intermédiaires
-officier	Cadres
-officier d'administration	Cadres
 opérateur	Ouvriers
-ophtalmologiste	Cadres
-ophtalmologue	Cadres
-opticien	Artisans, commerçants et chefs d’entreprise
-optométriste	Professions intermédiaires
-orfèvre	Artisans, commerçants et chefs d’entreprise
-orthopédiste	Professions intermédiaires
-ostéopathe	Professions intermédiaires
+opérateur de cinéma	Ouvriers
 outilleur	Ouvriers
 ouvrier	Ouvriers
 ouvrier agricole	Ouvriers
@@ -473,166 +523,149 @@ ouvrier d'usine	Ouvriers
 ouvrier de fabrique	Ouvriers
 ouvrier de filature	Ouvriers
 ouvrier électricien	Ouvriers
-ouvrier mécanicien	Ouvriers
 ouvrier en chaussures	Ouvriers
 ouvrier fondeur	Ouvriers
 ouvrier horloger	Ouvriers
+ouvrier mécanicien	Ouvriers
 ouvrier pâtissier	Ouvriers
 ouvrier quincailler	Ouvriers
 ouvrier quinier	Ouvriers
 palfrenier	Ouvriers
-papetier	Artisans, commerçants et chefs d’entreprise
-parqueteur	Artisans, commerçants et chefs d’entreprise
 passementier	Ouvriers
-pâtissier	Artisans, commerçants et chefs d’entreprise
 paveur	Ouvriers
-paysager	Agriculteurs
-paysan	Agriculteurs
 peaucier	Ouvriers
 peaussier	Ouvriers
-peintre	Artisans, commerçants et chefs d’entreprise
-peintre décorateur	Artisans, commerçants et chefs d’entreprise
+pêcheur	Ouvriers
 peintre en bâtiments	Ouvriers
 peintre en lettres	Ouvriers
 peintre en voitures	Ouvriers
-peintre sur porcelaine	Artisans, commerçants et chefs d’entreprise
 pelletier	Ouvriers
-percepteur	Professions intermédiaires
 perceur	Ouvriers
-perruquier	Artisans, commerçants et chefs d’entreprise
-pharmacien	Cadres
-photographe	Cadres
-photojournaliste	Cadres
 pierrier	Ouvriers
-pigeonnier	Professions intermédiaires
-pigiste	Professions intermédiaires
 piqueur de dessin	Ouvriers
-placeur	Employés
-planteur cultivateur	Agriculteurs
-plantier	Agriculteurs
-platière	Artisans, commerçants et chefs d’entreprise
-platrier	Artisans, commerçants et chefs d’entreprise
-plâtrier-peintre	Artisans, commerçants et chefs d’entreprise
-plombier	Artisans, commerçants et chefs d’entreprise
 plombier-couvreur	Ouvriers
-plombier-zingueur	Artisans, commerçants et chefs d’entreprise
-plumier	Artisans, commerçants et chefs d’entreprise
-poissonnier	Artisans, commerçants et chefs d’entreprise
 polisseur	Ouvriers
 polisseur en métaux	Ouvriers
-pompier	Professions intermédiaires
-pompiste	Employés
-porcelainier	Artisans, commerçants et chefs d’entreprise
-portier	Employés
-poseur	Artisans, commerçants et chefs d’entreprise
 poseur de voies	Ouvriers
-potier	Artisans, commerçants et chefs d’entreprise
-potier d'étain	Artisans, commerçants et chefs d’entreprise
-praticien	Cadres
-précepteur	Cadres
-premier-maître	Professions intermédiaires
-prêteur	Cadres
-prêtre-ouvrier	Professions intermédiaires
-principal	Cadres
-professeur	Cadres
-promoteur	Artisans, commerçants et chefs d’entreprise
-propriétaire	Artisans, commerçants et chefs d’entreprise
-prospecteur	Artisans, commerçants et chefs d’entreprise
-prospecteur colonial	Cadres
-prothésiste	Professions intermédiaires
-psychiatre	Cadres
-publiciste	Cadres
-puériculteur	Professions intermédiaires
 puisatier	Ouvriers
-quartier-maître	Professions intermédiaires
-questeur	Cadres
 ramoneur	Ouvriers
 rattacheur	Ouvriers
-réalisateur	Cadres
-réceptionnaire	Employés
-recruteur	Cadres
-rédacteur	Cadres
-régisseur de vignoble	Cadres
-relieur	Artisans, commerçants et chefs d’entreprise
-rempailleur	Artisans, commerçants et chefs d’entreprise
 rempailleur ambulant	Ouvriers
 rempailleur de chaises	Ouvriers
-rentier	Artisans, commerçants et chefs d’entreprise
-réparateur d'objets d'art	Artisans, commerçants et chefs d’entreprise
-reporter	Cadres
-représentant de commerce	Professions intermédiaires
-restaurateur	Artisans, commerçants et chefs d’entreprise
 riveur	Ouvriers
-roulottier	Artisans, commerçants et chefs d’entreprise
-sabotier	Artisans, commerçants et chefs d’entreprise
-salarié	Employés
 sapeur-pompier	Ouvriers
-sauveteur	Professions intermédiaires
-savant	Cadres
-scaphandrier	Professions intermédiaires
 scieur	Ouvriers
 scieur de long	Ouvriers
-sculpteur	Artisans, commerçants et chefs d’entreprise
-secouriste	Professions intermédiaires
-secrétaire de mairie	Professions intermédiaires
-sellier	Artisans, commerçants et chefs d’entreprise
-serrurier	Artisans, commerçants et chefs d’entreprise
-serrurier ajusteur	Artisans, commerçants et chefs d’entreprise
-sertisseur	Artisans, commerçants et chefs d’entreprise
-servant	Employés
-soigneur	Professions intermédiaires
 soldat boulanger	Ouvriers
-sous-officier rengagé	Cadres
 soutier	Ouvriers
-surveillant	Professions intermédiaires
-surveillant de travaux	Employés
-tailleur	Artisans, commerçants et chefs d’entreprise
-tailleur d'habits	Artisans, commerçants et chefs d’entreprise
-tailleur de pierre	Artisans, commerçants et chefs d’entreprise
-tailleuse	Artisans, commerçants et chefs d’entreprise
-tanneur	Artisans, commerçants et chefs d’entreprise
-tapissier	Artisans, commerçants et chefs d’entreprise
-tapissier en meubles	Artisans, commerçants et chefs d’entreprise
-technicien	Professions intermédiaires
-teinturier	Artisans, commerçants et chefs d’entreprise
-télégraphiste	Employés
-tenancier	Artisans, commerçants et chefs d’entreprise
 terrassier	Ouvriers
 terrassier-mineur	Ouvriers
-thérapeute	Professions intermédiaires
 tisserand	Ouvriers
 tisseur	Ouvriers
-tissutier	Artisans, commerçants et chefs d’entreprise
+tôlier	Ouvriers
 tôlier en automobiles	Ouvriers
 tonnelier	Ouvriers
 tourneur	Ouvriers
 tourneur ajusteur	Ouvriers
+tourneur mécanicien	Ouvriers
 tourneur sur métaux	Ouvriers
 travailleur	Ouvriers
 tripier	Ouvriers
 tripière	Ouvriers
 tulliste	Ouvriers
 tuyauteur	Ouvriers
+voiturier	Ouvriers
+Fraiseur-perceur	Ouvriers
+chaisier	Ouvriers
+cordier	Ouvriers
+batelier-marinier	Ouvriers
+charretier - liveur	Ouvriers
+ajusteur - limeur	Ouvriers
+conducteur	Ouvriers
+mécanicien des chemins de fer	Ouvriers
+abbé	Professions intermédiaires
+accessoiriste	Professions intermédiaires
+agent	Professions intermédiaires
+agent de police	Professions intermédiaires
+aide-comptable	Professions intermédiaires
+aide-infirmier	Professions intermédiaires
+ambulancier	Professions intermédiaires
+aumônier	Professions intermédiaires
+automobiliste	Professions intermédiaires
+brancardier	Professions intermédiaires
+camelot	Professions intermédiaires
+chef	Professions intermédiaires
+chef mécanicien	Professions intermédiaires
+chef-adjoint	Professions intermédiaires
+clerc	Professions intermédiaires
+clerc de notaire	Professions intermédiaires
+commis-pharmacien	Professions intermédiaires
+comptable	Professions intermédiaires
+contremaître	Professions intermédiaires
+démineur	Professions intermédiaires
+détective privé	Professions intermédiaires
+douanier	Professions intermédiaires
+éducateur	Professions intermédiaires
+employé de banque	Professions intermédiaires
+enseignant	Professions intermédiaires
+ex-apprenti	Professions intermédiaires
+ex-maître	Professions intermédiaires
+ex-monteur	Professions intermédiaires
+ex-pharmacien	Professions intermédiaires
+facturier	Professions intermédiaires
+faiseur	Professions intermédiaires
+footballeur	Professions intermédiaires
+formateur	Professions intermédiaires
+gabier	Professions intermédiaires
+greffier	Professions intermédiaires
+greffier de justice	Professions intermédiaires
+guérisseur	Professions intermédiaires
+huissier	Professions intermédiaires
+infirmier	Professions intermédiaires
+infirmière-major	Professions intermédiaires
+instituteur	Professions intermédiaires
+instructeur	Professions intermédiaires
+jésuitière	Professions intermédiaires
+kinésithérapeute	Professions intermédiaires
+louvetier	Professions intermédiaires
+mainteneur	Professions intermédiaires
+maître	Professions intermédiaires
+maître-chien	Professions intermédiaires
+maîtresse	Professions intermédiaires
+marinier	Professions intermédiaires
+marinier pilote	Professions intermédiaires
+masseur	Professions intermédiaires
+médecin-général	Professions intermédiaires
+militaire	Professions intermédiaires
+minéralier	Professions intermédiaires
+moine	Professions intermédiaires
+officiant	Professions intermédiaires
+optométriste	Professions intermédiaires
+orthopédiste	Professions intermédiaires
+ostéopathe	Professions intermédiaires
+percepteur	Professions intermédiaires
+pigeonnier	Professions intermédiaires
+pigiste	Professions intermédiaires
+pompier	Professions intermédiaires
+premier-maître	Professions intermédiaires
+prêtre-ouvrier	Professions intermédiaires
+prothésiste	Professions intermédiaires
+puériculteur	Professions intermédiaires
+quartier-maître	Professions intermédiaires
+représentant de commerce	Professions intermédiaires
+sauveteur	Professions intermédiaires
+scaphandrier	Professions intermédiaires
+secouriste	Professions intermédiaires
+secrétaire de mairie	Professions intermédiaires
+soigneur	Professions intermédiaires
+surveillant	Professions intermédiaires
+technicien	Professions intermédiaires
+thérapeute	Professions intermédiaires
 typographe	Professions intermédiaires
 urgentiste	Professions intermédiaires
-valet de chambre	Employés
-vannier	Artisans, commerçants et chefs d’entreprise
-vannière	Artisans, commerçants et chefs d’entreprise
-veilleur	Employés
-vendeur aux halles	Employés
-vendeur d'automobiles	Employés
-vendeuse	Employés
-verrier	Artisans, commerçants et chefs d’entreprise
 vétérinaire	Professions intermédiaires
-veuf	None
-veuve	None
-vigneron	Agriculteurs
-viticulteur	Agriculteurs
-voiturier	Ouvriers
-volailleur	Artisans, commerçants et chefs d’entreprise
 voyageur de commerce	Professions intermédiaires
-chauffeur maritime	Ouvriers
-argenteur-doreur	Artisans, commerçants et chefs d’entreprise
-fourreur    Artisans,	commerçants et chefs d’entreprise
-opérateur de cinéma	Ouvriers
-fabricant de balais	Artisans, commerçants et chefs d’entreprise
+sommelier	Professions intermédiaires
+boxeur	Professions intermédiaires
+bourrier	Agriculteurs
+courtillière	Agriculteurs

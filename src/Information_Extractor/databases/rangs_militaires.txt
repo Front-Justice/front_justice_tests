@@ -1,46 +1,52 @@
 2^eme canonnier
+2^eme canonnier
+2^eme canonnier boulanger
+2^eme canonnier chauffeur
 2^eme canonnier conducteur
 2^eme canonnier servant
 2^eme canonnier servant réserviste
 2^eme canonnier servant territorial
-sapeur conducteur de 2^e Classe
-tambour
-2^e sapeur mineur
-2^e canonnier
-2^e canonnier chauffeur
-sapeur de 2^e classe auxiliaire
-cavalier de 2^eme classe
-tirailleur de 1^ere classe
-tirailleur de 2^e classe
-chasseur de 2^e classe
-agent militarisé
-brigadier-pilote
-capitaine
-2^eme sapeur mineur
+2^eme canonnier territorial
+2^eme canonnier territorial
+2^eme conducteur
 2^eme ouvrier
+2^eme sapeur mineur
+2^eme sapeur mineur
+agent militarisé
 artificier rengagé
 aspirant
 brigadier
+brigadier automobiliste
 brigadier maréchal ferrand réserviste
 brigadier réserviste
+brigadier-pilote
 cannonier conducteur réserviste
 cannonier conducteur territorial
 canonnier
 canonnier artificier
 canonnier conducteur
 canonnier conducteur rengagé
+canonnier de 1^ere classe
 canonnier de 2^eme classe
 canonnier fauconnier
+canonnier maître pointeur
+canonnier premier ouvrier
 canonnier servant
 canonnier servant territorial
+capitaine
 caporal
 caporal fourrier
+caporal mitrailleur
+caporal pilote
 caporal réserviste
 cavalier
 cavalier de 1^ere classe
 cavalier de 2^eme classe
+cavalier de 2^eme classe
 cavalier réserviste
 chasseur
+chasseur de 2^eme classe
+chef de Bataillon
 clairon
 conducteur
 conducteur de 1^ere classe
@@ -51,16 +57,20 @@ contrôleur de 1^ere classe
 détenu
 exclu
 garde intérimaire
+lieutenant
+maître ouvrier
 maître pointeur
 maréchal des logis
 maréchal des logis fourrier
 maréchal des logis fourrier rengagé
 maréchal des logis réserviste
 matelot
+matelot de 3^eme classe
 médecin auxiliaire
 médecin major
 médecin major de 1^ere classe
 médecin major de 2^eme classe
+officier d'ad^on de 1^ère classe
 officier d'administration de 1^ere classe
 officier d'administration de 2^eme classe
 prisonnier de guerre
@@ -69,10 +79,13 @@ quartier-maître mécanicien
 réserviste
 sapeur
 sapeur artilleur
+sapeur conducteur de 2^eme Classe
 sapeur conducteur réserviste
 sapeur de 1^ere classe
 sapeur de 2^eme classe
+sapeur de 2^eme classe auxiliaire
 sapeur indigène
+sapeur indigène de 2^eme classe
 sapeur mineur
 sapeur réserviste
 sapeur réserviste
@@ -92,9 +105,27 @@ soldat réserviste
 soldat territorial
 sous-chef ouvrier
 sous-lieutenant
+tambour
 tirailleur
+tirailleur de 1^ere classe
+tirailleur de 2^eme classe
 travailleur
 travailleur auxiliaire
 travailleur auxiliaire kabyle
 trompette
 zouave
+quartier maître fourrier
+sapeur mineur de 2^eme classe
+canonnier conducteur de 2^eme classe
+soldat de 2^eme classe auxiliaire
+soldat infirmier
+cannonier de 2^eme classe réserviste
+cavalier auxiliaire
+matelot infirmier
+adjudant de réserve
+médecin - aide – major
+officier
+sergent mitrailleur
+canonnier de 2^eme classe du service auxiliaire
+ouvrier militarisé de 2^eme classe
+brigadier maréchal

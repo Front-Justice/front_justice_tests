@@ -296,6 +296,8 @@ Lafont
 Lagarde
 Lalande
 
+Dinet
+Dupont
 Lallemant
 Lamarque
 Lambert
@@ -467,6 +469,7 @@ Sagedieu
 Santier
 Saucède
 Sauvegrain
+Savart
 Schammel
 Scheffer
 Schivann
@@ -500,6 +503,7 @@ Umilta
 Vallet
 Vattet
 Verdien
+Vergé
 Vignol
 Villain
 Villette
@@ -510,6 +514,3 @@ Viraud
 Voruz
 Vuillaume
 Wahart
-Vergé
-Dinet
-Dupont
