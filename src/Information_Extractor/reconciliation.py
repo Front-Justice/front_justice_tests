@@ -432,10 +432,18 @@ class Reconciliator:
 
 	def _retrieve_categorie_sociopro(self):
 		if isinstance(self.profession_extraite, list) and len(self.profession_extraite) == 1:
-			logger.info("Une seule profession extraite, on extrait la catégorie professionnelle.")
+			logger.info("Une seule profession extraite a, on extrait la catégorie professionnelle.")
 			try:
 				self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite[0]]
 			except KeyError:
+				logger.error("Échec.")
+				self.categorie_sociopro = "UNK"
+		elif isinstance(self.profession_extraite, str):
+			logger.info("Une seule profession extraite bis, on extrait la catégorie professionnelle.")
+			try:
+				self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite[0]]
+			except KeyError:
+				logger.error("Échec.")
 				self.categorie_sociopro = "UNK"
 		else:
 			try:
