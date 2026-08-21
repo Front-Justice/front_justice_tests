@@ -428,7 +428,7 @@ class Reconciliator:
 			self.profession_extraite = profession_page_1_extraite
 		else:
 			self.profession_extraite = [item for item in [profession_page_1_extraite, profession_page_2_extraite] if item]
-		logger.info(f"Profession extraite et normalisée: {self.profession_extraite}")
+		logger.info(f"Profession extraite et normalisée: {self.profession_extraite}, {self.profession_normalisee}")
 
 	def _retrieve_categorie_sociopro(self):
 		if isinstance(self.profession_normalisee, list) and len(self.profession_normalisee) == 1:

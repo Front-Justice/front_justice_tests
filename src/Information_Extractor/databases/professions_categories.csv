@@ -16,7 +16,7 @@ aide-chaudronnier	Ouvriers
 aide-comptable	Professions intermédiaires
 aide-cuisinier	Ouvriers
 aide-infirmier	Professions intermédiaires
-Aide-jardinier	Ouvriers
+aide-jardinier	Ouvriers
 ajusteur	Ouvriers
 ajusteur - limeur	Ouvriers
 ajusteur mécanicien	Ouvriers
@@ -295,8 +295,8 @@ forain	Artisans, commerçants et chefs d’entreprise
 forgeron	Artisans, commerçants et chefs d’entreprise
 forgeron serrurier	Ouvriers
 formateur	Professions intermédiaires
-fourreur    Artisans,	commerçants et chefs d’entreprise
-Fraiseur-perceur	Ouvriers
+fourreur	Artisans, commerçants et chefs d’entreprise
+fraiseur-perceur	Ouvriers
 frappeur sur feux	Artisans, commerçants et chefs d’entreprise
 fripier	Artisans, commerçants et chefs d’entreprise
 gabier	Professions intermédiaires
@@ -670,3 +670,11 @@ voiturier	Ouvriers
 volailleur	Artisans, commerçants et chefs d’entreprise
 voyageur	Autre
 voyageur de commerce	Professions intermédiaires
+tôlier	Ouvriers
+négociant en perles fines	Artisans, commerçants et chefs d’entreprise
+employé à la compagnie du gaz	Employés
+presseur à la confection militaire	Employés
+ouvrier téléphoniste	Ouvriers
+ouvrier plombier zinguer	Ouvriers
+cultivateur terrassier	Agriculteurs
+clerc d’huissier	Professions intermédiaires
