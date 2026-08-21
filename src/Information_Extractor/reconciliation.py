@@ -441,7 +441,7 @@ class Reconciliator:
 		elif isinstance(self.profession_extraite, str):
 			logger.info("Une seule profession extraite bis, on extrait la catégorie professionnelle.")
 			try:
-				self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite[0]]
+				self.categorie_sociopro = self.dictionnaire_professions_categories[self.profession_extraite]
 			except KeyError:
 				logger.error("Échec.")
 				self.categorie_sociopro = "UNK"
