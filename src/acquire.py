@@ -916,7 +916,6 @@ def main(images_dir:str,
 			minutes[ident] = updated_minute
 		else:
 			minutes[ident] = {}
-	exit()
 
 	utils.serialize_dict(minutes, minutes_dir)
 	minutes_number = len(minutes)
