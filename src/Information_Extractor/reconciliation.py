@@ -445,34 +445,23 @@ class Reconciliator:
 			except KeyError:
 				logger.error("Échec.")
 				self.categorie_sociopro = "UNK"
+		elif isinstance(self.profession_extraite, None):
+			logger.info("Pas de profession extraite, catégorie socio-professionnelle inconnue.")
+			self.categorie_sociopro = "UNK"
 		else:
-			try:
-				categorie_sociopro_p1 = self.annotations_page_1["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-			except (KeyError, TypeError):
-				categorie_sociopro_p1 = None
-
-			try:
-				categorie_sociopro_p2 = self.annotations_page_2["extractions"]["soldat"]["profession"]["categorie_socioprofessionnelle"]
-			except (KeyError, TypeError):
-				categorie_sociopro_p2 = None
-
-			if categorie_sociopro_p1 == categorie_sociopro_p2 != None:
-				self.categorie_sociopro = categorie_sociopro_p1
-			elif categorie_sociopro_p1 == categorie_sociopro_p2 == None:
-				logger.info("La catégorie socioprofessionnelle n'a pas été trouvée.")
-				self.categorie_sociopro = "UNK"
-			elif categorie_sociopro_p1 in ["", None, "UNK"] and categorie_sociopro_p2 not in ["", None, "UNK"]:
-				logger.info("On garde la catégorie socioprofessionnelle de la page 2.")
-				self.categorie_sociopro = categorie_sociopro_p2
-			elif categorie_sociopro_p2 in ["", None, "UNK"] and categorie_sociopro_p1 not in ["", None, "UNK"]:
-				logger.info("On garde la catégorie socioprofessionnelle de la page 1.")
-				self.categorie_sociopro = categorie_sociopro_p1
-			elif categorie_sociopro_p1 != categorie_sociopro_p2 != None != "":
-				logger.info(f"La catégorie socioprofessionnelle diverge entre la page 1 et 2: {categorie_sociopro_p1} et {categorie_sociopro_p2}")
-				self.categorie_sociopro = "UNK"
+			all_categorie_sociopro = []
+			for profession in self.profession_extraite:
+				try:
+					all_categorie_sociopro.append(self.dictionnaire_professions_categories[profession])
+				except KeyError:
+					continue
+			if all([categorie == all_categorie_sociopro[0] for categorie in all_categorie_sociopro]):
+				self.categorie_sociopro = all_categorie_sociopro[0]
+				logger.info(f"Catégorie socioprofessionnelle identifiée: {self.categorie_sociopro}")
 			else:
-				logger.info("Une erreur est survenue.")
-				self.categorie_sociopro = "ERROR"
+				logger.info(f"Catégorie socioprofessionnelle divergente: {all_categorie_sociopro}")
+				self.categorie_sociopro = "UNK"
+
 
 	def _retrieve_annotations(self):
 		self.annotations = []
