@@ -445,7 +445,7 @@ class Reconciliator:
 			except KeyError:
 				logger.error("Échec.")
 				self.categorie_sociopro = "UNK"
-		elif isinstance(self.profession_extraite, None):
+		elif self.profession_extraite is None:
 			logger.info("Pas de profession extraite, catégorie socio-professionnelle inconnue.")
 			self.categorie_sociopro = "UNK"
 		else:
