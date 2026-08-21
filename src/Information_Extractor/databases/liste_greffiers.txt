@@ -15,9 +15,12 @@ Chauvelot
 Cuenne
 Darolle
 Darras
+Darut
 Daugan
+Daugon
 Daval
 Decand
+Decaud
 Delarue
 Demaire
 Demoure
@@ -39,6 +42,7 @@ Gaicon
 Gaillard
 Garziglia
 Gaubaux Lemaire
+Gaubert
 Gergent
 Gilloux
 Gismaud
@@ -46,12 +50,14 @@ Goubaux
 Gremaud
 Gressin
 Gridoux
+Grimaud
 Guillard
 Henriot
 Hubert
 Hugon
 Hulé
 Jacquemart
+Jallard
 Jamard
 Kerbrat
 L'Hôte
@@ -80,6 +86,7 @@ Phelut
 Ponsinet
 Rebeyrol
 Remaire
+Rentos
 Reulas
 Reveillard
 Rive
