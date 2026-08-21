@@ -831,8 +831,9 @@ def check_minute_consistency(minute_list, ident):
 		if minute_list[-2]["classe"] in ["page_autre", "page_manuscrite_suivie"] and classes == [1, 2, 4]:
 			minute_list[-2]["classe"] = "page_3"
 			return True, minute_list
-	except (IndexError, KeyError):
+	except (IndexError, KeyError) as e:
 		logger.error(f"La minute {ident} est trop courte.")
+		logger.error([image['classe'] for image in minute_list])
 		return False, {}
 	if classes == [1, 2, 3, 4]:
 		print(f"Minute {ident} correctement ordonnée")
